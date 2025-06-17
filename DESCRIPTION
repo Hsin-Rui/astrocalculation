@@ -1,0 +1,10 @@
+Package: astrocalculation
+Title: Astrology Calculations
+Version: 0.0.0.9000
+Authors@R: 
+    person("Hsin-Rui", "Lin", , "hsinrui.lin@gmail.com", role = c("aut", "cre"))
+Description: Calculate astrological information according to different doctrines
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
