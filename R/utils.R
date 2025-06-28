@@ -485,19 +485,6 @@ reorder_planets <- function(theta, new_theta, pl = 1){
   return(new)
 }
 
-#' Load fonts to show astrological symbols
-#'
-#' @importFrom sysfonts font_add
-#'
-
-load_fonts <- function(){
-
-  sysfonts::font_add(family="AstroGadget", regular="./inst/fonts/AstroGadget.ttf")
-  sysfonts::font_add(family="HamburgSymbols", regular="./inst/fonts/HamburgSymbols.ttf")
-  sysfonts::font_add(family="AstroDotBasic", regular="./inst/fonts/AstroDotBasic.ttf")
-
-}
-
 #' Calculate x and y of a circle
 #'
 #' @param r rate of the circle

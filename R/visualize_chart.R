@@ -20,12 +20,7 @@ draw_chart_template <- function(style="whole sign"){
 
   mytheme<- list(theme_void()+theme(panel.background = element_rect(colour= "white", fill= "white")))
 
-  ## 2. call showtext_auto so that astrological symbol will be rendered
-
-  load_fonts()
-  showtext::showtext_auto()
-
-  ## 3. define sign division & whole sign house cusps
+  ## 2. define sign division & whole sign house cusps
 
   equal_division <- seq(from=1, by=1080/12, length.out=12)
 
@@ -131,9 +126,6 @@ convert_degree_to_theta <- function(deg, starting_deg){
 #'
 
 draw_whole_sign_chart <- function(planet_position, chart_name, date, city, country, aspect_table){
-
-  load_fonts()
-  showtext_auto()
 
   p <- readRDS("./inst/ggplot_objects/p_empty_whole_sign.rds")
 
