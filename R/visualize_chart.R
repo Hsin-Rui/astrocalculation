@@ -133,7 +133,6 @@ draw_whole_sign_chart <- function(planet_position, chart_name, date, city, count
     stop("p_empty_whole_sign.rds not found")
   }
 
-  # 使用這個絕對且可靠的路徑來讀取檔案
   p <- readRDS(rds_path)
 
   selected_elements <- row.names(planet_position)
