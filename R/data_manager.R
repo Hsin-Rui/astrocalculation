@@ -3,6 +3,7 @@
 #' An R6 Class to communicate between shiny modules
 #'
 #' @import R6
+#' @export
 #'
 
 DataManager <- R6::R6Class(
