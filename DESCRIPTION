@@ -3,7 +3,7 @@ Title: Astrology Calculations
 Version: 0.0.0.9000
 Authors@R: 
     person("Hsin-Rui", "Lin", , "hsinrui.lin@gmail.com", role = c("aut", "cre"))
-Description: Calculate astrological information according to different doctrines
+Description: This package calculates astrological information according to different doctrines. In the current version, it supports drawing chart using whole sign house system. Further functionalities will follow.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -13,3 +13,17 @@ BugReports: https://github.com/Hsin-Rui/astrocalculation/issues
 Depends: 
     R (>= 3.5)
 LazyData: true
+Imports: 
+    dplyr,
+    ggplot2,
+    lubridate,
+    magrittr,
+    R6,
+    rlang,
+    showtext,
+    stringr,
+    swephR,
+    sysfonts,
+    tibble,
+    tidyr,
+    utils

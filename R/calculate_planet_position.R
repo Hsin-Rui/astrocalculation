@@ -8,14 +8,13 @@
 #' @param city A character string of city along with longitude and latitude (acquired in cities dataset)
 #'
 #' @importFrom swephR swe_set_ephe_path swe_calc_ut swe_houses_ex
-#' @importFrom here here
 #' @importFrom stringr str_extract
 #' @importFrom dplyr case_when
 #'
 
 calculate_planet_position <- function(date, timezone, city){
 
-  se_path <- (here::here("inst/se_data"))
+  se_path <- "./inst/se_data"
   swe_set_ephe_path(se_path)
   # call date_to_jd convert date to julian day
   jd <- date_to_jd(date = date, timezone = timezone)
