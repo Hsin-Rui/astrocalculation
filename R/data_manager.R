@@ -39,11 +39,8 @@ DataManager <- R6::R6Class(
     aspect_table = NULL,
 
     #' @description
-    #' Initalize the R6 class using the original shiny.i18n Translator class initialize function
-    #' furthermore, initialize horoscope city, calculate planatery positions & draw charts
+    #' Initalize initialize horoscope city, calculate planatery positions & draw charts
     #'
-    #' @param translation_csvs_path the path to the folder where the csv files for translation are stored
-    #' @param separator_csv csv separator
     #'
     initialize = function(){
 
@@ -63,7 +60,7 @@ DataManager <- R6::R6Class(
       data <- data[(row.names(data) %in% self$selected_planets),]
       self$aspect_table <- calculate_aspect(data)
       self$planet_position$planetary_position <- data
-      self$chart <- draw_whole_sign_chart(data, self$chart_name, self$horoscope_datetime, self$horoscope_city, self$horoscope_country, self$aspect_table)
+      self$chart <- draw_whole_sign_chart(data, self$chart_name, self$horoscope_datetime, self$horoscope_city, self$horoscope_country, self$horoscope_timezone, self$aspect_table)
 
     }
   )

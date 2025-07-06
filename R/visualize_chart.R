@@ -119,13 +119,14 @@ convert_degree_to_theta <- function(deg, starting_deg){
 #' @param date a datetime (POXIXct) object. Time of the chart
 #' @param city a character string. name of the city
 #' @param country a character string. name of the country
+#' @param timezone a string. Timezone of the chart
 #' @param aspect_table a data frame of aspects
 #'
 #' @importFrom dplyr filter
 #' @import ggplot2
 #'
 
-draw_whole_sign_chart <- function(planet_position, chart_name, date, city, country, aspect_table){
+draw_whole_sign_chart <- function(planet_position, chart_name, date, city, country, timezone, aspect_table){
 
   rds_path <- system.file("ggplot_objects", "p_empty_whole_sign.rds", package = "astrocalculation")
 
@@ -211,7 +212,8 @@ draw_whole_sign_chart <- function(planet_position, chart_name, date, city, count
   retrograde_y <- retrograde_coord$y [planet_position$new_theta] [planet_position$speed < 0]
 
   ## format date
-  date <- format(date)
+  formatted_date <- format(date, "%Y/%m/%d, %A")
+  time <- paste(format(date, "%T"), timezone)
 
   ## format city
   city <- stringr::str_extract(city, "(^[^0-9]{2,}),", group = 1)
@@ -253,10 +255,15 @@ draw_whole_sign_chart <- function(planet_position, chart_name, date, city, count
       geom_text(aes(x=min_x, y=min_y, label=minute), size=2.9, color=degree_color) +
       ## mark retrograde planets
       geom_text(aes(x=retrograde_x, y=retrograde_y, label="R"), size=2.4, color="darkred")+
+
+      xlim(c(-1.00, 1.00))+
+      ylim(c(-1.06, 1.32))+
+
+      ## chart name
+      geom_text(aes(x=-0.99), y=1.31, label=chart_name, vjust="inward", hjust="inward", size=4, fontface= "bold")+
+
       ## chart information
-      xlim(c(-1.10, 1.10))+
-      ylim(c(-1.10, 1.10))+
-      geom_text(aes(x=c(-1.05, -1.05, -1.05, -1.05), y=c(1.05, 0.99, 0.93, 0.87),label=c(chart_name, date, city, country)),
+      geom_text(aes(x=c(-0.99, -0.99, -0.99, -0.99), y=c(1.23, 1.16, 1.09, 1.02),label=c(formatted_date, time, city, country)),
                 vjust="inward", hjust="inward", size=3.5)+
       ## aspect lines
       geom_segment(data = aspect_table, aes(x=x, xend=x_end, y=y, yend=y_end), color=aspect_table$color) +
