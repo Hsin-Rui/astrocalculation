@@ -499,3 +499,25 @@ get_circle_coords <- function(r = 1, ...) {
                  x     = cos(theta) * r,
                  y     = sin(theta) * r)
 }
+
+
+
+#' return a ggplot theme which has blank background and grid
+#'
+#' @importFrom theme ggplot2
+#'
+
+get_blank_theme <- function(){
+
+  semi_transparent_color <- "#f2f2f266"
+
+  ggplot2::theme(
+    # background
+    panel.background = element_rect(fill = semi_transparent_color, color = NA),
+    plot.background = element_rect(fill = semi_transparent_color, color = NA),
+
+    # grid
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank())
+
+}

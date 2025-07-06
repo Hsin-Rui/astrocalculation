@@ -259,7 +259,8 @@ draw_whole_sign_chart <- function(planet_position, chart_name, date, city, count
       geom_text(aes(x=c(-1.05, -1.05, -1.05, -1.05), y=c(1.05, 0.99, 0.93, 0.87),label=c(chart_name, date, city, country)),
                 vjust="inward", hjust="inward", size=3.5)+
       ## aspect lines
-      geom_segment(data = aspect_table, aes(x=x, xend=x_end, y=y, yend=y_end), color=aspect_table$color)
+      geom_segment(data = aspect_table, aes(x=x, xend=x_end, y=y, yend=y_end), color=aspect_table$color) +
+      get_blank_theme()
 
     )
 }
