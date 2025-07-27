@@ -49,21 +49,11 @@ name of the chart}
 \if{html}{\out{<a id="method-DataManager-new"></a>}}
 \if{latex}{\out{\hypertarget{method-DataManager-new}{}}}
 \subsection{Method \code{new()}}{
-Initalize the R6 class using the original shiny.i18n Translator class initialize function
-furthermore, initialize horoscope city, calculate planatery positions & draw charts
+Initalize initialize horoscope city, calculate planatery positions & draw charts
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{DataManager$new()}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{translation_csvs_path}}{the path to the folder where the csv files for translation are stored}
-
-\item{\code{separator_csv}}{csv separator}
-}
-\if{html}{\out{</div>}}
-}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DataManager-update_chart"></a>}}

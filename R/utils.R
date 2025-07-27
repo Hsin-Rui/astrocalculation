@@ -504,7 +504,7 @@ get_circle_coords <- function(r = 1, ...) {
 
 #' return a ggplot theme which has blank background and grid
 #'
-#' @importFrom theme ggplot2
+#' @import ggplot2
 #'
 
 get_blank_theme <- function(){
