@@ -16,7 +16,13 @@ Date & time of the horoscope. Default to current datetime.}
 Time zone. Default to Asia/Taipei}
 
 \item{\code{horoscope_city}}{(\code{character()})\cr
-City with longitude & latitude. Default to Taipei City}
+City. Default to Taipei City}
+
+\item{\code{horoscope_longitude}}{(\code{numeric()})\cr
+Longitude of the City. Default to 121.52639}
+
+\item{\code{horoscope_latitude}}{(\code{numeric()})\cr
+Longitude of the City. Default to 25.05306}
 
 \item{\code{horoscope_country}}{(\code{character()})\cr
 Country}
