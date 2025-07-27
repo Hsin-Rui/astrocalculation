@@ -11,15 +11,21 @@ DataManager <- R6::R6Class(
   public = list(
     #' @field horoscope_datetime (`POSIXct()`)\cr
     #' Date & time of the horoscope. Default to current datetime.
-    horoscope_datetime = Sys.time(),
+    horoscope_datetime = NULL,
     #' @field horoscope_timezone (`character()`)\cr
     #' Time zone. Default to Asia/Taipei
-    horoscope_timezone = "Asia/Taipei",
+    horoscope_timezone = NULL,
     #' @field horoscope_city (`character()`)\cr
-    #' City with longitude & latitude. Default to Taipei City
+    #' City name. Default to Taipei City
     horoscope_city = NULL,
+    #' @field horoscope_longitude (`numeric()`)\cr
+    #' Longitude of City. Default to Taipei City
+    horoscope_longitude = NULL,
+    #' @field horoscope_latitude (`numeric()`)\cr
+    #' Latitude of City. Default to Taipei City
+    horoscope_latitude = NULL,
     #' @field horoscope_country (`character()`)\cr
-    #' Country
+    #' Country. Default to Taiwan
     horoscope_country = NULL,
     #' @field planet_position (`list()`)\cr
     #' A list of dataf rame containing planetary positions and house cusps
@@ -29,7 +35,7 @@ DataManager <- R6::R6Class(
     chart = NULL,
     #' @field chart_name (`character()`)\cr
     #' name of the chart
-    chart_name = "Transits",
+    chart_name = NULL,
     #' @field selected_planets (`character()`)\cr
     #' name of the chart
     selected_planets = c("sun","moon","mercury","venus","mars","jupiter","saturn","uranus","neptune","pluto",
@@ -44,8 +50,12 @@ DataManager <- R6::R6Class(
     #'
     initialize = function(){
 
-      self$horoscope_city <- cities$city [1]
-      self$horoscope_country <- cities$country [cities$city %in% self$horoscope_city]
+      self$horoscope_datetime <- Sys.time()
+      self$horoscope_timezone <- "Asia/Taipei"
+      self$horoscope_city <- "Taipei"
+      self$horoscope_longitude <- 121.52639
+      self$horoscope_latitude <- 25.05306
+      self$horoscope_country <- "Taiwan"
       self$update_chart()
 
     },
@@ -55,7 +65,7 @@ DataManager <- R6::R6Class(
     #'
     update_chart = function(){
 
-      self$planet_position <- calculate_planet_position(self$horoscope_datetime, self$horoscope_timezone, self$horoscope_city)
+      self$planet_position <- calculate_planet_position(self$horoscope_datetime, self$horoscope_timezone, self$horoscope_longitude, self$horoscope_latitude)
       data <- self$planet_position$planetary_position
       data <- data[(row.names(data) %in% self$selected_planets),]
       self$aspect_table <- calculate_aspect(data)
