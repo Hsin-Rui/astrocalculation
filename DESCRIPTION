@@ -24,7 +24,8 @@ Imports:
     stringr,
     swephR,
     sysfonts,
-    zlib,
     tibble,
     tidyr,
-    utils
+    utils,
+    DBI,
+    RSQLite
