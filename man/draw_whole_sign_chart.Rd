@@ -10,6 +10,7 @@ draw_whole_sign_chart(
   date,
   city,
   country,
+  timezone,
   aspect_table
 )
 }
@@ -23,6 +24,8 @@ draw_whole_sign_chart(
 \item{city}{a character string. name of the city}
 
 \item{country}{a character string. name of the country}
+
+\item{timezone}{a string. Timezone of the chart}
 
 \item{aspect_table}{a data frame of aspects}
 }
