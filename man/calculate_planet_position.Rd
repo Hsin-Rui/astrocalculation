@@ -7,14 +7,16 @@ planetary positions are calculated by calling swe_calc_ut()
 ASC, MC, Vertex and house cusps are calculated by calling swe_houses_ex()
 swe_calc_ut returns 6 double parameters: 1. longitude, 2. latitude, 3. distance, 4. speed in longitude, 5. speed in latitude, 6. speed in distance}
 \usage{
-calculate_planet_position(date, timezone, city)
+calculate_planet_position(date, timezone, longitude, latitude)
 }
 \arguments{
 \item{date}{A POSIXct class date time string}
 
 \item{timezone}{A string of time zone. It has to be time zone that lubridate recognizes. Default is "Asia/Taipei"}
 
-\item{city}{A character string of city along with longitude and latitude (acquired in cities dataset)}
+\item{longitude}{Longitude of the city}
+
+\item{latitude}{Latitude of the city}
 }
 \description{
 This function calculate planetary positions and other chart elements by calling functions in swephR
