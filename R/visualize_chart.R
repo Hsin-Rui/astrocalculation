@@ -215,9 +215,6 @@ draw_whole_sign_chart <- function(planet_position, chart_name, date, city, count
   formatted_date <- format(date, "%Y/%m/%d, %A")
   time <- paste(format(date, "%T"), timezone)
 
-  ## format city
-  city <- stringr::str_extract(city, "(^[^0-9]{2,}),", group = 1)
-
   ## 3. aspect lines
 
   aspect_table <-
