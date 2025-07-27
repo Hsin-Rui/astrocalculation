@@ -5,15 +5,14 @@
 #'
 #' @param date A POSIXct class date time string
 #' @param timezone A string of time zone. It has to be time zone that lubridate recognizes. Default is "Asia/Taipei"
-#' @param longitude a numeric value. Longitude of the city.
-#' @param latitude a numeric value. Latitude of the city.
+#' @param city A character string of city along with longitude and latitude (acquired in cities dataset)
 #'
 #' @importFrom swephR swe_set_ephe_path swe_calc_ut swe_houses_ex
 #' @importFrom stringr str_extract
 #' @importFrom dplyr case_when
 #'
 
-calculate_planet_position <- function(date, timezone, longitude, latitude){
+calculate_planet_position <- function(date, timezone, city){
 
   se_path <- "./inst/se_data"
   swe_set_ephe_path(se_path)
@@ -28,6 +27,8 @@ calculate_planet_position <- function(date, timezone, longitude, latitude){
   names(position) <- c("sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "chiron", "mean_node", "true_node")
 
   # calculate ASC & MC
+  longitude <- as.numeric(stringr::str_extract(city, "^.{2,}lng: (.{2,}),", group=1))
+  latitude <- as.numeric(stringr::str_extract(city, "lat: (.{1,})$", group=1))
 
   ascension <- swe_houses_ex(jd, 0, geolat = latitude, geolon = longitude, hsys = "W")$ascmc
   asc <- ascension[1] # first element is ASC
