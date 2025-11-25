@@ -9,7 +9,7 @@
 #' @return ggplot object (three possible empty chart templates for further plotting)
 #'
 
-draw_chart_template <- function(style="whole sign"){
+draw_chart_template <- function(style="whole_sign"){
 
   ## 1. define x,y for for circles
 
@@ -41,8 +41,10 @@ draw_chart_template <- function(style="whole sign"){
 
   ## 5. draw chris brennan style chart template
 
-  p_chris_prennan <-
-    ggplot()+
+  if(style=="chris_brennan") {
+
+    p_chris_prennan <-
+      ggplot()+
       geom_path(aes(x=outer_circle$x,y=outer_circle$y), linewidth=0.3)+
       geom_path(aes(x=outer_circle2$x, y=outer_circle2$y), linewidth=0.3)+
       mytheme+
@@ -52,7 +54,9 @@ draw_chart_template <- function(style="whole sign"){
       xlim(-1.05, 1.05)+
       ylim(-1.05, 1.05)
 
-  if(style=="chris brennan") return(p_chris_prennan)
+    return(p_chris_prennan)
+
+  }
 
   ## 6. draw common parts of the template
 
@@ -72,26 +76,34 @@ draw_chart_template <- function(style="whole sign"){
     coord_equal()
 
   ## 7. draw whole sign chart template
-  p_whole_sign <-
-    p_common +
-    geom_segment(aes(x=sign_x, y=sign_y, xend=sign_x_end, yend=sign_y_end), color="black", linewidth=0.3) +
-    # house division
-    geom_segment(aes(x=cusps_x, y=cusps_y, xend=sign_x_end, yend=sign_y_end), color="grey50", linewidth=0.2) +
-    # house number
-    geom_text(aes(x=house_x, y=house_y, label=c(7:12, 1:6)), size=3.5)
 
-  if(style=="whole sign") return(p_whole_sign)
+  if(style=="whole_sign") {
+
+    p_whole_sign <-
+      p_common +
+      geom_segment(aes(x=sign_x, y=sign_y, xend=sign_x_end, yend=sign_y_end), color="black", linewidth=0.3) +
+      # house division
+      geom_segment(aes(x=cusps_x, y=cusps_y, xend=sign_x_end, yend=sign_y_end), color="grey50", linewidth=0.2) +
+      # house number
+      geom_text(aes(x=house_x, y=house_y, label=c(7:12, 1:6)), size=3.5)
+
+    return(p_whole_sign)
+
+  }
 
   ## 8. draw template for whole sign house chart
-  sign_x
 
-  p_quadrant <-
-    p_common+
+  if(style=="others"){
+
+    p_quadrant <-
+      p_common+
       geom_segment(aes(x=cusps_x[c(1,7)], y=cusps_y[c(1,7)], xend=c(1.08, -1.08), yend=sign_y[c(1,7)]),
                    color="black", linewidth=0.4,
                    arrow = arrow(length = unit(0.15, "inches")))
 
-  if(style=="others") return(p_quadrant)
+    return(p_quadrant)
+
+  }
 
 }
 
@@ -128,13 +140,7 @@ convert_degree_to_theta <- function(deg, starting_deg){
 
 draw_whole_sign_chart <- function(planet_position, chart_name, date, city, country, timezone, aspect_table){
 
-  rds_path <- system.file("ggplot_objects", "p_empty_whole_sign.rds", package = "astrocalculation")
-
-  if (rds_path == "") {
-    stop("p_empty_whole_sign.rds not found")
-  }
-
-  p <- readRDS(rds_path)
+  p <- draw_chart_template(style = "whole_sign")
 
   selected_elements <- row.names(planet_position)
   # 1. put on zodiac sign
@@ -155,7 +161,7 @@ draw_whole_sign_chart <- function(planet_position, chart_name, date, city, count
 
   p <-
     p +
-    geom_text(aes(x=sign_x, y=sign_y, label=zodiac_sign[sign_order]), family="HamburgSymbols", size=6, color=zodiac_sign_color[sign_order])
+    ggplot2::geom_text(ggplot2::aes(x=sign_x, y=sign_y, label=zodiac_sign[sign_order]), family="HamburgSymbols", size=6, color=zodiac_sign_color[sign_order])
 
   ## 2. put on planets etc.
 
