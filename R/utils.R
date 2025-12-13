@@ -298,6 +298,8 @@ calculate_theta_distance <- function(new_theta, theta) {
 #' @param value a numeric value (1-30)
 #' @importFrom lubridate days hours minutes years
 #'
+#' @export
+#'
 
 
 add_datetime <- function(start_time, unit, value){
@@ -327,6 +329,8 @@ add_datetime <- function(start_time, unit, value){
 #' @param start_time POXIXct class date time
 #' @param value a numeric value (1-30)
 #' @importFrom lubridate days hours minutes years
+#'
+#' @export
 #'
 
 minus_datetime <- function(start_time, unit, value){
