@@ -4,7 +4,7 @@
 \alias{draw_chart_template}
 \title{Draw chart template using ggplot}
 \usage{
-draw_chart_template(style = "whole sign")
+draw_chart_template(style = "whole_sign")
 }
 \arguments{
 \item{style}{chart style (whole sign, chris brennan, others)}
