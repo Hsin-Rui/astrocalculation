@@ -1,3 +1,6 @@
+# astrocalculation 0.1.4 -- 2025-12-21
+* initialize postgres db (local db for development)
+
 # astrocalculation 0.1.3 -- 2025-12-13
 * export add_datetime and minus_datetime
 

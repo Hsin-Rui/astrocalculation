@@ -1,0 +1,141 @@
+# Database Schema Definitions (Fixed: Removed conflicting FK)
+
+config:
+  extensions:
+    - "uuid-ossp"
+
+tables:
+  user_profiles:
+    title: "User Profiles"
+    description: "Stores the user's identity, profile settings, and their primary 'Self' chart data."
+    columns:
+      entry_id:
+        type: "UUID PRIMARY KEY DEFAULT uuid_generate_v4()"
+        title: "Entry ID"
+        description: "Unique surrogate key for this version."
+      user_entity_id:
+        type: "VARCHAR(255) NOT NULL"
+        title: "User Entity ID"
+        description: "The immutable Auth ID provided by Azure Entra ID."
+
+      # Validity Window
+      valid_from:
+        type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
+        title: "Valid From"
+        description: "Start of validity."
+      valid_to:
+        type: "TIMESTAMP WITH TIME ZONE"
+        title: "Valid To"
+        description: "End of validity."
+
+      # Data
+      email:
+        type: "VARCHAR(255)"
+        title: "Email"
+        description: "User contact email."
+      display_name:
+        type: "VARCHAR(255)"
+        title: "Display Name"
+        description: "User's public name."
+      birth_timestamp:
+        type: "TIMESTAMP WITH TIME ZONE"
+        title: "Birth Timestamp"
+        description: "Combined birth date and time in UTC."
+      timezone:
+        type: "VARCHAR(100)"
+        title: "Timezone"
+        description: "IANA timezone string."
+      city_name:
+        type: "VARCHAR(100)"
+        title: "City"
+        description: "Name of the birth city."
+      country:
+        type: "VARCHAR(100)"
+        title: "Country"
+        description: "Name of the birth country."
+      lat:
+        type: "DOUBLE PRECISION"
+        title: "Latitude"
+        description: "Geographic latitude."
+      lng:
+        type: "DOUBLE PRECISION"
+        title: "Longitude"
+        description: "Geographic longitude."
+      profile_photo:
+        type: "TEXT"
+        title: "Profile Photo"
+        description: "Base64 encoded image string."
+      created_at:
+        type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
+        title: "Created At"
+        description: "Record creation timestamp."
+
+    indices:
+      - user_entity_id
+
+  personal_library:
+    title: "Personal Library"
+    description: "A collection of saved charts owned by a user."
+    columns:
+      entry_id:
+        type: "UUID PRIMARY KEY DEFAULT uuid_generate_v4()"
+        title: "Entry ID"
+        description: "Unique surrogate key."
+      entity_id:
+        type: "UUID NOT NULL"
+        title: "Entity ID"
+        description: "The persistent ID of the chart."
+      owner_oid:
+        type: "VARCHAR(255) NOT NULL"
+        title: "Owner ID"
+        description: "Links to user_profiles.user_entity_id (Logical Link)."
+
+      # Validity Window
+      valid_from:
+        type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
+        title: "Valid From"
+        description: "Start of validity."
+      valid_to:
+        type: "TIMESTAMP WITH TIME ZONE"
+        title: "Valid To"
+        description: "End of validity."
+
+      # Data
+      name:
+        type: "VARCHAR(255) NOT NULL"
+        title: "Name"
+        description: "Name of the person or event."
+      birth_timestamp:
+        type: "TIMESTAMP WITH TIME ZONE NOT NULL"
+        title: "Birth Timestamp"
+        description: "Combined birth date and time in UTC."
+      timezone:
+        type: "VARCHAR(100) NOT NULL"
+        title: "Timezone"
+        description: "IANA timezone string."
+      city_name:
+        type: "VARCHAR(100)"
+        title: "City"
+        description: "Birth city."
+      lat:
+        type: "DOUBLE PRECISION"
+        title: "Latitude"
+        description: "Geographic latitude."
+      lng:
+        type: "DOUBLE PRECISION"
+        title: "Longitude"
+        description: "Geographic longitude."
+      notes:
+        type: "TEXT"
+        title: "Notes"
+        description: "User notes."
+      created_at:
+        type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
+        title: "Created At"
+        description: "Creation timestamp."
+
+    # REMOVED: foreign_keys section (Conflict with History/Uniqueness)
+
+    indices:
+      - entity_id
+      - owner_oid
