@@ -28,5 +28,7 @@ Imports:
     tidyr,
     utils,
     DBI,
-    RSQLite
+    RSQLite,
+    pool,
+    RPostgres
 Date: 2025-07-27
