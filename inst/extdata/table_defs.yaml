@@ -117,6 +117,10 @@ tables:
         type: "VARCHAR(100)"
         title: "City"
         description: "Birth city."
+      country:
+        type: "VARCHAR(100)"
+        title: "Country"
+        description: "Name of the birth country."
       lat:
         type: "DOUBLE PRECISION"
         title: "Latitude"

@@ -4,7 +4,7 @@
 #' variables. It automatically handles SSL settings for Azure vs Local.
 #'
 #' @return A `pool` object
-#' @export
+#'
 connect_postgres_db <- function() {
 
   # 1. Read Credentials
@@ -39,7 +39,7 @@ connect_postgres_db <- function() {
 #' Close Database Connection
 #'
 #' @param pool The connection pool to close
-#' @export
+#'
 close_postgres_db <- function(pool) {
   if (!is.null(pool) && pool::dbIsValid(pool)) {
     pool::poolClose(pool)
@@ -141,3 +141,87 @@ db_initialize_schema <- function(overwrite = FALSE) {
 
   message("🚀 Schema migration complete.")
 }
+
+#' @title Database Service Functions
+#' @description Standalone functions to handle specific DB interactions.
+#'
+#' @param pool The database connection pool
+#' @param user_id The unique Azure Object ID
+#' @param ... Specific data fields (name, birth_date, etc.)
+
+db_get_profile <- function(pool, user_id) {
+  if (is.null(pool) || is.null(user_id)) return(NULL)
+
+  query <- "SELECT * FROM user_profiles WHERE user_entity_id = ?id AND valid_to IS NULL LIMIT 1"
+  res <- DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool, query, id = user_id))
+
+  if (nrow(res) == 0) return(NULL)
+  return(res)
+}
+
+#' @export
+db_save_profile <- function(pool, user_id, data) {
+  # Combine Date/Time/TZ into UTC Timestamp
+  dt_str <- paste(as.character(data$birth_date), as.character(data$birth_time))
+  birth_ts <- as.POSIXct(dt_str, tz = data$timezone)
+
+  pool::poolWithTransaction(pool, function(con) {
+    # 1. Close Old
+    DBI::dbExecute(con, DBI::sqlInterpolate(con, "
+      UPDATE user_profiles SET valid_to = NOW()
+      WHERE user_entity_id = ?id AND valid_to IS NULL
+    ", id = user_id))
+
+    # 2. Insert New
+    DBI::dbExecute(con, DBI::sqlInterpolate(con, "
+      INSERT INTO user_profiles (
+        user_entity_id, display_name, email, birth_timestamp, timezone,
+        city_name, country, lat, lng, profile_photo
+      ) VALUES (?id, ?name, ?email, ?ts, ?tz, ?city, ?country, ?lat, ?lng, ?photo)
+    ",
+                                            id = user_id, name = data$display_name, email = data$email,
+                                            ts = birth_ts, tz = data$timezone, city = data$city_name,
+                                            country = data$country, lat = data$lat, lng = data$lng,
+                                            photo = data$profile_photo %||% NA_character_))
+  })
+}
+
+db_get_library <- function(pool, user_id) {
+  if (is.null(pool) || is.null(user_id)) return(data.frame())
+
+  query <- "SELECT * FROM personal_library WHERE owner_oid = ?id AND valid_to IS NULL ORDER BY name ASC"
+  DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool, query, id = user_id))
+}
+
+db_save_library_entry <- function(pool, user_id, data, entity_id = NULL) {
+  dt_str <- paste(as.character(data$birth_date), as.character(data$birth_time))
+  birth_ts <- as.POSIXct(dt_str, tz = data$timezone)
+
+  pool::poolWithTransaction(pool, function(con) {
+    # Generate or Reuse ID
+    final_entity_id <- entity_id
+    if (is.null(final_entity_id)) {
+      final_entity_id <- DBI::dbGetQuery(con, "SELECT uuid_generate_v4() as id")$id
+    } else {
+      DBI::dbExecute(con, DBI::sqlInterpolate(con, "
+        UPDATE personal_library SET valid_to = NOW()
+        WHERE entity_id = ?eid AND valid_to IS NULL
+      ", eid = final_entity_id))
+    }
+
+    # Insert
+    DBI::dbExecute(con, DBI::sqlInterpolate(con, "
+      INSERT INTO personal_library (
+        entity_id, owner_oid, name, birth_timestamp, timezone, city_name, lat, lng, notes
+      ) VALUES (?eid, ?owner, ?name, ?ts, ?tz, ?city, ?lat, ?lng, ?notes)
+    ",
+                                            eid = final_entity_id, owner = user_id, name = data$name,
+                                            ts = birth_ts, tz = data$timezone, city = data$city_name,
+                                            lat = data$lat, lng = data$lng, notes = data$notes %||% ""))
+  })
+}
+
+# Helper for NULL checks
+`%||%` <- function(a, b) if (!is.null(a)) a else b
+
+
