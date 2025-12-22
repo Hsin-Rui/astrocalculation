@@ -73,7 +73,7 @@ DataManager <- R6::R6Class(
     #' If not, default to Guest/Transit mode.
     #' @param user_id Optional Azure Object ID
     #'
-    initialize = function(){
+    initialize = function(user_id = NULL){
 
       self$horoscope_datetime <- Sys.time()
       self$horoscope_timezone <- "Asia/Taipei"
