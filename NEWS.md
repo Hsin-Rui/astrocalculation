@@ -1,3 +1,7 @@
+# astrocalculation 0.1.5 -- 2025-12-24
+* Expand R6 data manager to handle user profile management
+* First logic saving user profile data
+
 # astrocalculation 0.1.4 -- 2025-12-21
 * initialize postgres db (local db for development)
 

@@ -161,19 +161,28 @@ db_get_profile <- function(pool, user_id) {
 
 #'
 db_save_profile <- function(pool, user_id, data) {
-  # 1. PERORM LOOKUP (Backend Authority)
-  # We ignore data$lat / data$lng from UI if they exist
+
+  # 1. PERFORM LOOKUP
   loc_data <- lookup_city_data(data$country, data$city_name)
 
-  # 2. Prepare Timestamp
-  # data$birth_timestamp comes from airDatepicker (POSIXct)
-  # We ensure it respects the lookup timezone
-  # Note: airDatepicker returns a time. If we want to store it
-  # strictly, we might need to force the timezone.
+  # 2. RESOLVE TIMEZONE (Defensive)
+  final_tz <- loc_data$timezone
+  if (is.null(final_tz) || is.na(final_tz) || final_tz == "") {
+    final_tz <- "UTC"
+  }
 
+  # 3. PREPARE TIMESTAMP (The Fix from Reprex)
   birth_ts <- data$birth_timestamp
-  # Optional: force the timezone if the input was unaware
-  # birth_ts <- lubridate::force_tz(birth_ts, loc_data$timezone)
+  if (is.null(birth_ts)) {
+    birth_ts <- Sys.time()
+  }
+
+  # Apply the timezone strictly to the timestamp object
+  # This ensures 'birth_ts' is a valid POSIXct with the correct TZ attribute
+  birth_ts <- lubridate::force_tz(birth_ts, tzone = final_tz)
+
+  message(sprintf("💾 Saving Profile for %s in %s (TZ: %s)",
+                  user_id, data$city_name, final_tz))
 
   pool::poolWithTransaction(pool, function(con) {
     # Close Old
@@ -216,9 +225,22 @@ db_get_library <- function(pool, user_id) {
 }
 
 db_save_library_entry <- function(pool, user_id, data, entity_id = NULL) {
-  dt_str <- paste(as.character(data$birth_date), as.character(data$birth_time))
-  birth_ts <- as.POSIXct(dt_str, tz = data$timezone)
 
+  # Lookup Location
+  loc_data <- lookup_city_data(data$country, data$city_name)
+
+  # Resolve Timezone
+  final_tz <- loc_data$timezone
+  if (is.null(final_tz) || is.na(final_tz) || final_tz == "") {
+    final_tz <- "UTC"
+  }
+
+  # Prepare Timestamp
+  birth_ts <- data$birth_timestamp
+  if (is.null(birth_ts)) birth_ts <- Sys.time()
+
+  # Force Timezone
+  birth_ts <- lubridate::force_tz(birth_ts, tzone = final_tz)
   pool::poolWithTransaction(pool, function(con) {
     # Generate or Reuse ID
     final_entity_id <- entity_id
@@ -251,6 +273,12 @@ db_save_library_entry <- function(pool, user_id, data, entity_id = NULL) {
 #' @noRd
 lookup_city_data <- function(country, city) {
   # TODO: Connect to astrocalculation internal SQLite DB
+  # Handle NULLs or Empty strings safely
+  if (is.null(country) || is.null(city) || length(country) == 0 || length(city) == 0) {
+    return(list(lat = 0, lng = 0, timezone = "UTC"))
+  }
+
+  # Mock Logic - Extend this or connect to your SQLite DB
   if (country == "Taiwan" && city == "Taipei") {
     return(list(
       lat = 25.0330,
@@ -258,6 +286,7 @@ lookup_city_data <- function(country, city) {
       timezone = "Asia/Taipei"
     ))
   }
-  # Default fallback
+
+  # Default Fallback
   return(list(lat = 0, lng = 0, timezone = "UTC"))
 }
