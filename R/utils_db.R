@@ -55,7 +55,7 @@ close_postgres_db <- function(pool) {
 #'
 #' @importFrom yaml read_yaml
 #' @importFrom pool poolWithTransaction
-#' @export
+#'
 db_initialize_schema <- function(overwrite = FALSE) {
 
   # 1. Connect using your new function name
@@ -159,30 +159,52 @@ db_get_profile <- function(pool, user_id) {
   return(res)
 }
 
-#' @export
+#'
 db_save_profile <- function(pool, user_id, data) {
-  # Combine Date/Time/TZ into UTC Timestamp
-  dt_str <- paste(as.character(data$birth_date), as.character(data$birth_time))
-  birth_ts <- as.POSIXct(dt_str, tz = data$timezone)
+  # 1. PERORM LOOKUP (Backend Authority)
+  # We ignore data$lat / data$lng from UI if they exist
+  loc_data <- lookup_city_data(data$country, data$city_name)
+
+  # 2. Prepare Timestamp
+  # data$birth_timestamp comes from airDatepicker (POSIXct)
+  # We ensure it respects the lookup timezone
+  # Note: airDatepicker returns a time. If we want to store it
+  # strictly, we might need to force the timezone.
+
+  birth_ts <- data$birth_timestamp
+  # Optional: force the timezone if the input was unaware
+  # birth_ts <- lubridate::force_tz(birth_ts, loc_data$timezone)
 
   pool::poolWithTransaction(pool, function(con) {
-    # 1. Close Old
+    # Close Old
     DBI::dbExecute(con, DBI::sqlInterpolate(con, "
       UPDATE user_profiles SET valid_to = NOW()
       WHERE user_entity_id = ?id AND valid_to IS NULL
     ", id = user_id))
 
-    # 2. Insert New
+    # Insert New with LOOKUP values
     DBI::dbExecute(con, DBI::sqlInterpolate(con, "
       INSERT INTO user_profiles (
-        user_entity_id, display_name, email, birth_timestamp, timezone,
+        user_entity_id, display_name, email,
+        birth_timestamp, timezone,
         city_name, country, lat, lng, profile_photo
-      ) VALUES (?id, ?name, ?email, ?ts, ?tz, ?city, ?country, ?lat, ?lng, ?photo)
+      ) VALUES (
+        ?id, ?name, ?email,
+        ?ts, ?tz,
+        ?city, ?country, ?lat, ?lng, ?photo
+      )
     ",
-                                            id = user_id, name = data$display_name, email = data$email,
-                                            ts = birth_ts, tz = data$timezone, city = data$city_name,
-                                            country = data$country, lat = data$lat, lng = data$lng,
-                                            photo = data$profile_photo %||% NA_character_))
+    id = user_id,
+    name = data$display_name,
+    email = data$email,
+    ts = birth_ts,
+    tz = loc_data$timezone,      # <--- FROM LOOKUP
+    city = data$city_name,
+    country = data$country,
+    lat = loc_data$lat,          # <--- FROM LOOKUP
+    lng = loc_data$lng,          # <--- FROM LOOKUP
+    photo = if (is.null(data$profile_photo)) NA_character_ else data$profile_photo
+    ))
   })
 }
 
@@ -224,4 +246,18 @@ db_save_library_entry <- function(pool, user_id, data, entity_id = NULL) {
 # Helper for NULL checks
 `%||%` <- function(a, b) if (!is.null(a)) a else b
 
-
+#' Mock City Lookup
+#' Replace this with your actual SQLite call later.
+#' @noRd
+lookup_city_data <- function(country, city) {
+  # TODO: Connect to astrocalculation internal SQLite DB
+  if (country == "Taiwan" && city == "Taipei") {
+    return(list(
+      lat = 25.0330,
+      lng = 121.5654,
+      timezone = "Asia/Taipei"
+    ))
+  }
+  # Default fallback
+  return(list(lat = 0, lng = 0, timezone = "UTC"))
+}
