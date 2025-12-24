@@ -107,6 +107,7 @@ DataManager <- R6::R6Class(
     },
 
     #' @description Save Profile Wrapper
+    #' @param data_list A list of variables. It should contain display_name (chart name), country, city_name and birth_timestamp
     save_user_profile = function(data_list) {
       if (is.null(self$user_id)) stop("Guest cannot save profile")
 
@@ -118,6 +119,8 @@ DataManager <- R6::R6Class(
     },
 
     #' @description Save Library Entry Wrapper
+    #' @param data_list A list of variables. It should contain display_name (chart name), country, city_name and birth_timestamp, note
+    #' @param entity_id UUID of a specific data entry in the user personal database
     save_chart_to_library = function(data_list, entity_id = NULL) {
       if (is.null(self$user_id)) stop("Guest cannot save to library")
 

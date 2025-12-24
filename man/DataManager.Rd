@@ -36,10 +36,18 @@ A list of dataf rame containing planetary positions and house cusps}
 \item{\code{chart_name}}{(\code{character()})\cr
 name of the chart}
 
+\item{\code{aspect_table}}{a data frame of aspects}
+
 \item{\code{selected_planets}}{(\code{character()})\cr
 name of the chart}
 
-\item{\code{aspect_table}}{a data frame of aspects}
+\item{\code{pool}}{postgres SQL database connection}
+
+\item{\code{user_id}}{ID to identify the user. If NULL, user is Guest}
+
+\item{\code{user_profile}}{The 1-row data frame of self}
+
+\item{\code{user_library}}{The data frame of the user's saved charts}
 }
 \if{html}{\out{</div>}}
 }
@@ -47,7 +55,12 @@ name of the chart}
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-DataManager-new}{\code{DataManager$new()}}
+\item \href{#method-DataManager-refresh_user_data}{\code{DataManager$refresh_user_data()}}
+\item \href{#method-DataManager-save_user_profile}{\code{DataManager$save_user_profile()}}
+\item \href{#method-DataManager-save_chart_to_library}{\code{DataManager$save_chart_to_library()}}
+\item \href{#method-DataManager-load_chart_to_view}{\code{DataManager$load_chart_to_view()}}
 \item \href{#method-DataManager-update_chart}{\code{DataManager$update_chart()}}
+\item \href{#method-DataManager-finalize}{\code{DataManager$finalize()}}
 \item \href{#method-DataManager-clone}{\code{DataManager$clone()}}
 }
 }
@@ -55,11 +68,84 @@ name of the chart}
 \if{html}{\out{<a id="method-DataManager-new"></a>}}
 \if{latex}{\out{\hypertarget{method-DataManager-new}{}}}
 \subsection{Method \code{new()}}{
-Initalize initialize horoscope city, calculate planatery positions & draw charts
+Initialize manager. If user_id is provided, connect to DB and load profile.
+If not, default to Guest/Transit mode.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataManager$new()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$new(user_id = NULL)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{user_id}}{Optional Azure Object ID}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-refresh_user_data"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-refresh_user_data}{}}}
+\subsection{Method \code{refresh_user_data()}}{
+Refresh profile and library from DB
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$refresh_user_data()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-save_user_profile"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-save_user_profile}{}}}
+\subsection{Method \code{save_user_profile()}}{
+Save Profile Wrapper
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$save_user_profile(data_list)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{data_list}}{A list of variables. It should contain display_name (chart name), country, city_name and birth_timestamp}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-save_chart_to_library"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-save_chart_to_library}{}}}
+\subsection{Method \code{save_chart_to_library()}}{
+Save Library Entry Wrapper
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$save_chart_to_library(data_list, entity_id = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{data_list}}{A list of variables. It should contain display_name (chart name), country, city_name and birth_timestamp, note}
+
+\item{\code{entity_id}}{UUID of a specific data entry in the user personal database}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-load_chart_to_view"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-load_chart_to_view}{}}}
+\subsection{Method \code{load_chart_to_view()}}{
+Load a chart from Profile or Library into the Calculation Engine
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$load_chart_to_view(source = "profile", library_id = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{source}}{"profile" or "library"}
+
+\item{\code{library_id}}{Optional ID if source is library}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DataManager-update_chart"></a>}}
@@ -68,6 +154,16 @@ Initalize initialize horoscope city, calculate planatery positions & draw charts
 update horoscope. Calculate planetary positions, draw chart
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{DataManager$update_chart()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-finalize"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-finalize}{}}}
+\subsection{Method \code{finalize()}}{
+Cleanup
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$finalize()}\if{html}{\out{</div>}}
 }
 
 }

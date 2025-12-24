@@ -72,18 +72,18 @@ db_initialize_schema <- function(overwrite = FALSE) {
   }
 
   defs <- yaml::read_yaml(schema_path)
-  message("📖 Reading schema config from: ", schema_path)
+  message("Reading schema config from: ", schema_path)
 
   # 3. Execute Transaction
   pool::poolWithTransaction(pool, function(con) {
 
     # A. OPTIONAL: Drop Tables if overwrite requested
     if (overwrite) {
-      message("⚠️ Overwrite enabled: Dropping existing tables...")
+      message("Overwrite enabled: Dropping existing tables...")
       for (table_name in names(defs$tables)) {
         # CASCADE ensures dependent tables (like personal_library) are dropped too
         DBI::dbExecute(con, sprintf("DROP TABLE IF EXISTS %s CASCADE", table_name))
-        message(sprintf("🗑️ Dropped table: %s", table_name))
+        message(sprintf("Dropped table: %s", table_name))
       }
     }
 
@@ -125,7 +125,7 @@ db_initialize_schema <- function(overwrite = FALSE) {
       query <- sprintf("CREATE TABLE IF NOT EXISTS %s (\n  %s\n);", table_name, all_defs)
 
       DBI::dbExecute(con, query)
-      message(sprintf("✅ Table verified: %s", table_name))
+      message(sprintf("able verified: %s", table_name))
 
       # D. Create Indices
       if (!is.null(tbl$indices)) {
@@ -139,7 +139,7 @@ db_initialize_schema <- function(overwrite = FALSE) {
     }
   })
 
-  message("🚀 Schema migration complete.")
+  message("Schema migration complete.")
 }
 
 #' @title Database Service Functions
@@ -147,7 +147,7 @@ db_initialize_schema <- function(overwrite = FALSE) {
 #'
 #' @param pool The database connection pool
 #' @param user_id The unique Azure Object ID
-#' @param ... Specific data fields (name, birth_date, etc.)
+#'
 
 db_get_profile <- function(pool, user_id) {
   if (is.null(pool) || is.null(user_id)) return(NULL)
@@ -181,7 +181,7 @@ db_save_profile <- function(pool, user_id, data) {
   # This ensures 'birth_ts' is a valid POSIXct with the correct TZ attribute
   birth_ts <- lubridate::force_tz(birth_ts, tzone = final_tz)
 
-  message(sprintf("💾 Saving Profile for %s in %s (TZ: %s)",
+  message(sprintf("Saving Profile for %s in %s (TZ: %s)",
                   user_id, data$city_name, final_tz))
 
   pool::poolWithTransaction(pool, function(con) {
@@ -259,9 +259,9 @@ db_save_library_entry <- function(pool, user_id, data, entity_id = NULL) {
         entity_id, owner_oid, name, birth_timestamp, timezone, city_name, lat, lng, notes
       ) VALUES (?eid, ?owner, ?name, ?ts, ?tz, ?city, ?lat, ?lng, ?notes)
     ",
-                                            eid = final_entity_id, owner = user_id, name = data$name,
-                                            ts = birth_ts, tz = data$timezone, city = data$city_name,
-                                            lat = data$lat, lng = data$lng, notes = data$notes %||% ""))
+     eid = final_entity_id, owner = user_id, name = data$name,
+     ts = birth_ts, tz = final_tz, city = data$city_name,
+     lat = loc_data$lat, lng = loc_data$lng, notes = data$notes %||% ""))
   })
 }
 
