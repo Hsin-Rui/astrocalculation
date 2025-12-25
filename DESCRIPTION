@@ -31,7 +31,9 @@ Imports:
     RSQLite,
     pool,
     RPostgres,
-    yaml
+    yaml,
+    uuid,
+    sodium
 Date: 2025-07-27
 Suggests: 
     dbplyr

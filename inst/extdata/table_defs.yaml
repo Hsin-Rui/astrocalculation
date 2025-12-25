@@ -5,9 +5,29 @@ config:
     - "uuid-ossp"
 
 tables:
+  auth_credentials:
+    title: "Auth Credentials"
+    description: "The Single Source of Truth for User Identity (Account)."
+    columns:
+      user_entity_id:
+        type: "VARCHAR(255) PRIMARY KEY"
+        description: "The persistent UUID for this account."
+      email:
+        type: "VARCHAR(255) NOT NULL UNIQUE"
+        description: "Login email. Must be unique system-wide."
+      password_hash:
+        type: "VARCHAR(512) NOT NULL"
+      salt:
+        type: "VARCHAR(255) NOT NULL"
+      last_login:
+        type: "TIMESTAMP WITH TIME ZONE"
+      created_at:
+        type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
+    indices:
+      - email
   user_profiles:
     title: "User Profiles"
-    description: "Stores the user's identity, profile settings, and their primary 'Self' chart data."
+    description: "Versioning of user details (Name, Birth Data, Photo)."
     columns:
       entry_id:
         type: "UUID PRIMARY KEY DEFAULT uuid_generate_v4()"
@@ -16,7 +36,7 @@ tables:
       user_entity_id:
         type: "VARCHAR(255) NOT NULL"
         title: "User Entity ID"
-        description: "The immutable Auth ID provided by Azure Entra ID."
+        description: "Links to auth_credentials.user_entity_id."
       valid_from:
         type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
         title: "Valid From"
@@ -25,10 +45,6 @@ tables:
         type: "TIMESTAMP WITH TIME ZONE"
         title: "Valid To"
         description: "End of validity."
-      email:
-        type: "VARCHAR(255)"
-        title: "Email"
-        description: "User contact email."
       display_name:
         type: "VARCHAR(255)"
         title: "Display Name"
@@ -65,28 +81,12 @@ tables:
         type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
         title: "Created At"
         description: "Record creation timestamp."
-    indices:
-      - user_entity_id
-
-  auth_credentials:
-    title: "Auth Credentials"
-    description: "Stores hashed passwords for ShinyNative Auth."
-    columns:
-      user_entity_id:
-        type: "VARCHAR(255) PRIMARY KEY"
-      password_hash:
-        type: "VARCHAR(512) NOT NULL"
-      salt:
-        type: "VARCHAR(255) NOT NULL"
-      last_login:
-        type: "TIMESTAMP WITH TIME ZONE"
-      created_at:
-        type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
     foreign_keys:
       - column: user_entity_id
-        references: user_profiles(user_entity_id)
+        references: auth_credentials(user_entity_id)
         on_delete: CASCADE
-
+    indices:
+      - user_entity_id
   app_sessions:
     title: "Active Sessions"
     description: "Manages active login sessions."
@@ -101,7 +101,7 @@ tables:
         type: "TIMESTAMP WITH TIME ZONE NOT NULL"
     foreign_keys:
       - column: user_entity_id
-        references: user_profiles(user_entity_id)
+        references: auth_credentials(user_entity_id)
         on_delete: CASCADE
 
   personal_library:
@@ -116,10 +116,10 @@ tables:
         type: "UUID NOT NULL"
         title: "Entity ID"
         description: "The persistent ID of the chart."
-      owner_oid:
+      user_entity_id:
         type: "VARCHAR(255) NOT NULL"
-        title: "Owner ID"
-        description: "Links to user_profiles.user_entity_id (Logical Link)."
+        title: "User entity ID"
+        description: "Links to auth_credentials.user_entity_id."
       valid_from:
         type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
         title: "Valid From"
@@ -164,11 +164,14 @@ tables:
         type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
         title: "Created At"
         description: "Creation timestamp."
+    foreign_keys:
+      - column: user_entity_id
+        references: auth_credentials(user_entity_id)
+        on_delete: CASCADE
     indices:
       - entity_id
-      - owner_oid
-
-app_logs:
+      - user_entity_id
+  app_logs:
     title: "Application Logs"
     description: "Structured logs for debugging and errors."
     columns:
@@ -182,8 +185,10 @@ app_logs:
         type: "TEXT"
       context_json:
         type: "JSONB"
-      user_id:
-        type: "VARCHAR(255)"
+      user_entity_id:
+        type: "VARCHAR(255)" # Removed NOT NULL
+        title: "User Entity ID"
+        description: "Optional link to auth_credentials."
     indices:
       - timestamp
       - level

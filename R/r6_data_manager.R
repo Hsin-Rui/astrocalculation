@@ -96,7 +96,45 @@ DataManager <- R6::R6Class(
 
     },
 
-    # 2. Methods: State Management ---------------------
+    # 2. Methods: Auth Integration ---------------------
+
+    #' @description Register a new user
+    #' @return The new user_id if successful, throws error otherwise
+    register = function(user_id, email, password, display_name) {
+      # Delegates to the logic function
+      new_id <- auth_register_user(self$pool, user_id, email, password, display_name)
+      return(new_id)
+    },
+
+    #' @description Login User
+    #' @param email User email
+    #' @param password User password
+    #' @return Session Token (String) if success, NULL if failed
+    login = function(email, password) {
+      verified_id <- auth_verify_user(self$pool, email, password)
+
+      if (!is.null(verified_id)) {
+        self$user_id <- verified_id
+        self$refresh_user_data()
+
+        # Generate Session Token for Cookie
+        token <- auth_create_session(self$pool, verified_id)
+        return(token)
+      } else {
+        return(NULL)
+      }
+    },
+
+    #' @description Logout
+    logout = function() {
+      self$user_id <- NULL
+      self$user_profile <- NULL
+      self$user_library <- NULL
+      # Reset chart to default transit? Optional.
+    },
+
+    # 3. Methods: State Management ---------------------
+
     #' @description Refresh profile and library from DB
     refresh_user_data = function() {
       if (is.null(self$user_id)) return()
@@ -166,7 +204,7 @@ DataManager <- R6::R6Class(
       }
     },
 
-    # 3. Methods: Calculation ------------------------------------
+    # 4. Methods: Calculation ------------------------------------
 
     #' @description
     #' update horoscope. Calculate planetary positions, draw chart
