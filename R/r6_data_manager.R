@@ -218,8 +218,11 @@ DataManager <- R6::R6Class(
       self$planet_position$planetary_position <- data
       self$chart <- draw_whole_sign_chart(data, self$chart_name, self$horoscope_datetime, self$horoscope_city, self$horoscope_country, self$horoscope_timezone, self$aspect_table)
 
-    },
+    }
+  ),
 
+  # 5. Private Methods -----------------------------------------
+  private = list(
     #' @description Cleanup
     finalize = function() {
       if (!is.null(self$pool)) close_postgres_db(self$pool)
