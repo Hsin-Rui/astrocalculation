@@ -33,12 +33,17 @@ connect_cities_db <- function() {
 connect_postgres_db <- function() {
 
   # 1. Read Credentials
-  db_host <- Sys.getenv("DB_HOST")
+  #db_host <- Sys.getenv("DB_HOST")
+  db_host <- Sys.getenv("PGHOST")
   db_port <- Sys.getenv("DB_PORT")
-  db_name <- Sys.getenv("DB_NAME")
-  db_user <- Sys.getenv("DB_USER")
-  db_pass <- Sys.getenv("DB_PASSWORD")
-  ssl_mode <- Sys.getenv("DB_SSL_MODE", "require")
+  #db_name <- Sys.getenv("DB_NAME")
+  db_name <- Sys.getenv("PGDATABASE")
+  #db_user <- Sys.getenv("DB_USER")
+  db_user <- Sys.getenv("PGUSER")
+  #db_pass <- Sys.getenv("DB_PASSWORD")
+  db_pass <- Sys.getenv("PGPASSWORD")
+  #ssl_mode <- Sys.getenv("DB_SSL_MODE", "require")
+  ssl_mode <- Sys.getenv("PGSSLMODE", "require")
 
   # 2. Check for missing config
   if (db_host == "") {
