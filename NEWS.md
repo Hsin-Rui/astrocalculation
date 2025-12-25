@@ -1,3 +1,6 @@
+# astrocalculation 0.1.6.9001 -- 2025-12-25
+* Bug fix in database logic (owner_id --> user_entity_id)
+
 # astrocalculation 0.1.6.9000 -- 2025-12-25
 * Correct initialization of database connection in R6 object
 
