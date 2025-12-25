@@ -17,8 +17,6 @@ tables:
         type: "VARCHAR(255) NOT NULL"
         title: "User Entity ID"
         description: "The immutable Auth ID provided by Azure Entra ID."
-
-      # Validity Window
       valid_from:
         type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
         title: "Valid From"
@@ -27,8 +25,6 @@ tables:
         type: "TIMESTAMP WITH TIME ZONE"
         title: "Valid To"
         description: "End of validity."
-
-      # Data
       email:
         type: "VARCHAR(255)"
         title: "Email"
@@ -69,9 +65,44 @@ tables:
         type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
         title: "Created At"
         description: "Record creation timestamp."
-
     indices:
       - user_entity_id
+
+  auth_credentials:
+    title: "Auth Credentials"
+    description: "Stores hashed passwords for ShinyNative Auth."
+    columns:
+      user_entity_id:
+        type: "VARCHAR(255) PRIMARY KEY"
+      password_hash:
+        type: "VARCHAR(512) NOT NULL"
+      salt:
+        type: "VARCHAR(255) NOT NULL"
+      last_login:
+        type: "TIMESTAMP WITH TIME ZONE"
+      created_at:
+        type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
+    foreign_keys:
+      - column: user_entity_id
+        references: user_profiles(user_entity_id)
+        on_delete: CASCADE
+
+  app_sessions:
+    title: "Active Sessions"
+    description: "Manages active login sessions."
+    columns:
+      session_token:
+        type: "VARCHAR(255) PRIMARY KEY"
+      user_entity_id:
+        type: "VARCHAR(255) NOT NULL"
+      created_at:
+        type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
+      expires_at:
+        type: "TIMESTAMP WITH TIME ZONE NOT NULL"
+    foreign_keys:
+      - column: user_entity_id
+        references: user_profiles(user_entity_id)
+        on_delete: CASCADE
 
   personal_library:
     title: "Personal Library"
@@ -89,8 +120,6 @@ tables:
         type: "VARCHAR(255) NOT NULL"
         title: "Owner ID"
         description: "Links to user_profiles.user_entity_id (Logical Link)."
-
-      # Validity Window
       valid_from:
         type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
         title: "Valid From"
@@ -99,8 +128,6 @@ tables:
         type: "TIMESTAMP WITH TIME ZONE"
         title: "Valid To"
         description: "End of validity."
-
-      # Data
       name:
         type: "VARCHAR(255) NOT NULL"
         title: "Name"
@@ -137,9 +164,26 @@ tables:
         type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
         title: "Created At"
         description: "Creation timestamp."
-
-    # REMOVED: foreign_keys section (Conflict with History/Uniqueness)
-
     indices:
       - entity_id
       - owner_oid
+
+app_logs:
+    title: "Application Logs"
+    description: "Structured logs for debugging and errors."
+    columns:
+      log_id:
+        type: "UUID PRIMARY KEY DEFAULT uuid_generate_v4()"
+      timestamp:
+        type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
+      level:
+        type: "VARCHAR(50)"
+      message:
+        type: "TEXT"
+      context_json:
+        type: "JSONB"
+      user_id:
+        type: "VARCHAR(255)"
+    indices:
+      - timestamp
+      - level
