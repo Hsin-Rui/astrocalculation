@@ -76,7 +76,7 @@ db_save_profile <- function(pool, user_id, data) {
 db_get_library <- function(pool, user_id) {
   if (is.null(pool) || is.null(user_id)) return(data.frame())
 
-  query <- "SELECT * FROM personal_library WHERE owner_oid = ?id AND valid_to IS NULL ORDER BY name ASC"
+  query <- "SELECT * FROM personal_library WHERE user_entity_id = ?id AND valid_to IS NULL ORDER BY name ASC"
   DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool, query, id = user_id))
 }
 
@@ -112,7 +112,7 @@ db_save_library_entry <- function(pool, user_id, data, entity_id = NULL) {
     # Insert
     DBI::dbExecute(con, DBI::sqlInterpolate(con, "
       INSERT INTO personal_library (
-        entity_id, owner_oid, name, birth_timestamp, timezone, city_name, lat, lng, notes
+        entity_id, user_entity_id, name, birth_timestamp, timezone, city_name, lat, lng, notes
       ) VALUES (?eid, ?owner, ?name, ?ts, ?tz, ?city, ?lat, ?lng, ?notes)
     ",
      eid = final_entity_id, owner = user_id, name = data$name,
