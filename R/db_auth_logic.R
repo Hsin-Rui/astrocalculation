@@ -9,7 +9,7 @@
 #'
 #' @importFrom sodium password_store password_verify
 #' @importFrom DBI dbGetQuery dbExecute sqlInterpolate
-#' @export
+#'
 
 auth_register_user <- function(pool, user_id, email, password, display_name) {
   # 1. Validation
@@ -61,12 +61,14 @@ auth_register_user <- function(pool, user_id, email, password, display_name) {
   return(user_id)
 }
 
-#' @export
-auth_verify_user <- function(pool, email, password) {
-  # 1. Find User & Hash by Email
+#'
+auth_verify_user <- function(pool, login_id, password) {
+  # 1. Find User & Hash by Email OR User ID
+  # We use the same input for both checks (OR condition)
   creds <- DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool,
-                                                     "SELECT user_entity_id, password_hash FROM auth_credentials WHERE email = ?email",
-                                                     email = email
+                                                     "SELECT user_entity_id, password_hash FROM auth_credentials
+     WHERE email = ?input OR user_entity_id = ?input",
+                                                     input = login_id
   ))
 
   if (nrow(creds) == 0) return(NULL)
@@ -87,7 +89,7 @@ auth_verify_user <- function(pool, email, password) {
   }
 }
 
-#' @export
+#'
 auth_create_session <- function(pool, user_id, duration_days = 7) {
   token <- uuid::UUIDgenerate()
   DBI::dbExecute(pool, DBI::sqlInterpolate(pool, "
@@ -97,7 +99,7 @@ auth_create_session <- function(pool, user_id, duration_days = 7) {
   return(token)
 }
 
-#' @export
+#'
 auth_validate_session <- function(pool, token) {
   if (is.null(token) || token == "") return(NULL)
   res <- DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool, "

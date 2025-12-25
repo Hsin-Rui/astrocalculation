@@ -99,6 +99,10 @@ DataManager <- R6::R6Class(
     # 2. Methods: Auth Integration ---------------------
 
     #' @description Register a new user
+    #' @param user_id user ID (user chosen)
+    #' @param email user ID
+    #' @param password user password
+    #' @param display_name User name to be displayed in chart
     #' @return The new user_id if successful, throws error otherwise
     register = function(user_id, email, password, display_name) {
       # Delegates to the logic function
@@ -106,18 +110,18 @@ DataManager <- R6::R6Class(
       return(new_id)
     },
 
-    #' @description Login User
-    #' @param email User email
+    #' @description Login User (Flexible)
+    #' @param login_id User email OR User ID
     #' @param password User password
     #' @return Session Token (String) if success, NULL if failed
-    login = function(email, password) {
-      verified_id <- auth_verify_user(self$pool, email, password)
+    login = function(login_id, password) {
+      verified_id <- auth_verify_user(self$pool, login_id, password)
 
       if (!is.null(verified_id)) {
         self$user_id <- verified_id
         self$refresh_user_data()
 
-        # Generate Session Token for Cookie
+        # Generate Session Token
         token <- auth_create_session(self$pool, verified_id)
         return(token)
       } else {
@@ -223,7 +227,6 @@ DataManager <- R6::R6Class(
 
   # 5. Private Methods -----------------------------------------
   private = list(
-    #' @description Cleanup
     finalize = function() {
       if (!is.null(self$pool)) close_postgres_db(self$pool)
     }
