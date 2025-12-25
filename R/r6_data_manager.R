@@ -83,10 +83,12 @@ DataManager <- R6::R6Class(
       self$horoscope_country <- "Taiwan"
       self$chart_name <- "Transits"
 
+      # 2. Connect to DB (MUST RUN EVERY TIME)
+      self$pool <- connect_postgres_db()
+
       # Check Auth
       if (!is.null(user_id)) {
         self$user_id <- user_id
-        self$pool <- connect_postgres_db()
 
         # Load Data using Service Function
         self$refresh_user_data()

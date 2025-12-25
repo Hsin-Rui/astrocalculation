@@ -1,3 +1,6 @@
+# astrocalculation 0.1.6.9000 -- 2025-12-25
+* Correct initialization of database connection in R6 object
+
 # astrocalculation 0.1.6 -- 2025-12-25
 * Extend database schema for handling user registration, login and logs
 * Implement user registration and login logic
