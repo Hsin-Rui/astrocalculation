@@ -96,7 +96,49 @@ DataManager <- R6::R6Class(
 
     },
 
-    # 2. Methods: State Management ---------------------
+    # 2. Methods: Auth Integration ---------------------
+
+    #' @description Register a new user
+    #' @param user_id user ID (user chosen)
+    #' @param email user ID
+    #' @param password user password
+    #' @param display_name User name to be displayed in chart
+    #' @return The new user_id if successful, throws error otherwise
+    register = function(user_id, email, password, display_name) {
+      # Delegates to the logic function
+      new_id <- auth_register_user(self$pool, user_id, email, password, display_name)
+      return(new_id)
+    },
+
+    #' @description Login User (Flexible)
+    #' @param login_id User email OR User ID
+    #' @param password User password
+    #' @return Session Token (String) if success, NULL if failed
+    login = function(login_id, password) {
+      verified_id <- auth_verify_user(self$pool, login_id, password)
+
+      if (!is.null(verified_id)) {
+        self$user_id <- verified_id
+        self$refresh_user_data()
+
+        # Generate Session Token
+        token <- auth_create_session(self$pool, verified_id)
+        return(token)
+      } else {
+        return(NULL)
+      }
+    },
+
+    #' @description Logout
+    logout = function() {
+      self$user_id <- NULL
+      self$user_profile <- NULL
+      self$user_library <- NULL
+      # Reset chart to default transit? Optional.
+    },
+
+    # 3. Methods: State Management ---------------------
+
     #' @description Refresh profile and library from DB
     refresh_user_data = function() {
       if (is.null(self$user_id)) return()
@@ -166,7 +208,7 @@ DataManager <- R6::R6Class(
       }
     },
 
-    # 3. Methods: Calculation ------------------------------------
+    # 4. Methods: Calculation ------------------------------------
 
     #' @description
     #' update horoscope. Calculate planetary positions, draw chart
@@ -180,9 +222,11 @@ DataManager <- R6::R6Class(
       self$planet_position$planetary_position <- data
       self$chart <- draw_whole_sign_chart(data, self$chart_name, self$horoscope_datetime, self$horoscope_city, self$horoscope_country, self$horoscope_timezone, self$aspect_table)
 
-    },
+    }
+  ),
 
-    #' @description Cleanup
+  # 5. Private Methods -----------------------------------------
+  private = list(
     finalize = function() {
       if (!is.null(self$pool)) close_postgres_db(self$pool)
     }

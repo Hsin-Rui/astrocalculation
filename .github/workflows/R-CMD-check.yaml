@@ -28,6 +28,12 @@ jobs:
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
+      PGHOST: ${{ secrets.PGHOST }}
+      PGDATABASE: ${{ secrets.PGDATABASE }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      PGUSER: ${{ secrets.PGUSER }}
+      PGPASSWORD: ${{ secrets.PGPASSWORD }}
+      PGSSLMODE: ${{ secrets.PGSSLMODE }}
 
     steps:
       - uses: actions/checkout@v4

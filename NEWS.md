@@ -1,3 +1,7 @@
+# astrocalculation 0.1.6 -- 2025-12-25
+* Extend database schema for handling user registration, login and logs
+* Implement user registration and login logic
+
 # astrocalculation 0.1.5 -- 2025-12-24
 * Expand R6 data manager to handle user profile management
 * First logic saving user profile data
