@@ -18,7 +18,13 @@ draw_chart_template <- function(style="whole_sign"){
   inner_circle <- get_circle_coords(r=0.5, length.out=1080)
   inner_circle2 <- get_circle_coords(r=0.4, length.out=1080)
 
-  mytheme<- list(theme_void()+theme(panel.background = element_rect(colour= "white", fill= "white")))
+  mytheme <- list(
+    theme_void() +
+      theme(
+        panel.background = element_rect(fill = "white", colour = "white"),
+        plot.background  = element_rect(fill = "white", colour = "white")
+      )
+  )
 
   ## 2. define sign division & whole sign house cusps
 
@@ -269,8 +275,7 @@ draw_whole_sign_chart <- function(planet_position, chart_name, date, city, count
       geom_text(aes(x=c(-0.99, -0.99, -0.99, -0.99), y=c(1.23, 1.16, 1.09, 1.02),label=c(formatted_date, time, city, country)),
                 vjust="inward", hjust="inward", size=3.5)+
       ## aspect lines
-      geom_segment(data = aspect_table, aes(x=x, xend=x_end, y=y, yend=y_end), color=aspect_table$color) +
-      get_blank_theme()
+      geom_segment(data = aspect_table, aes(x=x, xend=x_end, y=y, yend=y_end), color=aspect_table$color)
 
     )
 }
