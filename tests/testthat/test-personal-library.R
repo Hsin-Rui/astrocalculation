@@ -1,16 +1,35 @@
 test_that("Story 3: Personal Library (Save, Load, Delete)", {
 
   # 1. Setup: Create a User
-  pool <- connect_postgres_db()
+  # --- Connection Logic with Skip ---
+  # Attempt to connect and capture potential errors
+  pool <- tryCatch({
+    connect_postgres_db()
+  }, error = function(e) {
+    return(NULL) # Return NULL if connection fails
+  })
+
+  # Skip the entire test if the pool is NULL or the connection is invalid
+  skip_if(is.null(pool), "Postgres connection could not be established; skipping test.")
+
   on.exit(pool::poolClose(pool))
 
   test_email <- "lib@test.com"
 
   # Cleanup (Fix: Use sqlInterpolate + Delete by Email)
+  # Cleanup before test, in case of previous failed run
   if(DBI::dbExistsTable(pool, "auth_credentials")) {
     sql <- DBI::sqlInterpolate(pool, "DELETE FROM auth_credentials WHERE email = ?email", email = test_email)
     DBI::dbExecute(pool, sql)
   }
+
+  # Ensure cleanup happens after test execution, even on failure
+  on.exit({
+    if(DBI::dbExistsTable(pool, "auth_credentials")) {
+      sql <- DBI::sqlInterpolate(pool, "DELETE FROM auth_credentials WHERE email = ?email", email = test_email)
+      DBI::dbExecute(pool, sql)
+    }
+  }, add = TRUE)
 
   user_oid <- auth_register_user(pool, "test_lib_user", test_email, "password", "LibUser")
 
