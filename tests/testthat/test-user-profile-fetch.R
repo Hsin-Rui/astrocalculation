@@ -10,7 +10,6 @@ test_that("Story 2: Profile Fetching (Join Logic)", {
   # Skip the entire test if the pool is NULL or the connection is invalid
   skip_if(is.null(pool), "Postgres connection could not be established; skipping test.")
 
-  on.exit(pool::poolClose(pool))
 
   # 1. Setup
   test_email <- "profile_test@example.com"
@@ -24,10 +23,15 @@ test_that("Story 2: Profile Fetching (Join Logic)", {
 
   # Ensure cleanup happens after test execution, even on failure
   on.exit({
-    if(DBI::dbExistsTable(pool, "auth_credentials")) {
-      sql <- DBI::sqlInterpolate(pool, "DELETE FROM auth_credentials WHERE email = ?email", email = test_email)
-      DBI::dbExecute(pool, sql)
-    }
+    try({
+      if(DBI::dbExistsTable(pool, "auth_credentials")) {
+        sql <- DBI::sqlInterpolate(pool, "DELETE FROM auth_credentials WHERE email = ?email", email = test_email)
+        DBI::dbExecute(pool, sql)
+      }
+    }, silent = TRUE)
+
+    # 2. Finally, close the pool
+    pool::poolClose(pool)
   }, add = TRUE)
 
   user_oid <- auth_register_user(pool, "prof_test", test_email, "password", "ProfileTester")

@@ -12,7 +12,6 @@ test_that("Story 3: Personal Library (Save, Load, Delete)", {
   # Skip the entire test if the pool is NULL or the connection is invalid
   skip_if(is.null(pool), "Postgres connection could not be established; skipping test.")
 
-  on.exit(pool::poolClose(pool))
 
   test_email <- "lib@test.com"
 
@@ -25,10 +24,12 @@ test_that("Story 3: Personal Library (Save, Load, Delete)", {
 
   # Ensure cleanup happens after test execution, even on failure
   on.exit({
+    try({
     if(DBI::dbExistsTable(pool, "auth_credentials")) {
       sql <- DBI::sqlInterpolate(pool, "DELETE FROM auth_credentials WHERE email = ?email", email = test_email)
       DBI::dbExecute(pool, sql)
-    }
+    }}, silent = TRUE)
+    pool::poolClose(pool)
   }, add = TRUE)
 
   user_oid <- auth_register_user(pool, "test_lib_user", test_email, "password", "LibUser")
