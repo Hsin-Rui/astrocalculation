@@ -1,3 +1,6 @@
+# astrocalculation 0.1.6.9003 -- 2025-12-26
+* Bug fix in db_utils (save user profile and get profile)
+
 # astrocalculation 0.1.6.9002 -- 2025-12-26
 * Implement session authorization in R6 class
 
