@@ -8,7 +8,13 @@
 db_get_profile <- function(pool, user_id) {
   if (is.null(pool) || is.null(user_id)) return(NULL)
 
-  query <- "SELECT * FROM user_profiles WHERE user_entity_id = ?id AND valid_to IS NULL LIMIT 1"
+  query <- "
+    SELECT p.*, a.email
+    FROM user_profiles p
+    LEFT JOIN auth_credentials a ON p.user_entity_id = a.user_entity_id
+    WHERE p.user_entity_id = ?id AND p.valid_to IS NULL
+    LIMIT 1
+  "
   res <- DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool, query, id = user_id))
 
   if (nrow(res) == 0) return(NULL)
@@ -47,28 +53,30 @@ db_save_profile <- function(pool, user_id, data) {
       WHERE user_entity_id = ?id AND valid_to IS NULL
     ", id = user_id))
 
-    # Insert New with LOOKUP values
+    # Insert New Profile (WITHOUT EMAIL)
+    # Note: We do NOT update email here. Email is immutable in auth_credentials.
     DBI::dbExecute(con, DBI::sqlInterpolate(con, "
       INSERT INTO user_profiles (
-        user_entity_id, display_name, email,
+        user_entity_id, display_name,
         birth_timestamp, timezone,
-        city_name, country, lat, lng, profile_photo
+        city_name, country, lat, lng, profile_photo,
+        valid_from
       ) VALUES (
-        ?id, ?name, ?email,
+        ?id, ?name,
         ?ts, ?tz,
-        ?city, ?country, ?lat, ?lng, ?photo
+        ?city, ?country, ?lat, ?lng, ?photo,
+        NOW()
       )
     ",
-    id = user_id,
-    name = data$display_name,
-    email = data$email,
-    ts = birth_ts,
-    tz = loc_data$timezone,      # <--- FROM LOOKUP
-    city = data$city_name,
-    country = data$country,
-    lat = loc_data$lat,          # <--- FROM LOOKUP
-    lng = loc_data$lng,          # <--- FROM LOOKUP
-    photo = if (is.null(data$profile_photo)) NA_character_ else data$profile_photo
+                                            id = user_id,
+                                            name = data$display_name,
+                                            ts = birth_ts,
+                                            tz = final_tz,
+                                            city = data$city_name,
+                                            country = data$country,
+                                            lat = loc_data$lat,
+                                            lng = loc_data$lng,
+                                            photo = if (is.null(data$profile_photo)) NA_character_ else data$profile_photo
     ))
   })
 }
