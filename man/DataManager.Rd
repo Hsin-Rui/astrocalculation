@@ -56,12 +56,14 @@ name of the chart}
 \itemize{
 \item \href{#method-DataManager-new}{\code{DataManager$new()}}
 \item \href{#method-DataManager-register}{\code{DataManager$register()}}
+\item \href{#method-DataManager-validate_session}{\code{DataManager$validate_session()}}
 \item \href{#method-DataManager-login}{\code{DataManager$login()}}
 \item \href{#method-DataManager-logout}{\code{DataManager$logout()}}
 \item \href{#method-DataManager-refresh_user_data}{\code{DataManager$refresh_user_data()}}
 \item \href{#method-DataManager-save_user_profile}{\code{DataManager$save_user_profile()}}
 \item \href{#method-DataManager-save_chart_to_library}{\code{DataManager$save_chart_to_library()}}
 \item \href{#method-DataManager-load_chart_to_view}{\code{DataManager$load_chart_to_view()}}
+\item \href{#method-DataManager-delete_chart_from_library}{\code{DataManager$delete_chart_from_library()}}
 \item \href{#method-DataManager-update_chart}{\code{DataManager$update_chart()}}
 \item \href{#method-DataManager-clone}{\code{DataManager$clone()}}
 }
@@ -108,6 +110,26 @@ Register a new user
 }
 \subsection{Returns}{
 The new user_id if successful, throws error otherwise
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-validate_session"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-validate_session}{}}}
+\subsection{Method \code{validate_session()}}{
+Validate Session Token
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$validate_session(token)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{token}}{The session cookie string}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+user_id if valid, NULL otherwise
 }
 }
 \if{html}{\out{<hr>}}
@@ -203,6 +225,23 @@ Load a chart from Profile or Library into the Calculation Engine
 \item{\code{source}}{"profile" or "library"}
 
 \item{\code{library_id}}{Optional ID if source is library}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-delete_chart_from_library"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-delete_chart_from_library}{}}}
+\subsection{Method \code{delete_chart_from_library()}}{
+Delete a chart from library
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$delete_chart_from_library(entity_id)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{entity_id}}{uuid of the chart}
 }
 \if{html}{\out{</div>}}
 }

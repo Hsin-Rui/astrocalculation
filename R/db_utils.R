@@ -90,6 +90,11 @@ db_get_library <- function(pool, user_id) {
 
 #' Handles "SCD Type 2" updates (if editing) or creates new entries.
 #'
+#' @param pool database connection (postgres pool)
+#' @param user_id username
+#' @param data list of data to save chart (timestamp, country, city, chart name)
+#' @param entity_id uuid of the chart
+#'
 db_save_library_entry <- function(pool, user_id, data, entity_id = NULL) {
 
   if (is.null(data$birth_timestamp)) stop("Birth timestamp is required")

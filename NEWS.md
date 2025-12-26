@@ -1,3 +1,7 @@
+# astrocalculation 0.1.7 -- 2025-12-26
+* Expand the R6 object and db utils to allow delete chart from user library
+* Implemented unit tests for user library
+
 # astrocalculation 0.1.6.9003 -- 2025-12-26
 * Bug fix in db_utils (save user profile and get profile)
 

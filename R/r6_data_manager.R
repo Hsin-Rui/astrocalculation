@@ -227,6 +227,14 @@ DataManager <- R6::R6Class(
       }
     },
 
+    #' @description Delete a chart from library
+    #' @param entity_id uuid of the chart
+    delete_chart_from_library = function(entity_id) {
+      if (is.null(self$user_id)) stop("Guest cannot delete from library")
+      db_delete_library_entry(self$pool, entity_id)
+      self$refresh_user_data()
+    },
+
     # 4. Methods: Calculation ------------------------------------
 
     #' @description
