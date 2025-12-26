@@ -68,15 +68,15 @@ db_save_profile <- function(pool, user_id, data) {
         NOW()
       )
     ",
-                                            id = user_id,
-                                            name = data$display_name,
-                                            ts = birth_ts,
-                                            tz = final_tz,
-                                            city = data$city_name,
-                                            country = data$country,
-                                            lat = loc_data$lat,
-                                            lng = loc_data$lng,
-                                            photo = if (is.null(data$profile_photo)) NA_character_ else data$profile_photo
+     id = user_id,
+     name = data$display_name,
+     ts = birth_ts,
+     tz = final_tz,
+     city = data$city_name,
+     country = data$country,
+     lat = loc_data$lat,
+     lng = loc_data$lng,
+     photo = if (is.null(data$profile_photo)) NA_character_ else data$profile_photo
     ))
   })
 }
@@ -88,7 +88,13 @@ db_get_library <- function(pool, user_id) {
   DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool, query, id = user_id))
 }
 
+#' Handles "SCD Type 2" updates (if editing) or creates new entries.
+#'
 db_save_library_entry <- function(pool, user_id, data, entity_id = NULL) {
+
+  if (is.null(data$birth_timestamp)) stop("Birth timestamp is required")
+  if (is.null(data$country)) stop("Country is required")
+  if (is.null(data$city_name)) stop("City is required")
 
   # Lookup Location
   loc_data <- lookup_city_data(data$country, data$city_name)
@@ -120,13 +126,38 @@ db_save_library_entry <- function(pool, user_id, data, entity_id = NULL) {
     # Insert
     DBI::dbExecute(con, DBI::sqlInterpolate(con, "
       INSERT INTO personal_library (
-        entity_id, user_entity_id, name, birth_timestamp, timezone, city_name, lat, lng, notes
-      ) VALUES (?eid, ?owner, ?name, ?ts, ?tz, ?city, ?lat, ?lng, ?notes)
+        entity_id,
+        user_entity_id,
+        name,
+        birth_timestamp,
+        timezone,
+        city_name,
+        country,
+        lat,
+        lng,
+        notes,
+        valid_from
+      ) VALUES (?eid, ?owner, ?name, ?ts, ?tz, ?city, ?country, ?lat, ?lng, ?notes, NOW())
     ",
-     eid = final_entity_id, owner = user_id, name = data$name,
-     ts = birth_ts, tz = final_tz, city = data$city_name,
-     lat = loc_data$lat, lng = loc_data$lng, notes = data$notes %||% ""))
+     eid = final_entity_id,
+     owner = user_id,
+     name = data$name,
+     ts = birth_ts,
+     tz = final_tz,
+     city = data$city_name,
+     country = data$country,
+     lat = loc_data$lat,
+     lng = loc_data$lng,
+     notes = data$notes %||% ""))
   })
+}
+
+db_delete_library_entry <- function(pool, entry_id) {
+  # Soft delete by setting valid_to
+  DBI::dbExecute(pool, DBI::sqlInterpolate(pool, "
+        UPDATE personal_library SET valid_to = NOW()
+        WHERE entity_id = ?eid AND valid_to IS NULL
+   ", eid = entry_id))
 }
 
 # Helper for NULL checks
