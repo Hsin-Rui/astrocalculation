@@ -112,6 +112,23 @@ DataManager <- R6::R6Class(
       return(new_id)
     },
 
+    #' @description Validate Session Token
+    #' @param token The session cookie string
+    #' @return user_id if valid, NULL otherwise
+    validate_session = function(token) {
+      if (is.null(token) || token == "") return(NULL)
+
+      # Use the internal pool
+      valid_user_id <- auth_validate_session(self$pool, token)
+
+      if (!is.null(valid_user_id)) {
+        self$user_id <- valid_user_id
+        self$refresh_user_data()
+      }
+
+      return(valid_user_id)
+    },
+
     #' @description Login User (Flexible)
     #' @param login_id User email OR User ID
     #' @param password User password

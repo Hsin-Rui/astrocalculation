@@ -1,3 +1,6 @@
+# astrocalculation 0.1.6.9002 -- 2025-12-26
+* Implement session authorization in R6 class
+
 # astrocalculation 0.1.6.9001 -- 2025-12-25
 * Bug fix in database logic (owner_id --> user_entity_id)
 
