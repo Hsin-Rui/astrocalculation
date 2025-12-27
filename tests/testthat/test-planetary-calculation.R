@@ -11,22 +11,15 @@ test_that("Story 3.1: Taiwan Gold Standard Calculation", {
   lat <- 35.3273
   lng <- -96.9253
 
+  se_path <- system.file("se_data", package = "astrocalculation")
+  if (se_path != "") {
+    swephR::swe_set_ephe_path(se_path)
+  }
   # 2. Run Calculation
   # We call the main wrapper function
   result <- calculate_planet_position(time_obj, tz, lng, lat)
 
   # Extract Data
-  pos_table <- result$planetary_position
-
-  # Ensure the ephemeris path is set correctly for the test environment
-  # Replace 'yourPackageName' with your actual package name
-  se_path <- system.file("se_data", package = "yourPackageName")
-  if (se_path != "") {
-    swephR::swe_set_ephe_path(se_path)
-  }
-
-  # 2. Run Calculation
-  result <- calculate_planet_position(time_obj, tz, lng, lat)
   pos_table <- result$planetary_position
 
   # 3. Assertions (The "Gold Standard")

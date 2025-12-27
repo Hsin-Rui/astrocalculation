@@ -10,7 +10,7 @@
 #' @import jsonlite
 #'
 Logger <- R6::R6Class(
-  "DbLogger",
+  "Logger",
   #' @field pool database connection
   public = list(
     pool = NULL,
