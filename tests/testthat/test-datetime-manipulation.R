@@ -1,7 +1,7 @@
 library(testthat)
 library(lubridate)
 
-test_that("add_datetime correctly handles plural units", {
+test_that("add_datetime works", {
   start <- as.POSIXct("2023-01-01 12:00:00", tz = "UTC")
 
   # 1. Test Days (Fix verification)
@@ -18,12 +18,12 @@ test_that("add_datetime correctly handles plural units", {
   # Note: months() in R can result in NA if the target day doesn't exist (e.g., Feb 31)
   # unless handled by lubridate or specific logic. Your design uses base months().
   expect_s3_class(add_datetime(jan_end, "Months", 1), "POSIXct")
-
+  expect_equal(add_datetime(jan_end, "Months", 1), as.POSIXct("2023-02-28 12:00:00", tz = "UTC"))
   # 5. Test Years (Default case)
   expect_equal(add_datetime(start, "Years", 1), as.POSIXct("2024-01-01 12:00:00", tz = "UTC"))
 })
 
-test_that("Epic 1: minus_datetime correctly handles plural units", {
+test_that("Epic 1: minus_datetime works", {
   start <- as.POSIXct("2023-01-02 12:00:00", tz = "UTC")
 
   # 1. Test Days
@@ -32,7 +32,13 @@ test_that("Epic 1: minus_datetime correctly handles plural units", {
   # 2. Test Hours
   expect_equal(minus_datetime(start, "Hours", 1), as.POSIXct("2023-01-02 11:00:00", tz = "UTC"))
 
-  # 3. Test Years
+  # 3. Test Minutes
+  expect_equal(minus_datetime(start, "Minutes", 30), as.POSIXct("2023-01-02 11:30:00", tz = "UTC"))
+
+  # 4. Test Months
+  expect_equal(minus_datetime(start, "Months", 1), as.POSIXct("2022-12-02 12:00:00", tz = "UTC"))
+
+  # 5. Test Years
   expect_equal(minus_datetime(start, "Years", 1), as.POSIXct("2022-01-02 12:00:00", tz = "UTC"))
 })
 
