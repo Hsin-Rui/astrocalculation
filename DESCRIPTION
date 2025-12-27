@@ -33,7 +33,8 @@ Imports:
     RPostgres,
     yaml,
     uuid,
-    sodium
+    sodium,
+    jsonlite
 Date: 2025-07-27
 Suggests: 
     dbplyr,

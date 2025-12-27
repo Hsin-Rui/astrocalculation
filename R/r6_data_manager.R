@@ -59,14 +59,18 @@ DataManager <- R6::R6Class(
     #' @field user_id
     #' ID to identify the user. If NULL, user is Guest
     user_id = NULL,
-    #' @field user_profile
-    #' The 1-row data frame of self
 
     ## 1-5. User data fields ####
+    #' @field user_profile
+    #' The 1-row data frame of self
     user_profile = NULL,
     #' @field user_library
     #' The data frame of the user's saved charts
     user_library = NULL,
+
+    #' @field logger
+    #' R6 logger object
+    logger = NULL, #
 
     #' @description
     #' Initialize manager. If user_id is provided, connect to DB and load profile.
@@ -86,12 +90,20 @@ DataManager <- R6::R6Class(
       # 2. Connect to DB (MUST RUN EVERY TIME)
       self$pool <- connect_postgres_db()
 
+      self$logger <- Logger$new(self$pool)
+
       # Check Auth
       if (!is.null(user_id)) {
         self$user_id <- user_id
 
         # Load Data using Service Function
         self$refresh_user_data()
+        self$logger$log_info("LOGIN", "User restored from session", user_id)
+
+      } else {
+
+        self$logger$log_info("INIT", "Guest session started")
+
       }
 
       self$update_chart()
@@ -245,14 +257,31 @@ DataManager <- R6::R6Class(
     #' update horoscope. Calculate planetary positions, draw chart
     #'
     update_chart = function(){
+      tryCatch({
+        # 1. Perform Calculation
+        self$planet_position <- calculate_planet_position(self$horoscope_datetime, self$horoscope_timezone, self$horoscope_longitude, self$horoscope_latitude)
 
-      self$planet_position <- calculate_planet_position(self$horoscope_datetime, self$horoscope_timezone, self$horoscope_longitude, self$horoscope_latitude)
-      data <- self$planet_position$planetary_position
-      data <- data[(row.names(data) %in% self$selected_planets),]
-      self$aspect_table <- calculate_aspect(data)
-      self$planet_position$planetary_position <- data
-      self$chart <- draw_whole_sign_chart(data, self$chart_name, self$horoscope_datetime, self$horoscope_city, self$horoscope_country, self$horoscope_timezone, self$aspect_table)
+        data <- self$planet_position$planetary_position
+        data <- data[(row.names(data) %in% self$selected_planets),]
+        self$aspect_table <- calculate_aspect(data)
+        self$planet_position$planetary_position <- data
+        self$chart <- draw_whole_sign_chart(data, self$chart_name, self$horoscope_datetime, self$horoscope_city, self$horoscope_country, self$horoscope_timezone, self$aspect_table)
 
+      }, error = function(e) {
+        # 2. LOG THE CRASH
+        self$logger$log_error(
+          event = "CALC_FAILURE",
+          message = e$message,
+          user_id = self$user_id,
+          context = list(
+            time = as.character(self$horoscope_datetime),
+            city = self$horoscope_city,
+            tz = self$horoscope_timezone
+          )
+        )
+        # Re-throw so UI knows something broke
+        stop(e)
+      })
     }
   ),
 

@@ -48,6 +48,8 @@ name of the chart}
 \item{\code{user_profile}}{The 1-row data frame of self}
 
 \item{\code{user_library}}{The data frame of the user's saved charts}
+
+\item{\code{logger}}{R6 logger object}
 }
 \if{html}{\out{</div>}}
 }

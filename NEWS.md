@@ -1,6 +1,7 @@
 # astrocalculation 0.1.8 -- 2025-12-26
 * Bug fix in se_path setting
 * Implement unit test for planetary position calculation (test case: Brad Pitt)
+* Implement logger
 
 # astrocalculation 0.1.7 -- 2025-12-26
 * Expand the R6 object and db utils to allow delete chart from user library
