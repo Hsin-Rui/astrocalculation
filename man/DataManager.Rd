@@ -67,6 +67,7 @@ name of the chart}
 \item \href{#method-DataManager-load_chart_to_view}{\code{DataManager$load_chart_to_view()}}
 \item \href{#method-DataManager-delete_chart_from_library}{\code{DataManager$delete_chart_from_library()}}
 \item \href{#method-DataManager-update_chart}{\code{DataManager$update_chart()}}
+\item \href{#method-DataManager-adjust_time}{\code{DataManager$adjust_time()}}
 \item \href{#method-DataManager-clone}{\code{DataManager$clone()}}
 }
 }
@@ -257,6 +258,27 @@ update horoscope. Calculate planetary positions, draw chart
 \if{html}{\out{<div class="r">}}\preformatted{DataManager$update_chart()}\if{html}{\out{</div>}}
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-adjust_time"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-adjust_time}{}}}
+\subsection{Method \code{adjust_time()}}{
+Add or minus datetime according for a certain value and unit, then plot the chart
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$adjust_time(operation = c("add", "minus"), value, unit)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{operation}}{add or minus (interact with an action button)}
+
+\item{\code{value}}{range from 1 to 30}
+
+\item{\code{unit}}{Minutes, Hours, Days, Months and Years}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DataManager-clone"></a>}}

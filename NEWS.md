@@ -1,3 +1,8 @@
+# astrocalculation 0.1.9 -- 2025-12-27
+* Bug fix in add_datetime and minus_datetime (match astro.shiny)
+* Expand R6 DataManager to handle add and minus datetime
+* Delete legacy scripts
+
 # astrocalculation 0.1.8 -- 2025-12-26
 * Bug fix in se_path setting
 * Implement unit test for planetary position calculation (test case: Brad Pitt)

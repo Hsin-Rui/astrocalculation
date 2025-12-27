@@ -18,16 +18,16 @@ so it doesn't crash the main app.
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-DbLogger-new}{\code{Logger$new()}}
-\item \href{#method-DbLogger-log_info}{\code{Logger$log_info()}}
-\item \href{#method-DbLogger-log_error}{\code{Logger$log_error()}}
-\item \href{#method-DbLogger-write_log}{\code{Logger$write_log()}}
-\item \href{#method-DbLogger-clone}{\code{Logger$clone()}}
+\item \href{#method-Logger-new}{\code{Logger$new()}}
+\item \href{#method-Logger-log_info}{\code{Logger$log_info()}}
+\item \href{#method-Logger-log_error}{\code{Logger$log_error()}}
+\item \href{#method-Logger-write_log}{\code{Logger$write_log()}}
+\item \href{#method-Logger-clone}{\code{Logger$clone()}}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-DbLogger-new"></a>}}
-\if{latex}{\out{\hypertarget{method-DbLogger-new}{}}}
+\if{html}{\out{<a id="method-Logger-new"></a>}}
+\if{latex}{\out{\hypertarget{method-Logger-new}{}}}
 \subsection{Method \code{new()}}{
 Initialize with a DB pool
 \subsection{Usage}{
@@ -43,8 +43,8 @@ Initialize with a DB pool
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-DbLogger-log_info"></a>}}
-\if{latex}{\out{\hypertarget{method-DbLogger-log_info}{}}}
+\if{html}{\out{<a id="method-Logger-log_info"></a>}}
+\if{latex}{\out{\hypertarget{method-Logger-log_info}{}}}
 \subsection{Method \code{log_info()}}{
 Log an INFO event
 \subsection{Usage}{
@@ -66,8 +66,8 @@ Log an INFO event
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-DbLogger-log_error"></a>}}
-\if{latex}{\out{\hypertarget{method-DbLogger-log_error}{}}}
+\if{html}{\out{<a id="method-Logger-log_error"></a>}}
+\if{latex}{\out{\hypertarget{method-Logger-log_error}{}}}
 \subsection{Method \code{log_error()}}{
 Log an ERROR event
 \subsection{Usage}{
@@ -89,8 +89,8 @@ Log an ERROR event
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-DbLogger-write_log"></a>}}
-\if{latex}{\out{\hypertarget{method-DbLogger-write_log}{}}}
+\if{html}{\out{<a id="method-Logger-write_log"></a>}}
+\if{latex}{\out{\hypertarget{method-Logger-write_log}{}}}
 \subsection{Method \code{write_log()}}{
 Internal writer
 \subsection{Usage}{
@@ -114,8 +114,8 @@ Internal writer
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-DbLogger-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-DbLogger-clone}{}}}
+\if{html}{\out{<a id="method-Logger-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-Logger-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{

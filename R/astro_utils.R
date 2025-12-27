@@ -296,7 +296,7 @@ calculate_theta_distance <- function(new_theta, theta) {
 #' @param unit unit (Days, Hrs, Min, Mon, Yrs)
 #' @param start_time POXIXct class date time
 #' @param value a numeric value (1-30)
-#' @importFrom lubridate days hours minutes years
+#' @importFrom lubridate %m+% %m-% days hours minutes years
 #'
 #' @export
 #'
@@ -305,19 +305,18 @@ calculate_theta_distance <- function(new_theta, theta) {
 add_datetime <- function(start_time, unit, value){
 
   value <- as.numeric(value)
-  unit <- as.character(unit)
+  unit_norm <- gsub("s$", "", tolower(as.character(unit)))
 
-  if (unit=="Day") {
-    new_time <- start_time + lubridate::days(value)
-    } else if (unit=="Hrs") {
-    new_time <- start_time + lubridate::hours(value)
-    } else if (unit=="Min") {
-    new_time <- start_time + lubridate::minutes(value)
-    } else if (unit=="Mon") {
-    new_time <- start_time + months(value)
-    } else {
-    new_time <- start_time + lubridate::years(value)
-  }
+  new_time <- switch(unit_norm,
+                     "minute" = start_time + lubridate::minutes(value),
+                     "hour"   = start_time + lubridate::hours(value),
+                     "day"    = start_time + lubridate::days(value),
+                     # %m+% handles month roll-over correctly (e.g., Jan 31 -> Feb 28/29)
+                     "month"  = start_time %m+% months(value),
+                     "year"   = start_time %m+% lubridate::years(value),
+                     # Default fallback
+                     start_time
+  )
 
   return(new_time)
 
@@ -328,7 +327,7 @@ add_datetime <- function(start_time, unit, value){
 #' @param unit unit (Days, Hrs, Min, Mon, Yrs)
 #' @param start_time POXIXct class date time
 #' @param value a numeric value (1-30)
-#' @importFrom lubridate days hours minutes years
+#' @importFrom lubridate %m+% %m-% days hours minutes years
 #'
 #' @export
 #'
@@ -336,19 +335,18 @@ add_datetime <- function(start_time, unit, value){
 minus_datetime <- function(start_time, unit, value){
 
   value <- as.numeric(value)
-  unit <- as.character(unit)
+  unit_norm <- gsub("s$", "", tolower(as.character(unit)))
 
-  if (unit=="Day") {
-    new_time <- start_time - lubridate::days(value)
-  } else if (unit=="Hrs") {
-    new_time <- start_time - lubridate::hours(value)
-  } else if (unit=="Min") {
-    new_time <- start_time - lubridate::minutes(value)
-  } else if (unit=="Mon") {
-    new_time <- start_time - months(value)
-  } else {
-    new_time <- start_time - lubridate::years(value)
-  }
+  new_time <- switch(unit_norm,
+                     "minute" = start_time - lubridate::minutes(value),
+                     "hour"   = start_time - lubridate::hours(value),
+                     "day"    = start_time - lubridate::days(value),
+                     # %m-% handles month roll-over correctly
+                     "month"  = start_time %m-% months(value),
+                     "year"   = start_time %m-% lubridate::years(value),
+                     # Default fallback
+                     start_time
+  )
 
   return(new_time)
 
