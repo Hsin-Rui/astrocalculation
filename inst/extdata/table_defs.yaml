@@ -181,6 +181,8 @@ tables:
         type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
       level:
         type: "VARCHAR(50)"
+      event:
+        type: "VARCHAR(50)"
       message:
         type: "TEXT"
       context_json:
@@ -192,3 +194,4 @@ tables:
     indices:
       - timestamp
       - level
+      - event

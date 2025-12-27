@@ -5,6 +5,7 @@
 #'
 #' @import showtext
 #' @importFrom sysfonts font_add
+#' @importFrom swephR swe_set_ephe_path
 #'
 
 .onLoad <- function(libname, pkgname) {
@@ -49,6 +50,13 @@
 
   } else {
     warning("'AstroDotBasic.ttf' not found")
+  }
+
+  se_path <- system.file("se_data", package = pkgname)
+
+  if (se_path != "") {
+    # Set the path globally for the session when the package loads
+    swephR::swe_set_ephe_path(se_path)
   }
 
   invisible()
