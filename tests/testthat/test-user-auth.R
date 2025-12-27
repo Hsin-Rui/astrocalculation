@@ -13,30 +13,33 @@ test_that("Story 1: Database Schema & Authentication Logic", {
   # Skip the entire test if the pool is NULL or the connection is invalid
   skip_if(is.null(pool), "Postgres connection could not be established; skipping test.")
 
+  # 1. Define Test Data
+  test_id <- "test_user_007"
+  test_email <- "bond@mi6.gov.uk"
+
+  # 2. ROBUST TEARDOWN (CI/CD SAFE)
+  # Use add = TRUE to prevent overwriting other handlers
+  on.exit({
+    try({
+      # Clean by BOTH ID and Email to ensure no collision for next run
+      DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
+                                               "DELETE FROM auth_credentials WHERE user_entity_id = ?id OR email = ?email",
+                                               id = test_id, email = test_email))
+    }, silent = TRUE)
+    pool::poolClose(pool)
+  }, add = TRUE)
+
+  # 3. CLEAN START
+  # Ensure no leftover data exists before the first registration call
+  DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
+                                           "DELETE FROM auth_credentials WHERE user_entity_id = ?id OR email = ?email",
+                                           id = test_id, email = test_email))
+
   # Test Data
   test_id <- "test_user_007"
   test_email <- "bond@mi6.gov.uk"
   test_pass <- "SecretAgentMan!123"
   test_name <- "James Bond"
-
-  # --- ROBUST TEARDOWN (CI/CD SAFE) ---
-  # This block runs automatically when the test finishes or FAILS.
-  on.exit({
-    # 1. Clean up the test user
-    # Note: Because of CASCADE, this deletes the profile and sessions too.
-    try({
-      DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
-                                               "DELETE FROM auth_credentials WHERE user_entity_id = ?id", id = test_id))
-    }, silent = TRUE)
-
-    # 2. Close connection
-    pool::poolClose(pool)
-  })
-
-  # --- CLEAN START ---
-  # Ensure no leftover data from a previous manual run exists
-  DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
-                                           "DELETE FROM auth_credentials WHERE user_entity_id = ?id", id = test_id))
 
   # --- AC 1 & 2: Table Definitions Exist ---
   tables <- DBI::dbListTables(pool)
