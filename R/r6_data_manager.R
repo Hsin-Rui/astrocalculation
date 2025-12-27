@@ -282,8 +282,33 @@ DataManager <- R6::R6Class(
         # Re-throw so UI knows something broke
         stop(e)
       })
+    },
+  #' @description
+  #' Add or minus datetime according for a certain value and unit, then plot the chart
+  #' @param operation add or minus (interact with an action button)
+  #' @param value range from 1 to 30
+  #' @param unit Minutes, Hours, Days, Months and Years
+  #'
+  adjust_time = function(operation = c("add", "minus"), value, unit) {
+    operation <- match.arg(operation)
+
+    if (operation == "add") {
+      self$horoscope_datetime <- add_datetime(self$horoscope_datetime, unit, value)
+    } else {
+      self$horoscope_datetime <- minus_datetime(self$horoscope_datetime, unit, value)
     }
-  ),
+
+    # Refresh the chart data with the new datetime
+    self$update_chart()
+
+    self$logger$log_info(
+      event = "TIME_ADJUST",
+      message = paste("Time adjusted:", operation, value, unit,
+                      "| New time:", self$horoscope_datetime)
+    )
+
+    return(invisible(self))
+  }),
 
   # 5. Private Methods -----------------------------------------
   private = list(

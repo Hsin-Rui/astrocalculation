@@ -307,13 +307,13 @@ add_datetime <- function(start_time, unit, value){
   value <- as.numeric(value)
   unit <- as.character(unit)
 
-  if (unit=="Day") {
+  if (unit=="Days") {
     new_time <- start_time + lubridate::days(value)
-    } else if (unit=="Hrs") {
+    } else if (unit=="Hours") {
     new_time <- start_time + lubridate::hours(value)
-    } else if (unit=="Min") {
+    } else if (unit=="Minutes") {
     new_time <- start_time + lubridate::minutes(value)
-    } else if (unit=="Mon") {
+    } else if (unit=="Months") {
     new_time <- start_time + months(value)
     } else {
     new_time <- start_time + lubridate::years(value)
@@ -338,13 +338,13 @@ minus_datetime <- function(start_time, unit, value){
   value <- as.numeric(value)
   unit <- as.character(unit)
 
-  if (unit=="Day") {
+  if (unit=="Days") {
     new_time <- start_time - lubridate::days(value)
-  } else if (unit=="Hrs") {
+  } else if (unit=="Hours") {
     new_time <- start_time - lubridate::hours(value)
-  } else if (unit=="Min") {
+  } else if (unit=="Minutes") {
     new_time <- start_time - lubridate::minutes(value)
-  } else if (unit=="Mon") {
+  } else if (unit=="Months") {
     new_time <- start_time - months(value)
   } else {
     new_time <- start_time - lubridate::years(value)
