@@ -43,15 +43,18 @@ test_that("Epic 1: minus_datetime works", {
 })
 
 test_that("DataManager integration of add and minus datetime", {
-  r6 <- DataManager$new()
+  r6 <- suppressMessages(DataManager$new())
 
   # Set a fixed start time for testing
   test_time <- as.POSIXct("2023-12-01 12:00:00", tz = "Asia/Taipei")
   r6$horoscope_datetime <- test_time
 
   # Action: Add 1 Day
-  # This calls add_datetime(test_time, "Days", 1)
-  expect_silent(r6$adjust_time(operation = "add", value = 1, unit = "Days"))
+  # Use suppressMessages to ignore the "TIME_ADJUST" console log
+  # that appears when the database is NULL.
+  suppressMessages({
+    r6$adjust_time(operation = "add", value = 1, unit = "Days")
+  })
 
   # Verification
   expected_time <- as.POSIXct("2023-12-02 12:00:00", tz = "Asia/Taipei")
