@@ -87,8 +87,20 @@ DataManager <- R6::R6Class(
       self$horoscope_country <- "Taiwan"
       self$chart_name <- "Transits"
 
-      # 2. Connect to DB (MUST RUN EVERY TIME)
-      self$pool <- connect_postgres_db()
+      # 2. Resilient DB Connection Logic
+      max_retries <- 2
+      attempt <- 1
+
+      while (attempt <= max_retries && is.null(self$pool)) {
+        self$pool <- tryCatch({
+          connect_postgres_db()
+        }, error = function(e) {
+          message(sprintf("DB Connection attempt %d failed: %s", attempt, e$message))
+          if (attempt < max_retries) Sys.sleep(1) # Brief pause before retry
+          return(NULL)
+        })
+        attempt <- attempt + 1
+      }
 
       self$logger <- Logger$new(self$pool)
 
@@ -119,6 +131,9 @@ DataManager <- R6::R6Class(
     #' @param display_name User name to be displayed in chart
     #' @return The new user_id if successful, throws error otherwise
     register = function(user_id, email, password, display_name) {
+      if (is.null(self$pool)) {
+        return(message("Database is offline. Registration is currently unavailable."))
+      }
       # Delegates to the logic function
       new_id <- auth_register_user(self$pool, user_id, email, password, display_name)
       return(new_id)
@@ -172,7 +187,7 @@ DataManager <- R6::R6Class(
 
     #' @description Refresh profile and library from DB
     refresh_user_data = function() {
-      if (is.null(self$user_id)) return()
+      if (is.null(self$pool) || is.null(self$user_id)) return()
 
       # Call external service functions
       self$user_profile <- db_get_profile(self$pool, self$user_id)

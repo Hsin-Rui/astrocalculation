@@ -36,6 +36,7 @@ Logger <- R6::R6Class(
     #' @param user_id user name. can be NULL (guest)
     #' @param context a json list
     log_error = function(event, message, user_id = NULL, context = list()) {
+      if (length(context) == 0) context <- list(sys_time = as.character(Sys.time()))
       self$write_log("ERROR", event, message, user_id, context)
     },
 
@@ -47,7 +48,8 @@ Logger <- R6::R6Class(
     #' @param context a json list
     write_log = function(level, event, message, user_id, context) {
       if (is.null(self$pool)) {
-        message(sprintf("[%s] %s: %s", level, event, message))
+        timestamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+        message(sprintf("[%s] %s | %s: %s", timestamp, level, event, message))
         return()
       }
 
