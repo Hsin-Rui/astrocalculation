@@ -169,13 +169,45 @@ db_delete_library_entry <- function(pool, entry_id) {
 # Helper for NULL checks
 `%||%` <- function(a, b) if (!is.null(a)) a else b
 
-#' Mock City Lookup
-#' Replace this with your actual SQLite call later.
-#' @noRd
+#' Lookup City Coordinates and Timezone
+#'
+#' Fetches latitude, longitude, and timezone string from the local SQLite database.
+#' Joins cities, countries, and timezones tables.
+#'
+#' @param country Character string. Full country name (e.g., "Taiwan")
+#' @param city Character string. City name (e.g., "Taipei")
+#' @return A list containing lat, lng, and timezone.
+#' @importFrom DBI dbConnect dbGetQuery dbDisconnect sqlInterpolate
+#'
 lookup_city_data <- function(country, city) {
-  # TODO: Connect to astrocalculation internal SQLite DB
-  # Handle NULLs or Empty strings safely
-  if (is.null(country) || is.null(city) || length(country) == 0 || length(city) == 0) {
+
+  # 1. Connect to internal SQLite DB
+  con <- connect_cities_db()
+  on.exit(DBI::dbDisconnect(con))
+
+  # 2. Prepare SQL with JOINs
+  # cities table links to timezones via timezone_id
+  # cities table links to countries via country_code
+  sql <- "
+    SELECT
+      ci.latitude,
+      ci.longitude,
+      tz.timezone
+    FROM cities ci
+    JOIN countries co ON ci.country_code = co.country_code
+    LEFT JOIN timezones tz ON ci.timezone_id = tz.timezone_id
+    WHERE ci.name = ?city
+      AND co.country_name = ?country
+      LIMIT 1
+  "
+
+  # 3. Execute Query
+  query <- DBI::sqlInterpolate(con, sql, city = city, country = country)
+  res <- DBI::dbGetQuery(con, query)
+
+  # 4. Handle Results & Fallback
+  if (nrow(res) == 0) {
+    warning(sprintf("Location lookup failed for %s, %s. Defaulting to UTC/0,0.", city, country))
     return(list(lat = 0, lng = 0, timezone = "UTC"))
   }
 
@@ -188,6 +220,9 @@ lookup_city_data <- function(country, city) {
     ))
   }
 
-  # Default Fallback
-  return(list(lat = 0, lng = 0, timezone = "UTC"))
+  return(list(
+    lat = res$latitude[1],
+    lng = res$longitude[1],
+    timezone = res$timezone[1]
+  ))
 }

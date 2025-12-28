@@ -40,7 +40,7 @@ test_that("Story 3: Personal Library (Save, Load, Delete)", {
     birth_timestamp = as.POSIXct("1990-01-01 12:00:00", tz="UTC"),
     timezone = "UTC",
     city_name = "London",
-    country = "UK",
+    country = "United Kingdom",
     lat = 51.5,
     lng = -0.12,
     notes = "My first test chart"

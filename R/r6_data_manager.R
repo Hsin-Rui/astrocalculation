@@ -273,14 +273,39 @@ DataManager <- R6::R6Class(
     #'
     update_chart = function(){
       tryCatch({
-        # 1. Perform Calculation
-        self$planet_position <- calculate_planet_position(self$horoscope_datetime, self$horoscope_timezone, self$horoscope_longitude, self$horoscope_latitude)
+        # 1. LOOKUP LOCATION (Story 2.2 Integration)
+        # We fetch the precise coordinates and timezone for the current city/country
+        loc_data <- lookup_city_data(self$horoscope_country, self$horoscope_city)
 
+        # Update internal state with fetched data
+        self$horoscope_latitude <- loc_data$lat
+        self$horoscope_longitude <- loc_data$lng
+        self$horoscope_timezone <- loc_data$timezone
+
+        # 2. Perform Calculation using the validated coordinates
+        self$planet_position <- calculate_planet_position(
+          self$horoscope_datetime,
+          self$horoscope_timezone,
+          self$horoscope_longitude,
+          self$horoscope_latitude
+        )
+
+        # 3. Process Aspect Table
         data <- self$planet_position$planetary_position
         data <- data[(row.names(data) %in% self$selected_planets),]
         self$aspect_table <- calculate_aspect(data)
+
+        # 4. Generate Visualization
         self$planet_position$planetary_position <- data
-        self$chart <- draw_whole_sign_chart(data, self$chart_name, self$horoscope_datetime, self$horoscope_city, self$horoscope_country, self$horoscope_timezone, self$aspect_table)
+        self$chart <- draw_whole_sign_chart(
+          data,
+          self$chart_name,
+          self$horoscope_datetime,
+          self$horoscope_city,
+          self$horoscope_country,
+          self$horoscope_timezone,
+          self$aspect_table
+        )
 
       }, error = function(e) {
         # 2. LOG THE CRASH
@@ -291,6 +316,7 @@ DataManager <- R6::R6Class(
           context = list(
             time = as.character(self$horoscope_datetime),
             city = self$horoscope_city,
+            country = self$horoscope_country,
             tz = self$horoscope_timezone
           )
         )
