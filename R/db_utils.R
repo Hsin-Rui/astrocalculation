@@ -226,3 +226,53 @@ lookup_city_data <- function(country, city) {
     timezone = res$timezone[1]
   ))
 }
+
+#' Get Bilingual Country Options
+#' Returns a named vector for selectizeInput: "Name ZH (Name EN)" = "Name EN"
+#' @return A named character vector
+#'
+get_country_options <- function() {
+  con <- connect_cities_db()
+  on.exit(DBI::dbDisconnect(con))
+
+  # Fetch all countries
+  res <- DBI::dbGetQuery(con, "SELECT country_name, name_zh FROM countries ORDER BY country_name")
+
+  # Format Label: "台灣 (Taiwan)" or just "Taiwan" if no translation
+  labels <- ifelse(!is.na(res$name_zh) & res$name_zh != "",
+                   paste0(res$name_zh, " (", res$country_name, ")"),
+                   res$country_name)
+
+  # Value: "Taiwan" (English name required by backend)
+  return(setNames(res$country_name, labels))
+}
+
+#' Get Bilingual City Options for a Country
+#' Returns a named vector for selectizeInput
+#' @param country_name The English name of the country
+#' @return A named character vector
+#'
+get_city_options <- function(country_name) {
+  con <- connect_cities_db()
+  on.exit(DBI::dbDisconnect(con))
+
+  # Join to filter by Country Name
+  sql <- "
+    SELECT ci.name, ci.name_zh
+    FROM cities ci
+    JOIN countries co ON ci.country_code = co.country_code
+    WHERE co.country_name = ?name
+    ORDER BY ci.name
+  "
+  query <- DBI::sqlInterpolate(con, sql, name = country_name)
+  res <- DBI::dbGetQuery(con, query)
+
+  if (nrow(res) == 0) return(character(0))
+
+  # Format Label: "台北市 (Taipei)"
+  labels <- ifelse(!is.na(res$name_zh) & res$name_zh != "",
+                   paste0(res$name_zh, " (", res$name, ")"),
+                   res$name)
+
+  return(setNames(res$name, labels))
+}

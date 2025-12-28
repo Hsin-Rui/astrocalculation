@@ -349,9 +349,21 @@ DataManager <- R6::R6Class(
     )
 
     return(invisible(self))
-  }),
+  },
+  # 5. Methods: UI Helpers (Bilingual Lists) ---------------------------------
 
-  # 5. Private Methods -----------------------------------------
+  #' @description
+  #' Fetch bilingual country list for UI SelectizeInput
+  #' Returns named vector
+  get_country_options = function() get_country_options(),
+  #' @description
+  #' Fetch bilingual city list for a specific country
+  #' Returns named vector
+  #' @param country_name English name of the country
+  get_city_options = function(country_name) get_city_options(country_name)
+  ),
+
+  # 6. Private Methods -----------------------------------------
   private = list(
     finalize = function() {
       if (!is.null(self$pool)) close_postgres_db(self$pool)

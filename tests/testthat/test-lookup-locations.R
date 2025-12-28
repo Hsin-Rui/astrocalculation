@@ -53,3 +53,49 @@ test_that("DataManager updates timezone upon city change", {
   # 5. Verify Timezone switched automatically
   expect_equal(r6$horoscope_timezone, "America/New_York")
 })
+
+test_that("Frontend helper functions return correct bilingual lists", {
+
+  # 1. Test Country Options
+  countries <- get_country_options()
+
+  # Check Taiwan entry
+  # We expect the name (key) to contain Chinese and value to be English
+  expect_true("Taiwan" %in% countries)
+  # Check if the label for "Taiwan" contains "台灣"
+  # names(countries) returns the labels
+  taiwan_label <- names(countries)[countries == "Taiwan"]
+  expect_match(taiwan_label, "台灣")
+  expect_match(taiwan_label, "Taiwan")
+
+  # 2. Test City Options (Taipei)
+  cities <- get_city_options("Taiwan")
+  expect_true("Taipei" %in% cities)
+
+  taipei_label <- names(cities)[cities == "Taipei"]
+  expect_match(taipei_label, "台北市")
+  expect_match(taipei_label, "Taipei")
+
+  # 3. Test Empty Case
+  empty_cities <- get_city_options("Antarctica") # Assuming no cities there in DB
+  expect_length(empty_cities, 0)
+})
+
+test_that("DataManager returns correct bilingual lists", {
+  r6 <- suppressMessages(DataManager$new())
+
+  # 1. Test Country Options
+  countries <- r6$get_country_options()
+
+  expect_true("Taiwan" %in% countries)
+  # Check label contains Chinese
+  taiwan_label <- names(countries)[countries == "Taiwan"]
+  expect_match(taiwan_label, "台灣")
+
+  # 2. Test City Options
+  cities <- r6$get_city_options("Taiwan")
+  expect_true("Taipei" %in% cities)
+
+  taipei_label <- names(cities)[cities == "Taipei"]
+  expect_match(taipei_label, "台北市")
+})

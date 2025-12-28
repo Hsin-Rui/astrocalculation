@@ -3,43 +3,51 @@
 test_that("Story 1: Database Schema & Authentication Logic", {
 
   # --- Connection Logic with Skip ---
-  # Attempt to connect and capture potential errors
   pool <- tryCatch({
     connect_postgres_db()
   }, error = function(e) {
-    return(NULL) # Return NULL if connection fails
+    return(NULL)
   })
 
-  # Skip the entire test if the pool is NULL or the connection is invalid
   skip_if(is.null(pool), "Postgres connection could not be established; skipping test.")
-
-  # 1. Define Test Data
-  test_id <- "test_user_007"
-  test_email <- "bond@mi6.gov.uk"
-
-  # 2. ROBUST TEARDOWN (CI/CD SAFE)
-  # Use add = TRUE to prevent overwriting other handlers
-  on.exit({
-    try({
-      # Clean by BOTH ID and Email to ensure no collision for next run
-      DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
-                                               "DELETE FROM auth_credentials WHERE user_entity_id = ?id OR email = ?email",
-                                               id = test_id, email = test_email))
-    }, silent = TRUE)
-    pool::poolClose(pool)
-  }, add = TRUE)
-
-  # 3. CLEAN START
-  # Ensure no leftover data exists before the first registration call
-  DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
-                                           "DELETE FROM auth_credentials WHERE user_entity_id = ?id OR email = ?email",
-                                           id = test_id, email = test_email))
 
   # Test Data
   test_id <- "test_user_007"
   test_email <- "bond@mi6.gov.uk"
   test_pass <- "SecretAgentMan!123"
   test_name <- "James Bond"
+
+  # 2. Helper: cleanup_logic
+  # We define this function to use it in both Clean Start and Teardown
+  cleanup_logic <- function() {
+    try({
+      # A. Delete dependent data first (Manual Cascade)
+      # This prevents "Foreign Key Constraint" errors if CASCADE is missing in DB
+      DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
+                                               "DELETE FROM user_profiles WHERE user_entity_id = ?id", id = test_id))
+
+      DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
+                                               "DELETE FROM personal_library WHERE user_entity_id = ?id", id = test_id))
+
+      DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
+                                               "DELETE FROM app_logs WHERE user_entity_id = ?id", id = test_id))
+
+      # B. Delete the User Account
+      DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
+                                               "DELETE FROM auth_credentials WHERE user_entity_id = ?id OR email = ?email",
+                                               id = test_id, email = test_email))
+    }, silent = TRUE)
+  }
+
+  # 3. ROBUST TEARDOWN (Run at end of test)
+  on.exit({
+    cleanup_logic()
+    pool::poolClose(pool)
+  }, add = TRUE)
+
+  # 4. CLEAN START (Run immediately)
+  # Run cleanup explicitly to clear any data from previous failed runs
+  cleanup_logic()
 
   # --- AC 1 & 2: Table Definitions Exist ---
   tables <- DBI::dbListTables(pool)
