@@ -1,3 +1,6 @@
+# astrocalculation 0.1.10.9000 -- 2025-12-28
+* Add two frontend helpers to get Chinese names as labels
+
 # astrocalculation 0.1.10 -- 2025-12-28
 * Implement traditional Chinese name (name_zh) in the cities_db.sqlite for all countries and 22 Taiwanese cities
 * update lookup_city_data to enable plotting chart for all cities in cities_db.sqlite
