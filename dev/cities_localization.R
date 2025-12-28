@@ -1,5 +1,3 @@
-# dev/migrate_localization.R
-
 library(RSQLite)
 library(DBI)
 library(dplyr)

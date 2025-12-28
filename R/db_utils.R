@@ -198,6 +198,7 @@ lookup_city_data <- function(country, city) {
     LEFT JOIN timezones tz ON ci.timezone_id = tz.timezone_id
     WHERE ci.name = ?city
       AND co.country_name = ?country
+      LIMIT 1
   "
 
   # 3. Execute Query
