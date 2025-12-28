@@ -80,3 +80,22 @@ test_that("Frontend helper functions return correct bilingual lists", {
   empty_cities <- get_city_options("Antarctica") # Assuming no cities there in DB
   expect_length(empty_cities, 0)
 })
+
+test_that("DataManager returns correct bilingual lists", {
+  r6 <- suppressMessages(DataManager$new())
+
+  # 1. Test Country Options
+  countries <- r6$get_country_options()
+
+  expect_true("Taiwan" %in% countries)
+  # Check label contains Chinese
+  taiwan_label <- names(countries)[countries == "Taiwan"]
+  expect_match(taiwan_label, "台灣")
+
+  # 2. Test City Options
+  cities <- r6$get_city_options("Taiwan")
+  expect_true("Taipei" %in% cities)
+
+  taipei_label <- names(cities)[cities == "Taipei"]
+  expect_match(taipei_label, "台北市")
+})

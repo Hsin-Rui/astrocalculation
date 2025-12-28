@@ -230,7 +230,7 @@ lookup_city_data <- function(country, city) {
 #' Get Bilingual Country Options
 #' Returns a named vector for selectizeInput: "Name ZH (Name EN)" = "Name EN"
 #' @return A named character vector
-#' @export
+#'
 get_country_options <- function() {
   con <- connect_cities_db()
   on.exit(DBI::dbDisconnect(con))
@@ -251,7 +251,7 @@ get_country_options <- function() {
 #' Returns a named vector for selectizeInput
 #' @param country_name The English name of the country
 #' @return A named character vector
-#' @export
+#'
 get_city_options <- function(country_name) {
   con <- connect_cities_db()
   on.exit(DBI::dbDisconnect(con))
