@@ -1,40 +1,39 @@
 test_that("Story 2: Profile Fetching (Join Logic)", {
   # --- Connection Logic with Skip ---
-  # Attempt to connect and capture potential errors
   pool <- tryCatch({
     connect_postgres_db()
   }, error = function(e) {
-    return(NULL) # Return NULL if connection fails
+    return(NULL)
   })
 
-  # Skip the entire test if the pool is NULL or the connection is invalid
   skip_if(is.null(pool), "Postgres connection could not be established; skipping test.")
-
 
   # 1. Setup
   test_email <- "profile_test@example.com"
 
-  # Cleanup (Fix: Use sqlInterpolate)
-  # Cleanup before test, in case of previous failed run
-  if(DBI::dbExistsTable(pool, "auth_credentials")) {
-    sql <- DBI::sqlInterpolate(pool, "DELETE FROM auth_credentials WHERE email = ?email", email = test_email)
-    DBI::dbExecute(pool, sql)
-  }
+  # Use a Strong Password
+  test_pass <- "SecureProfPass1!"
 
-  # Ensure cleanup happens after test execution, even on failure
-  on.exit({
+  # Cleanup
+  cleanup_logic <- function() {
     try({
       if(DBI::dbExistsTable(pool, "auth_credentials")) {
-        sql <- DBI::sqlInterpolate(pool, "DELETE FROM auth_credentials WHERE email = ?email", email = test_email)
-        DBI::dbExecute(pool, sql)
+        DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
+                                                 "DELETE FROM auth_credentials WHERE email = ?email", email = test_email))
       }
     }, silent = TRUE)
+  }
 
-    # 2. Finally, close the pool
+  on.exit({
+    cleanup_logic()
     pool::poolClose(pool)
   }, add = TRUE)
 
-  user_oid <- auth_register_user(pool, "prof_test", test_email, "password", "ProfileTester")
+  cleanup_logic() # Clean Start
+
+  # --- FIX: Use Strong Password & Extract ID ---
+  reg_res <- auth_register_user(pool, "prof_test", test_email, test_pass, "ProfileTester")
+  user_oid <- reg_res$user_id
 
   # 2. Get Profile (Verify Email JOIN)
   prof <- db_get_profile(pool, user_oid)

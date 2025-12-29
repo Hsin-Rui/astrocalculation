@@ -6,7 +6,6 @@
 #' @importFrom lubridate year month day hour minute is.POSIXct
 #' @importFrom swephR swe_date_conversion swe_utc_time_zone
 #' @importFrom rlang abort
-#'
 #' @return An integer of Julian Day
 #'
 
@@ -491,13 +490,11 @@ reorder_planets <- function(theta, new_theta, pl = 1){
 #'
 #' @param r rate of the circle
 #' @param ... all other argumebts
-#'
-#' @importFrom tibble tibble
-#' @import magrittr
+#' @importFrom tidyr tibble
 #'
 
 get_circle_coords <- function(r = 1, ...) {
-  tibble::tibble(theta = seq(0, 2 * pi, ...),
+  tidyr::tibble(theta = seq(0, 2 * pi, ...),
                  x     = cos(theta) * r,
                  y     = sin(theta) * r)
 }

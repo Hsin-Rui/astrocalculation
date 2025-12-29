@@ -1,6 +1,6 @@
 Package: astrocalculation
 Title: Astrology Calculations
-Version: 0.1.10.9000
+Version: 0.1.11
 Authors@R: 
     person("Hsin-Rui", "Lin", , "hsinrui.lin@gmail.com", role = c("aut", "cre"))
 Description: This package calculates astrological information according to different doctrines. In the current version, it supports drawing chart using whole sign house system. Further functionalities will follow.
@@ -17,16 +17,12 @@ Imports:
     dplyr,
     ggplot2,
     lubridate,
-    magrittr,
     R6,
-    rlang,
     showtext,
     stringr,
     swephR,
     sysfonts,
-    tibble,
     tidyr,
-    utils,
     DBI,
     RSQLite,
     pool,
@@ -34,9 +30,13 @@ Imports:
     yaml,
     uuid,
     sodium,
-    jsonlite
+    jsonlite,
+    emayili,
+    rlang
 Date: 2025-07-27
 Suggests: 
     dbplyr,
-    testthat
+    testthat,
+    utils,
+    tibble
 Config/testthat/edition: 3

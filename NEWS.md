@@ -1,3 +1,7 @@
+# astrocalculation 0.1.11 -- 2025-12-29
+* Enable backend to send verification email.
+* Implement e-mail verification at registration.
+
 # astrocalculation 0.1.10.9000 -- 2025-12-28
 * Add two frontend helpers to get Chinese names as labels
 

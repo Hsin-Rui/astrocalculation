@@ -187,7 +187,7 @@ draw_whole_sign_chart <- function(planet_position, chart_name, date, city, count
   ## determine the position of planet glyphs
   new_theta <- optmize_planet_position(planet_position$planet_theta, planets = selected_elements)
   planet_position$planet <- row.names(planet_position)
-  planet_position <- planet_position %>% left_join(data.frame(planet_glyphs=names(new_theta), new_theta), by="planet_glyphs")
+  planet_position <- planet_position |> left_join(data.frame(planet_glyphs=names(new_theta), new_theta), by="planet_glyphs")
 
   planet_x_glyphs <- coords_planet_glyphs$x [planet_position$new_theta]
   planet_y_glyphs <- coords_planet_glyphs$y [planet_position$new_theta]
@@ -230,7 +230,7 @@ draw_whole_sign_chart <- function(planet_position, chart_name, date, city, count
   ## 3. aspect lines
 
   aspect_table <-
-    aspect_table %>%
+    aspect_table |>
     dplyr::filter(aspect != "conjunction")
 
   aspect_table$theta_p1 <- convert_degree_to_theta(aspect_table$deg_p1, starting_deg)
