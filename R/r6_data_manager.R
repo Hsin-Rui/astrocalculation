@@ -140,7 +140,7 @@ DataManager <- R6::R6Class(
         self$logger$log_info(
           event = "REGISTER",
           message = paste("New user registered (pending verification):", email),
-          user_id = username
+          user_id = user_id
         )
       }
       return(new_id)

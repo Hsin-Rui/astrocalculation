@@ -31,12 +31,12 @@ Imports:
     uuid,
     sodium,
     jsonlite,
-    emayili
+    emayili,
+    rlang
 Date: 2025-07-27
 Suggests: 
     dbplyr,
     testthat,
     utils,
-    rlang,
     tibble
 Config/testthat/edition: 3

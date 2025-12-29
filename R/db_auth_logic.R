@@ -46,10 +46,10 @@ auth_register_user <- function(pool, user_id, email, password, display_name) {
     DBI::dbExecute(con, DBI::sqlInterpolate(con, "
       INSERT INTO auth_credentials (
         user_entity_id, email, password_hash, salt,
-        is_verified, verification_token, created_at
+        is_verified, verification_token, verification_token_expires_at, created_at
       ) VALUES (
         ?id, ?email, ?hash, '-',
-        FALSE, ?token, NOW()
+        FALSE, ?token, NOW() + INTERVAL '24 hours', NOW()
       )
     ", id = user_id, email = email, hash = hashed_pw, token = verif_token))
 
@@ -84,6 +84,7 @@ auth_verify_email <- function(pool, token) {
   # Find user with this token
   res <- DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool, "
     SELECT user_entity_id FROM auth_credentials WHERE verification_token = ?token
+    AND (verification_token_expires_at IS NULL OR verification_token_expires_at > NOW())
   ", token = token))
 
   if (nrow(res) == 0) return(FALSE)

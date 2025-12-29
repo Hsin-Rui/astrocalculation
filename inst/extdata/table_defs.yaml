@@ -23,6 +23,8 @@ tables:
         type: "BOOLEAN DEFAULT FALSE"
       verification_token:
         type: "VARCHAR(255)"
+      verification_token_expires_at:
+        type: "TIMESTAMP WITH TIME ZONE"
       oauth_provider:
         type: "VARCHAR(50)"
       oauth_subject_id:
