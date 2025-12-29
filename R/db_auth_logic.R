@@ -9,45 +9,48 @@
 #'
 #' @importFrom sodium password_store password_verify
 #' @importFrom DBI dbGetQuery dbExecute sqlInterpolate
+#' @import uuid UUIDgenerate
+#' @return list(user_id, verification_token) if successful
 #'
 
 auth_register_user <- function(pool, user_id, email, password, display_name) {
   # 1. Validation
   if (is.null(user_id) || user_id == "") stop("User ID is required")
-  if (is.null(email) || email == "") stop("Email is required")
-  if (is.null(password) || nchar(password) < 6) stop("Password must be at least 6 chars")
-
+  if (!validate_email(email)) {
+    stop("Invalid email format.")
+  }
+  if (!validate_password(password)) {
+    stop("Password must be at least 8 characters long, contain a number and a special character.")
+  }
   # 2. Check Uniqueness (ID and Email)
-  # Check ID
   id_check <- DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool,
-                                                        "SELECT 1 FROM auth_credentials WHERE user_entity_id = ?id",
-                                                        id = user_id
-  ))
+                                                        "SELECT 1 FROM auth_credentials WHERE user_entity_id = ?id", id = user_id))
   if (nrow(id_check) > 0) stop("This User ID is already taken.")
 
-  # Check Email
   email_check <- DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool,
-                                                           "SELECT 1 FROM auth_credentials WHERE email = ?email",
-                                                           email = email
-  ))
+                                                           "SELECT 1 FROM auth_credentials WHERE email = ?email", email = email))
   if (nrow(email_check) > 0) stop("This Email is already registered.")
 
-  # 3. Hash Password
+  # C. Preparation
   hashed_pw <- sodium::password_store(password)
+  # Generate a random verification token
+  verif_token <- uuid::UUIDgenerate()
 
   # 4. Transaction: Insert Account -> Then Profile
   pool::poolWithTransaction(pool, function(con) {
 
-    # A. Insert Master Account (Using custom user_id)
+    # Insert Credential (is_verified = FALSE)
     DBI::dbExecute(con, DBI::sqlInterpolate(con, "
       INSERT INTO auth_credentials (
-        user_entity_id, email, password_hash, salt
+        user_entity_id, email, password_hash, salt,
+        is_verified, verification_token, created_at
       ) VALUES (
-        ?id, ?email, ?hash, '-'
+        ?id, ?email, ?hash, '-',
+        FALSE, ?token, NOW()
       )
-    ", id = user_id, email = email, hash = hashed_pw))
+    ", id = user_id, email = email, hash = hashed_pw, token = verif_token))
 
-    # B. Insert Initial Profile
+    # Insert Profile
     DBI::dbExecute(con, DBI::sqlInterpolate(con, "
       INSERT INTO user_profiles (
         user_entity_id, display_name, valid_from
@@ -58,7 +61,34 @@ auth_register_user <- function(pool, user_id, email, password, display_name) {
 
   })
 
-  return(user_id)
+  return(list(user_id = user_id, verification_token = verif_token))
+}
+
+#' Verify Email Address
+#' @param pool db connection object
+#' @param token The verification string from the email link
+#' @return TRUE if successful, FALSE otherwise
+#'
+auth_verify_email <- function(pool, token) {
+  if (is.null(token) || token == "") return(FALSE)
+
+  # Find user with this token
+  res <- DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool, "
+    SELECT user_entity_id FROM auth_credentials WHERE verification_token = ?token
+  ", token = token))
+
+  if (nrow(res) == 0) return(FALSE)
+
+  user_id <- res$user_entity_id[1]
+
+  # Activate Account
+  DBI::dbExecute(pool, DBI::sqlInterpolate(pool, "
+    UPDATE auth_credentials
+    SET is_verified = TRUE, verification_token = NULL
+    WHERE user_entity_id = ?id
+  ", id = user_id))
+
+  return(TRUE)
 }
 
 #'
@@ -108,4 +138,25 @@ auth_validate_session <- function(pool, token) {
   ", token = token))
   if (nrow(res) == 1) return(res$user_entity_id)
   return(NULL)
+}
+
+#' Validate email using regex
+#' @param email character string. An email address
+#' @return logical
+#'
+validate_email <- function(email) {
+  # Standard regex for email validation
+  pattern <- "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
+  return(grepl(pattern, email))
+}
+
+#' Validate password
+#' @param password character string. Password should have more at least 8 characters, have a number and have a special character
+#' @return logical
+#'
+validate_password <- function(password) {
+  if (nchar(password) < 8) return(FALSE)
+  if (!grepl("[0-9]", password)) return(FALSE) # Must have number
+  if (!grepl("[^A-Za-z0-9]", password)) return(FALSE) # Must have special char
+  return(TRUE)
 }
