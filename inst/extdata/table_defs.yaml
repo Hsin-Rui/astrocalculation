@@ -19,6 +19,22 @@ tables:
         type: "VARCHAR(512) NOT NULL"
       salt:
         type: "VARCHAR(255) NOT NULL"
+      is_verified:
+        type: "BOOLEAN DEFAULT FALSE"
+      verification_token:
+        type: "VARCHAR(255)"
+      oauth_provider:
+        type: "VARCHAR(50)"
+      oauth_subject_id:
+        type: "VARCHAR(255)"
+      failed_attempts:
+        type: "INTEGER DEFAULT 0"
+      locked_until:
+        type: "TIMESTAMP WITH TIME ZONE"
+      reset_token:
+        type: "VARCHAR(255)"
+      reset_token_expires_at:
+        type: "TIMESTAMP WITH TIME ZONE"
       last_login:
         type: "TIMESTAMP WITH TIME ZONE"
       created_at:
