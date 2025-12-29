@@ -17,6 +17,9 @@ auth_register_user(pool, user_id, email, password, display_name)
 
 \item{display_name}{User's public name}
 }
+\value{
+list(user_id, verification_token) if successful
+}
 \description{
 Handles Registration, Login verification, and Session management.
 }

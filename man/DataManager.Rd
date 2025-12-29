@@ -68,6 +68,8 @@ name of the chart}
 \item \href{#method-DataManager-delete_chart_from_library}{\code{DataManager$delete_chart_from_library()}}
 \item \href{#method-DataManager-update_chart}{\code{DataManager$update_chart()}}
 \item \href{#method-DataManager-adjust_time}{\code{DataManager$adjust_time()}}
+\item \href{#method-DataManager-get_country_options}{\code{DataManager$get_country_options()}}
+\item \href{#method-DataManager-get_city_options}{\code{DataManager$get_city_options()}}
 \item \href{#method-DataManager-clone}{\code{DataManager$clone()}}
 }
 }
@@ -276,6 +278,35 @@ Add or minus datetime according for a certain value and unit, then plot the char
 \item{\code{value}}{range from 1 to 30}
 
 \item{\code{unit}}{Minutes, Hours, Days, Months and Years}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-get_country_options"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-get_country_options}{}}}
+\subsection{Method \code{get_country_options()}}{
+Fetch bilingual country list for UI SelectizeInput
+Returns named vector
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$get_country_options()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-get_city_options"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-get_city_options}{}}}
+\subsection{Method \code{get_city_options()}}{
+Fetch bilingual city list for a specific country
+Returns named vector
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$get_city_options(country_name)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{country_name}}{English name of the country}
 }
 \if{html}{\out{</div>}}
 }

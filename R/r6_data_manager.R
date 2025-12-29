@@ -136,6 +136,13 @@ DataManager <- R6::R6Class(
       }
       # Delegates to the logic function
       new_id <- auth_register_user(self$pool, user_id, email, password, display_name)
+      if (!is.null(self$logger)) {
+        self$logger$log_info(
+          event = "REGISTER",
+          message = paste("New user registered (pending verification):", email),
+          user_id = username
+        )
+      }
       return(new_id)
     },
 
@@ -161,18 +168,30 @@ DataManager <- R6::R6Class(
     #' @param password User password
     #' @return Session Token (String) if success, NULL if failed
     login = function(login_id, password) {
-      verified_id <- auth_verify_user(self$pool, login_id, password)
+      if (is.null(self$pool)) stop("Database offline.")
 
-      if (!is.null(verified_id)) {
-        self$user_id <- verified_id
-        self$refresh_user_data()
+      user_info <- auth_verify_user(self$pool, login_id, password)
 
-        # Generate Session Token
-        token <- auth_create_session(self$pool, verified_id)
-        return(token)
-      } else {
-        return(NULL)
+      if (is.null(user_info)) {
+        stop("Invalid username/email or password.")
       }
+
+      # 2. Enforce Email Verification
+      if (isFALSE(user_info$verified)) {
+        stop("Account not activated. Please check your email.")
+      }
+
+      # 3. Update R6 State
+      self$user_id <- user_info$id
+      self$refresh_user_data()
+
+      # 4. Generate Session Cookie Token
+      # Calls your existing auth_create_session logic
+      session_token <- auth_create_session(self$pool, self$user_id)
+
+      self$logger$log_info("LOGIN", "User logged in", self$user_id)
+
+      return(session_token)
     },
 
     #' @description Logout

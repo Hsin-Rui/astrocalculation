@@ -105,5 +105,5 @@ test_that("Epic 3.1: Secure Registration & Email Verification", {
   # Login should work with the strong password
   # (Note: In future Story 3.3, login might check is_verified, but for now we check creds)
   login_id <- auth_verify_user(pool, test_email, test_pass_strong)
-  expect_equal(login_id, test_id)
+  expect_equal(login_id$id, test_id)
 })
