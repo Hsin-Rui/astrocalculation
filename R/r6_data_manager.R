@@ -215,7 +215,7 @@ DataManager <- R6::R6Class(
       session_token <- auth_create_session(self$pool, self$user_id)
 
       # 3. Create Session
-      return(auth_create_session(session_token))
+      return(session_token)
     },
 
     #' @description Verify Email Token
