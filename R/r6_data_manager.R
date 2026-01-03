@@ -196,8 +196,8 @@ DataManager <- R6::R6Class(
 
     #' @description Handle Google Login
     #' @param email google email
-    #' @param google_id google id (returned by google auth0)
-    #' @param name name of user (returned by google auth0)
+    #' @param google_id google id (returned by google)
+    #' @param name name of user (returned by google)
     #' @return Session Token
     login_with_google = function(email, google_id, name) {
       if (is.null(self$pool)) stop("Database offline.")
