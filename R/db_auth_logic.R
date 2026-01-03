@@ -233,7 +233,7 @@ validate_password <- function(password) {
   return(TRUE)
 }
 
-#' Handle Google OAuth Login
+#' Handle Google OAuth Login/Registration
 #'
 #' Checks if a Google user exists. If not, registers them.
 #' @param pool The DB pool
@@ -241,11 +241,10 @@ validate_password <- function(password) {
 #' @param google_id The unique 'sub' ID from Google
 #' @param name User's display name
 #' @return The user_entity_id to log in with
-#'
+#' @export
 auth_handle_oauth_user <- function(pool, email, google_id, name) {
 
-  # 1. Check if user exists by Email
-  # (We link by email because it's unique)
+  # 1. Check if user exists by Email (Link accounts)
   existing <- DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool,
                                                         "SELECT user_entity_id, oauth_subject_id FROM auth_credentials WHERE email = ?email",
                                                         email = email))
@@ -253,7 +252,7 @@ auth_handle_oauth_user <- function(pool, email, google_id, name) {
   if (nrow(existing) > 0) {
     user_id <- existing$user_entity_id[1]
 
-    # If this existing user hasn't been linked to Google yet, link them now
+    # If not yet linked, link now & auto-verify
     if (is.na(existing$oauth_subject_id[1]) || existing$oauth_subject_id[1] == "") {
       DBI::dbExecute(pool, DBI::sqlInterpolate(pool, "
         UPDATE auth_credentials
@@ -261,15 +260,16 @@ auth_handle_oauth_user <- function(pool, email, google_id, name) {
         WHERE user_entity_id = ?uid
       ", gid = google_id, uid = user_id))
     }
-
     return(user_id)
 
   } else {
     # 2. Register New User (Auto-Verified)
-    new_id <- paste0("user_", uuid::UUIDgenerate())
+    # We use the email prefix as a default username (user can change later if we build that feature)
+    # or generate a UUID. Let's use a UUID for safety to avoid collisions.
+    new_uid <- uuid::UUIDgenerate()
 
     pool::poolWithTransaction(pool, function(con) {
-      # Create Credentials (No password hash needed for OAuth-only, but we put a placeholder)
+      # Create Credentials (No password hash needed for OAuth-only)
       DBI::dbExecute(con, DBI::sqlInterpolate(con, "
         INSERT INTO auth_credentials (
           user_entity_id, email, password_hash, salt,
@@ -278,15 +278,15 @@ auth_handle_oauth_user <- function(pool, email, google_id, name) {
           ?uid, ?email, 'OAUTH_USER', '-',
           TRUE, 'google', ?gid, NOW()
         )
-      ", uid = new_id, email = email, gid = google_id))
+      ", uid = new_uid, email = email, gid = google_id))
 
       # Create Profile
       DBI::dbExecute(con, DBI::sqlInterpolate(con, "
         INSERT INTO user_profiles (user_entity_id, display_name, valid_from)
         VALUES (?uid, ?name, NOW())
-      ", uid = new_id, name = name))
+      ", uid = new_uid, name = name))
     })
 
-    return(new_id)
+    return(new_uid)
   }
 }

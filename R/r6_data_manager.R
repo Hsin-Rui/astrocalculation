@@ -194,6 +194,32 @@ DataManager <- R6::R6Class(
       return(session_token)
     },
 
+    #' @description Handle Google Login
+    #' @param email google email
+    #' @param google_id google id (returned by google auth0)
+    #' @param name name of user (returned by google auth0)
+    #' @return Session Token
+    login_with_google = function(email, google_id, name) {
+      if (is.null(self$pool)) stop("Database offline.")
+
+      # 1. Get/Create User via Logic
+      uid <- auth_handle_oauth_user(self$pool, email, google_id, name)
+
+      # 2. Update Internal State
+      self$user_id <- uid
+      self$refresh_user_data()
+
+      # 3. Create Session
+      return(auth_create_session(self$pool, uid))
+    },
+
+    #' @description Verify Email Token
+    #' @param token verification token
+    verify_email = function(token) {
+      if (is.null(self$pool)) return(FALSE)
+      return(auth_verify_email(self$pool, token))
+    },
+
     #' @description Logout
     logout = function() {
       self$user_id <- NULL

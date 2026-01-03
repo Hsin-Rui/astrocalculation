@@ -2,7 +2,7 @@
 % Please edit documentation in R/db_auth_logic.R
 \name{auth_handle_oauth_user}
 \alias{auth_handle_oauth_user}
-\title{Handle Google OAuth Login}
+\title{Handle Google OAuth Login/Registration}
 \usage{
 auth_handle_oauth_user(pool, email, google_id, name)
 }

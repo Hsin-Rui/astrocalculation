@@ -1,3 +1,6 @@
+# astrocalculation 0.1.12 -- 2025-12-30
+* Account authentification using google
+
 # astrocalculation 0.1.11 -- 2025-12-29
 * Enable backend to send verification email.
 * Implement e-mail verification at registration.

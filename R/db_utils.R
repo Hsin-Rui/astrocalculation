@@ -3,10 +3,13 @@
 #'
 #' @param pool The database connection pool
 #' @param user_id The unique Azure Object ID
+#' @importFrom stats setNames
 #'
 
 db_get_profile <- function(pool, user_id) {
-  if (is.null(pool) || is.null(user_id)) return(NULL)
+  if (is.null(pool) || is.null(user_id)) {
+    return(NULL)
+  }
 
   query <- "
     SELECT p.*, a.email
@@ -17,13 +20,14 @@ db_get_profile <- function(pool, user_id) {
   "
   res <- DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool, query, id = user_id))
 
-  if (nrow(res) == 0) return(NULL)
+  if (nrow(res) == 0) {
+    return(NULL)
+  }
   return(res)
 }
 
 #'
 db_save_profile <- function(pool, user_id, data) {
-
   # 1. PERFORM LOOKUP
   loc_data <- lookup_city_data(data$country, data$city_name)
 
@@ -43,8 +47,10 @@ db_save_profile <- function(pool, user_id, data) {
   # This ensures 'birth_ts' is a valid POSIXct with the correct TZ attribute
   birth_ts <- lubridate::force_tz(birth_ts, tzone = final_tz)
 
-  message(sprintf("Saving Profile for %s in %s (TZ: %s)",
-                  user_id, data$city_name, final_tz))
+  message(sprintf(
+    "Saving Profile for %s in %s (TZ: %s)",
+    user_id, data$city_name, final_tz
+  ))
 
   pool::poolWithTransaction(pool, function(con) {
     # Close Old
@@ -68,21 +74,23 @@ db_save_profile <- function(pool, user_id, data) {
         NOW()
       )
     ",
-     id = user_id,
-     name = data$display_name,
-     ts = birth_ts,
-     tz = final_tz,
-     city = data$city_name,
-     country = data$country,
-     lat = loc_data$lat,
-     lng = loc_data$lng,
-     photo = if (is.null(data$profile_photo)) NA_character_ else data$profile_photo
+      id = user_id,
+      name = data$display_name,
+      ts = birth_ts,
+      tz = final_tz,
+      city = data$city_name,
+      country = data$country,
+      lat = loc_data$lat,
+      lng = loc_data$lng,
+      photo = if (is.null(data$profile_photo)) NA_character_ else data$profile_photo
     ))
   })
 }
 
 db_get_library <- function(pool, user_id) {
-  if (is.null(pool) || is.null(user_id)) return(data.frame())
+  if (is.null(pool) || is.null(user_id)) {
+    return(data.frame())
+  }
 
   query <- "SELECT * FROM personal_library WHERE user_entity_id = ?id AND valid_to IS NULL ORDER BY name ASC"
   DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool, query, id = user_id))
@@ -96,7 +104,6 @@ db_get_library <- function(pool, user_id) {
 #' @param entity_id uuid of the chart
 #'
 db_save_library_entry <- function(pool, user_id, data, entity_id = NULL) {
-
   if (is.null(data$birth_timestamp)) stop("Birth timestamp is required")
   if (is.null(data$country)) stop("Country is required")
   if (is.null(data$city_name)) stop("City is required")
@@ -145,16 +152,17 @@ db_save_library_entry <- function(pool, user_id, data, entity_id = NULL) {
         valid_from
       ) VALUES (?eid, ?owner, ?name, ?ts, ?tz, ?city, ?country, ?lat, ?lng, ?notes, NOW())
     ",
-     eid = final_entity_id,
-     owner = user_id,
-     name = data$name,
-     ts = birth_ts,
-     tz = final_tz,
-     city = data$city_name,
-     country = data$country,
-     lat = loc_data$lat,
-     lng = loc_data$lng,
-     notes = data$notes %||% ""))
+      eid = final_entity_id,
+      owner = user_id,
+      name = data$name,
+      ts = birth_ts,
+      tz = final_tz,
+      city = data$city_name,
+      country = data$country,
+      lat = loc_data$lat,
+      lng = loc_data$lng,
+      notes = data$notes %||% ""
+    ))
   })
 }
 
@@ -180,7 +188,6 @@ db_delete_library_entry <- function(pool, entry_id) {
 #' @importFrom DBI dbConnect dbGetQuery dbDisconnect sqlInterpolate
 #'
 lookup_city_data <- function(country, city) {
-
   # 1. Connect to internal SQLite DB
   con <- connect_cities_db()
   on.exit(DBI::dbDisconnect(con))
@@ -211,15 +218,6 @@ lookup_city_data <- function(country, city) {
     return(list(lat = 0, lng = 0, timezone = "UTC"))
   }
 
-  # Mock Logic - Extend this or connect to your SQLite DB
-  if (country == "Taiwan" && city == "Taipei") {
-    return(list(
-      lat = 25.0330,
-      lng = 121.5654,
-      timezone = "Asia/Taipei"
-    ))
-  }
-
   return(list(
     lat = res$latitude[1],
     lng = res$longitude[1],
@@ -240,8 +238,9 @@ get_country_options <- function() {
 
   # Format Label: "台灣 (Taiwan)" or just "Taiwan" if no translation
   labels <- ifelse(!is.na(res$name_zh) & res$name_zh != "",
-                   paste0(res$name_zh, " (", res$country_name, ")"),
-                   res$country_name)
+    paste0(res$name_zh, " (", res$country_name, ")"),
+    res$country_name
+  )
 
   # Value: "Taiwan" (English name required by backend)
   return(setNames(res$country_name, labels))
@@ -267,12 +266,15 @@ get_city_options <- function(country_name) {
   query <- DBI::sqlInterpolate(con, sql, name = country_name)
   res <- DBI::dbGetQuery(con, query)
 
-  if (nrow(res) == 0) return(character(0))
+  if (nrow(res) == 0) {
+    return(character(0))
+  }
 
   # Format Label: "台北市 (Taipei)"
   labels <- ifelse(!is.na(res$name_zh) & res$name_zh != "",
-                   paste0(res$name_zh, " (", res$name, ")"),
-                   res$name)
+    paste0(res$name_zh, " (", res$name, ")"),
+    res$name
+  )
 
   return(setNames(res$name, labels))
 }

@@ -60,6 +60,8 @@ name of the chart}
 \item \href{#method-DataManager-register}{\code{DataManager$register()}}
 \item \href{#method-DataManager-validate_session}{\code{DataManager$validate_session()}}
 \item \href{#method-DataManager-login}{\code{DataManager$login()}}
+\item \href{#method-DataManager-login_with_google}{\code{DataManager$login_with_google()}}
+\item \href{#method-DataManager-verify_email}{\code{DataManager$verify_email()}}
 \item \href{#method-DataManager-logout}{\code{DataManager$logout()}}
 \item \href{#method-DataManager-refresh_user_data}{\code{DataManager$refresh_user_data()}}
 \item \href{#method-DataManager-save_user_profile}{\code{DataManager$save_user_profile()}}
@@ -157,6 +159,47 @@ Login User (Flexible)
 }
 \subsection{Returns}{
 Session Token (String) if success, NULL if failed
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-login_with_google"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-login_with_google}{}}}
+\subsection{Method \code{login_with_google()}}{
+Handle Google Login
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$login_with_google(email, google_id, name)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{email}}{google email}
+
+\item{\code{google_id}}{google id (returned by google auth0)}
+
+\item{\code{name}}{name of user (returned by google auth0)}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Session Token
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-verify_email"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-verify_email}{}}}
+\subsection{Method \code{verify_email()}}{
+Verify Email Token
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$verify_email(token)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{token}}{verification token}
+}
+\if{html}{\out{</div>}}
 }
 }
 \if{html}{\out{<hr>}}
