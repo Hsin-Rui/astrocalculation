@@ -243,7 +243,7 @@ DataManager <- R6::R6Class(
       # 2. If a user ID was found
       if (!is.null(user_id)) {
         self$user_id <- user_id
-        self$load_profile() # Assuming you have this to load name/avatar
+        self$refresh_user_data() # Assuming you have this to load name/avatar
         return(TRUE)
       }
 
