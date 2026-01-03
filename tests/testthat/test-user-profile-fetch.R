@@ -1,12 +1,16 @@
 test_that("Story 2: Profile Fetching (Join Logic)", {
   # --- Connection Logic with Skip ---
-  pool <- tryCatch({
-    connect_postgres_db()
-  }, error = function(e) {
-    return(NULL)
-  })
+  pool <- tryCatch(
+    {
+      connect_postgres_db()
+    },
+    error = function(e) {
+      return(NULL)
+    }
+  )
 
   skip_if(is.null(pool), "Postgres connection could not be established; skipping test.")
+  skip_if(!inherits(pool, "Pool"), "Postgres pool not available; skipping test.")
 
   # 1. Setup
   test_email <- "profile_test@example.com"
@@ -16,18 +20,26 @@ test_that("Story 2: Profile Fetching (Join Logic)", {
 
   # Cleanup
   cleanup_logic <- function() {
-    try({
-      if(DBI::dbExistsTable(pool, "auth_credentials")) {
-        DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
-                                                 "DELETE FROM auth_credentials WHERE email = ?email", email = test_email))
-      }
-    }, silent = TRUE)
+    try(
+      {
+        if (DBI::dbExistsTable(pool, "auth_credentials")) {
+          DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
+            "DELETE FROM auth_credentials WHERE email = ?email",
+            email = test_email
+          ))
+        }
+      },
+      silent = TRUE
+    )
   }
 
-  on.exit({
-    cleanup_logic()
-    pool::poolClose(pool)
-  }, add = TRUE)
+  on.exit(
+    {
+      cleanup_logic()
+      if (inherits(pool, "Pool")) pool::poolClose(pool)
+    },
+    add = TRUE
+  )
 
   cleanup_logic() # Clean Start
 

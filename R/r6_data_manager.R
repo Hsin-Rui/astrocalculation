@@ -194,12 +194,60 @@ DataManager <- R6::R6Class(
       return(session_token)
     },
 
+    #' @description Handle Google Login
+    #' @param email google email
+    #' @param google_id google id (returned by google)
+    #' @param name name of user (returned by google)
+    #' @return Session Token
+    login_with_google = function(email, google_id, name) {
+      if (is.null(self$pool)) stop("Database offline.")
+
+      self$logger$log_info("LOGIN_GOOGLE", "Login attempt", self$user_id)
+
+      # 1. Get/Create User via Logic
+      uid <- auth_handle_oauth_user(self$pool, email, google_id, name)
+
+      # 2. Update Internal State
+      self$user_id <- uid
+
+      self$refresh_user_data()
+      self$logger$log_info("LOGIN_GOOGLE", "User logged in", self$user_id)
+      session_token <- auth_create_session(self$pool, self$user_id)
+
+      # 3. Create Session
+      return(session_token)
+    },
+
+    #' @description Verify Email Token
+    #' @param token verification token
+    verify_email = function(token) {
+      if (is.null(self$pool)) return(FALSE)
+      return(auth_verify_email(self$pool, token))
+    },
+
     #' @description Logout
     logout = function() {
       self$user_id <- NULL
       self$user_profile <- NULL
       self$user_library <- NULL
       # Reset chart to default transit? Optional.
+    },
+
+    #' @description Attempt to restore session from a cookie token
+    #' @param token The session UUID string
+    #' @return Logical TRUE if successful, FALSE otherwise
+    restore_session = function(token) {
+      # 1. Use the existing logic function to check DB
+      user_id <- auth_validate_session(self$pool, token)
+
+      # 2. If a user ID was found
+      if (!is.null(user_id)) {
+        self$user_id <- user_id
+        self$refresh_user_data() # Assuming you have this to load name/avatar
+        return(TRUE)
+      }
+
+      return(FALSE)
     },
 
     # 3. Methods: State Management ---------------------
