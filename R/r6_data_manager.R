@@ -238,7 +238,7 @@ DataManager <- R6::R6Class(
     #' @return Logical TRUE if successful, FALSE otherwise
     restore_session = function(token) {
       # 1. Use the existing logic function to check DB
-      user_id <- auth_validate_session(private$pool, token)
+      user_id <- auth_validate_session(self$pool, token)
 
       # 2. If a user ID was found
       if (!is.null(user_id)) {
