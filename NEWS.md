@@ -1,5 +1,6 @@
 # astrocalculation 0.1.12 -- 2025-12-30
 * Account authentification using google
+* Implement restore_session method in DataManager to improve cookie handling logic.
 
 # astrocalculation 0.1.11 -- 2025-12-29
 * Enable backend to send verification email.
