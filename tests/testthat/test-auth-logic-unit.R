@@ -49,9 +49,9 @@ test_that("validate_email enforces basic format", {
 
 test_that("validate_password enforces length, number, special", {
     expect_true(validate_password("Abcd123!"))
-    expect_false(validate_password("short1!")) # too short
-    expect_false(validate_password("NoNumber!"))
-    expect_false(validate_password("NoSpecial123"))
+    expect_error(validate_password("short1!")) # too short
+    expect_error(validate_password("NoNumber!"))
+    expect_error(validate_password("NoSpecial123"))
 })
 
 test_that("auth_verify_user returns NULL when user not found", {
