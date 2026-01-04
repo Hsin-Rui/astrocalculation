@@ -46,10 +46,10 @@ auth_register_user <- function(pool, user_id, email, password, display_name) {
     # Insert Credential (is_verified = FALSE)
     DBI::dbExecute(con, DBI::sqlInterpolate(con, "
       INSERT INTO auth_credentials (
-        user_entity_id, email, password_hash, salt,
+        user_entity_id, email, password_hash,
         is_verified, verification_token, verification_token_expires_at, created_at
       ) VALUES (
-        ?id, ?email, ?hash, NA,
+        ?id, ?email, ?hash,
         FALSE, ?token, NOW() + INTERVAL '24 hours', NOW()
       )
     ", id = user_id, email = email, hash = hashed_pw, token = verif_token))
@@ -206,7 +206,6 @@ auth_reset_password <- function(pool, token, new_password) {
   DBI::dbExecute(pool, DBI::sqlInterpolate(pool, "
     UPDATE auth_credentials
     SET password_hash = ?hash,
-        salt = 'NA',
         reset_token = NULL,
         reset_token_expires_at = NULL,
         is_verified = TRUE
@@ -420,10 +419,10 @@ auth_handle_oauth_user <- function(pool, email, google_id, name) {
       # Create Credentials (No password hash needed for OAuth-only)
       DBI::dbExecute(con, DBI::sqlInterpolate(con, "
         INSERT INTO auth_credentials (
-          user_entity_id, email, password_hash, salt,
+          user_entity_id, email, password_hash,
           is_verified, oauth_provider, oauth_subject_id, created_at
         ) VALUES (
-          ?uid, ?email, NA, NA,
+          ?uid, ?email, NA,
           TRUE, 'google', ?gid, NOW()
         )
       ", uid = new_uid, email = email, gid = google_id))
