@@ -48,8 +48,10 @@ DataManager <- R6::R6Class(
     ## 1-3. Calculation config ####
     #' @field selected_planets (`character()`)\cr
     #' name of the chart
-    selected_planets = c("sun","moon","mercury","venus","mars","jupiter","saturn","uranus","neptune","pluto",
-                         "chiron","mean_node","asc","mc","vertex"),
+    selected_planets = c(
+      "sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto",
+      "chiron", "mean_node", "asc", "mc", "vertex"
+    ),
 
     ## 1-4. User auth fileds ####
 
@@ -77,8 +79,7 @@ DataManager <- R6::R6Class(
     #' If not, default to Guest/Transit mode.
     #' @param user_id Optional Azure Object ID
     #'
-    initialize = function(user_id = NULL){
-
+    initialize = function(user_id = NULL) {
       self$horoscope_datetime <- Sys.time()
       self$horoscope_timezone <- "Asia/Taipei"
       self$horoscope_city <- "Taipei"
@@ -92,13 +93,16 @@ DataManager <- R6::R6Class(
       attempt <- 1
 
       while (attempt <= max_retries && is.null(self$pool)) {
-        self$pool <- tryCatch({
-          connect_postgres_db()
-        }, error = function(e) {
-          message(sprintf("DB Connection attempt %d failed: %s", attempt, e$message))
-          if (attempt < max_retries) Sys.sleep(1) # Brief pause before retry
-          return(NULL)
-        })
+        self$pool <- tryCatch(
+          {
+            connect_postgres_db()
+          },
+          error = function(e) {
+            message(sprintf("DB Connection attempt %d failed: %s", attempt, e$message))
+            if (attempt < max_retries) Sys.sleep(1) # Brief pause before retry
+            return(NULL)
+          }
+        )
         attempt <- attempt + 1
       }
 
@@ -111,15 +115,11 @@ DataManager <- R6::R6Class(
         # Load Data using Service Function
         self$refresh_user_data()
         self$logger$log_info("LOGIN", "User restored from session", user_id)
-
       } else {
-
         self$logger$log_info("INIT", "Guest session started")
-
       }
 
       self$update_chart()
-
     },
 
     # 2. Methods: Auth Integration ---------------------
@@ -150,7 +150,9 @@ DataManager <- R6::R6Class(
     #' @param token The session cookie string
     #' @return user_id if valid, NULL otherwise
     validate_session = function(token) {
-      if (is.null(token) || token == "") return(NULL)
+      if (is.null(token) || token == "") {
+        return(NULL)
+      }
 
       # Use the internal pool
       valid_user_id <- auth_validate_session(self$pool, token)
@@ -218,10 +220,36 @@ DataManager <- R6::R6Class(
       return(session_token)
     },
 
+    #' @description Trigger password reset email
+    #' @param email user email
+    trigger_password_reset = function(email) {
+      if (is.null(self$pool)) stop("Database offline.")
+      res <- auth_trigger_password_reset(self$pool, email)
+      if (!is.null(self$logger)) {
+        self$logger$log_info("RESET_REQUEST", paste("Password reset requested for", email))
+      }
+      return(res)
+    },
+
+    #' @description Reset password using a token
+    #' @param token reset token
+    #' @param new_password new password string
+    reset_password = function(token, new_password) {
+      if (is.null(self$pool)) stop("Database offline.")
+      res <- auth_reset_password(self$pool, token, new_password)
+      if (!is.null(self$logger)) {
+        event <- if (isTRUE(res)) "RESET_SUCCESS" else "RESET_FAILED"
+        self$logger$log_info(event, "Password reset attempt", self$user_id)
+      }
+      return(res)
+    },
+
     #' @description Verify Email Token
     #' @param token verification token
     verify_email = function(token) {
-      if (is.null(self$pool)) return(FALSE)
+      if (is.null(self$pool)) {
+        return(FALSE)
+      }
       return(auth_verify_email(self$pool, token))
     },
 
@@ -254,7 +282,9 @@ DataManager <- R6::R6Class(
 
     #' @description Refresh profile and library from DB
     refresh_user_data = function() {
-      if (is.null(self$pool) || is.null(self$user_id)) return()
+      if (is.null(self$pool) || is.null(self$user_id)) {
+        return()
+      }
 
       # Call external service functions
       self$user_profile <- db_get_profile(self$pool, self$user_id)
@@ -287,7 +317,6 @@ DataManager <- R6::R6Class(
     #' @param source "profile" or "library"
     #' @param library_id Optional ID if source is library
     load_chart_to_view = function(source = "profile", library_id = NULL) {
-
       target_row <- NULL
 
       if (source == "profile") {
@@ -299,7 +328,6 @@ DataManager <- R6::R6Class(
       }
 
       if (!is.null(target_row) && nrow(target_row) > 0) {
-
         # TIMEZONE HANDLING
         # 1. Get the UTC timestamp from DB
         db_ts <- target_row$birth_timestamp
@@ -312,10 +340,10 @@ DataManager <- R6::R6Class(
 
         self$horoscope_datetime <- target_row$birth_timestamp
         self$horoscope_timezone <- target_row$timezone
-        self$horoscope_city     <- target_row$city_name
-        self$horoscope_country  <- target_row$country
+        self$horoscope_city <- target_row$city_name
+        self$horoscope_country <- target_row$country
         self$horoscope_latitude <- target_row$lat
-        self$horoscope_longitude<- target_row$lng
+        self$horoscope_longitude <- target_row$lng
 
         self$update_chart()
       }
@@ -338,96 +366,100 @@ DataManager <- R6::R6Class(
     #' @description
     #' update horoscope. Calculate planetary positions, draw chart
     #'
-    update_chart = function(){
-      tryCatch({
-        # 1. LOOKUP LOCATION (Story 2.2 Integration)
-        # We fetch the precise coordinates and timezone for the current city/country
-        loc_data <- lookup_city_data(self$horoscope_country, self$horoscope_city)
+    update_chart = function() {
+      tryCatch(
+        {
+          # 1. LOOKUP LOCATION (Story 2.2 Integration)
+          # We fetch the precise coordinates and timezone for the current city/country
+          loc_data <- lookup_city_data(self$horoscope_country, self$horoscope_city)
 
-        # Update internal state with fetched data
-        self$horoscope_latitude <- loc_data$lat
-        self$horoscope_longitude <- loc_data$lng
-        self$horoscope_timezone <- loc_data$timezone
+          # Update internal state with fetched data
+          self$horoscope_latitude <- loc_data$lat
+          self$horoscope_longitude <- loc_data$lng
+          self$horoscope_timezone <- loc_data$timezone
 
-        # 2. Perform Calculation using the validated coordinates
-        self$planet_position <- calculate_planet_position(
-          self$horoscope_datetime,
-          self$horoscope_timezone,
-          self$horoscope_longitude,
-          self$horoscope_latitude
-        )
-
-        # 3. Process Aspect Table
-        data <- self$planet_position$planetary_position
-        data <- data[(row.names(data) %in% self$selected_planets),]
-        self$aspect_table <- calculate_aspect(data)
-
-        # 4. Generate Visualization
-        self$planet_position$planetary_position <- data
-        self$chart <- draw_whole_sign_chart(
-          data,
-          self$chart_name,
-          self$horoscope_datetime,
-          self$horoscope_city,
-          self$horoscope_country,
-          self$horoscope_timezone,
-          self$aspect_table
-        )
-
-      }, error = function(e) {
-        # 2. LOG THE CRASH
-        self$logger$log_error(
-          event = "CALC_FAILURE",
-          message = e$message,
-          user_id = self$user_id,
-          context = list(
-            time = as.character(self$horoscope_datetime),
-            city = self$horoscope_city,
-            country = self$horoscope_country,
-            tz = self$horoscope_timezone
+          # 2. Perform Calculation using the validated coordinates
+          self$planet_position <- calculate_planet_position(
+            self$horoscope_datetime,
+            self$horoscope_timezone,
+            self$horoscope_longitude,
+            self$horoscope_latitude
           )
-        )
-        # Re-throw so UI knows something broke
-        stop(e)
-      })
+
+          # 3. Process Aspect Table
+          data <- self$planet_position$planetary_position
+          data <- data[(row.names(data) %in% self$selected_planets), ]
+          self$aspect_table <- calculate_aspect(data)
+
+          # 4. Generate Visualization
+          self$planet_position$planetary_position <- data
+          self$chart <- draw_whole_sign_chart(
+            data,
+            self$chart_name,
+            self$horoscope_datetime,
+            self$horoscope_city,
+            self$horoscope_country,
+            self$horoscope_timezone,
+            self$aspect_table
+          )
+        },
+        error = function(e) {
+          # 2. LOG THE CRASH
+          self$logger$log_error(
+            event = "CALC_FAILURE",
+            message = e$message,
+            user_id = self$user_id,
+            context = list(
+              time = as.character(self$horoscope_datetime),
+              city = self$horoscope_city,
+              country = self$horoscope_country,
+              tz = self$horoscope_timezone
+            )
+          )
+          # Re-throw so UI knows something broke
+          stop(e)
+        }
+      )
     },
-  #' @description
-  #' Add or minus datetime according for a certain value and unit, then plot the chart
-  #' @param operation add or minus (interact with an action button)
-  #' @param value range from 1 to 30
-  #' @param unit Minutes, Hours, Days, Months and Years
-  #'
-  adjust_time = function(operation = c("add", "minus"), value, unit) {
-    operation <- match.arg(operation)
+    #' @description
+    #' Add or minus datetime according for a certain value and unit, then plot the chart
+    #' @param operation add or minus (interact with an action button)
+    #' @param value range from 1 to 30
+    #' @param unit Minutes, Hours, Days, Months and Years
+    #'
+    adjust_time = function(operation = c("add", "minus"), value, unit) {
+      operation <- match.arg(operation)
 
-    if (operation == "add") {
-      self$horoscope_datetime <- add_datetime(self$horoscope_datetime, unit, value)
-    } else {
-      self$horoscope_datetime <- minus_datetime(self$horoscope_datetime, unit, value)
-    }
+      if (operation == "add") {
+        self$horoscope_datetime <- add_datetime(self$horoscope_datetime, unit, value)
+      } else {
+        self$horoscope_datetime <- minus_datetime(self$horoscope_datetime, unit, value)
+      }
 
-    # Refresh the chart data with the new datetime
-    self$update_chart()
+      # Refresh the chart data with the new datetime
+      self$update_chart()
 
-    self$logger$log_info(
-      event = "TIME_ADJUST",
-      message = paste("Time adjusted:", operation, value, unit,
-                      "| New time:", self$horoscope_datetime)
-    )
+      self$logger$log_info(
+        event = "TIME_ADJUST",
+        message = paste(
+          "Time adjusted:", operation, value, unit,
+          "| New time:", self$horoscope_datetime
+        )
+      )
 
-    return(invisible(self))
-  },
-  # 5. Methods: UI Helpers (Bilingual Lists) ---------------------------------
+      return(invisible(self))
+    },
+    # 5. Methods: UI Helpers (Bilingual Lists) ---------------------------------
 
-  #' @description
-  #' Fetch bilingual country list for UI SelectizeInput
-  #' Returns named vector
-  get_country_options = function() get_country_options(),
-  #' @description
-  #' Fetch bilingual city list for a specific country
-  #' Returns named vector
-  #' @param country_name English name of the country
-  get_city_options = function(country_name) get_city_options(country_name)
+    #' @description
+    #' Fetch bilingual country list for UI SelectizeInput
+    #' Returns named vector
+    get_country_options = function() get_country_options(),
+    #' @description
+    #' Fetch bilingual city list for a specific country
+    #' Returns named vector
+    #' @param country_name English name of the country
+    get_city_options = function(country_name) get_city_options(country_name)
   ),
 
   # 6. Private Methods -----------------------------------------

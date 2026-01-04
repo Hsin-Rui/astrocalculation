@@ -86,6 +86,76 @@ test_that("validate_session updates user_id and refreshes data", {
   )
 })
 
+test_that("trigger_password_reset delegates to auth logic", {
+  calls <- list(count = 0)
+
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(
+        {
+          r6$pool <- NULL
+        },
+        add = TRUE
+      )
+
+      res <- r6$trigger_password_reset("user@example.com")
+      expect_true(res)
+      expect_equal(calls$count, 1)
+    },
+    connect_postgres_db = function() list(conn = TRUE),
+    Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
+    lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
+    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_aspect = function(data) data.frame(),
+    draw_whole_sign_chart = function(...) list(),
+    auth_trigger_password_reset = function(pool, email, ttl_minutes = 30) {
+      calls$count <<- calls$count + 1
+      TRUE
+    },
+    db_get_profile = function(pool, uid) data.frame(display_name = "Display", birth_timestamp = as.POSIXct("2020-01-01", tz = "UTC"), timezone = "UTC", city_name = "City", country = "Country", lat = 0, lng = 0),
+    db_get_library = function(pool, uid) data.frame(entity_id = "lib1", name = "Lib", birth_timestamp = as.POSIXct("2020-01-01", tz = "UTC"), timezone = "UTC", city_name = "City", country = "Country", lat = 0, lng = 0),
+    poolWithTransaction = function(pool, code) code(NULL),
+    .env = asNamespace("astrocalculation")
+  )
+})
+
+test_that("reset_password delegates to auth logic", {
+  calls <- list(token = NULL, pwd = NULL)
+
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(
+        {
+          r6$pool <- NULL
+        },
+        add = TRUE
+      )
+
+      res <- r6$reset_password("tok123", "Abcd123!")
+      expect_true(res)
+      expect_equal(calls$token, "tok123")
+      expect_equal(calls$pwd, "Abcd123!")
+    },
+    connect_postgres_db = function() list(conn = TRUE),
+    Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
+    lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
+    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_aspect = function(data) data.frame(),
+    draw_whole_sign_chart = function(...) list(),
+    auth_reset_password = function(pool, token, new_password) {
+      calls$token <<- token
+      calls$pwd <<- new_password
+      TRUE
+    },
+    db_get_profile = function(pool, uid) data.frame(display_name = "Display", birth_timestamp = as.POSIXct("2020-01-01", tz = "UTC"), timezone = "UTC", city_name = "City", country = "Country", lat = 0, lng = 0),
+    db_get_library = function(pool, uid) data.frame(entity_id = "lib1", name = "Lib", birth_timestamp = as.POSIXct("2020-01-01", tz = "UTC"), timezone = "UTC", city_name = "City", country = "Country", lat = 0, lng = 0),
+    poolWithTransaction = function(pool, code) code(NULL),
+    .env = asNamespace("astrocalculation")
+  )
+})
+
 test_that("adjust_time delegates to add/minus helpers and refreshes chart", {
   calls <- list()
 

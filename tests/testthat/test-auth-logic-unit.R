@@ -7,6 +7,10 @@ mock_conn_class <- function() {
 make_mock_conn <- function(query_res = data.frame(), exec_side = NULL) {
     mock_conn_class()
 
+    # Allow sequential query results (list) or single data.frame
+    res_list <- if (is.list(query_res) && !is.data.frame(query_res)) query_res else list(query_res)
+    res_idx <- 1L
+
     methods::setMethod(
         "sqlInterpolate",
         signature(conn = "MockConn", sql = "character"),
@@ -16,7 +20,11 @@ make_mock_conn <- function(query_res = data.frame(), exec_side = NULL) {
     methods::setMethod(
         "dbGetQuery",
         signature(conn = "MockConn", statement = "character"),
-        function(conn, statement, ...) query_res
+        function(conn, statement, ...) {
+            res <- res_list[[min(res_idx, length(res_list))]]
+            res_idx <<- res_idx + 1L
+            res
+        }
     )
 
     methods::setMethod(
@@ -135,4 +143,47 @@ test_that("auth_handle_oauth_user creates new user when none exists", {
 
     expect_match(res, "new-uid")
     expect_equal(exec_calls$count, 2) # credentials + profile inserts
+})
+
+test_that("auth_trigger_password_reset returns FALSE when email missing", {
+    pool <- make_mock_conn(query_res = data.frame())
+    res <- auth_trigger_password_reset(pool, "missing@example.com", ttl_minutes = 30)
+    expect_false(res)
+})
+
+test_that("auth_trigger_password_reset writes token and expiry", {
+    exec_calls <- list(count = 0)
+    pool <- make_mock_conn(
+        query_res = data.frame(user_entity_id = "uid-1"),
+        exec_side = function() exec_calls$count <<- exec_calls$count + 1
+    )
+
+    res <- with_mocked_bindings(
+        auth_trigger_password_reset(pool, "user@example.com", ttl_minutes = 30),
+        UUIDgenerate = function(...) "token-123",
+        .env = asNamespace("uuid")
+    )
+
+    expect_true(res)
+    expect_equal(exec_calls$count, 1)
+})
+
+test_that("auth_reset_password fails on invalid token", {
+    pool <- make_mock_conn(query_res = data.frame())
+    res <- auth_reset_password(pool, "bad-token", "Abcd123!")
+    expect_false(res)
+})
+
+test_that("auth_reset_password updates password and clears token", {
+    exec_calls <- list(count = 0)
+    pool <- make_mock_conn(
+        query_res = list(
+            data.frame(user_entity_id = "uid-1", stringsAsFactors = FALSE)
+        ),
+        exec_side = function() exec_calls$count <<- exec_calls$count + 1
+    )
+
+    res <- auth_reset_password(pool, "token-ok", "Abcd123!")
+    expect_true(res)
+    expect_equal(exec_calls$count, 1)
 })

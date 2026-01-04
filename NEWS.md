@@ -1,3 +1,6 @@
+# astrocalculation 0.1.13 -- 2026-1-4
+* Implement backend logic for reset password
+
 # astrocalculation 0.1.12 -- 2025-12-30
 * Account authentification using google
 * Implement restore_session method in DataManager to improve cookie handling logic.
