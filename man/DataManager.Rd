@@ -61,8 +61,11 @@ name of the chart}
 \item \href{#method-DataManager-validate_session}{\code{DataManager$validate_session()}}
 \item \href{#method-DataManager-login}{\code{DataManager$login()}}
 \item \href{#method-DataManager-login_with_google}{\code{DataManager$login_with_google()}}
+\item \href{#method-DataManager-trigger_password_reset}{\code{DataManager$trigger_password_reset()}}
+\item \href{#method-DataManager-reset_password}{\code{DataManager$reset_password()}}
 \item \href{#method-DataManager-verify_email}{\code{DataManager$verify_email()}}
 \item \href{#method-DataManager-logout}{\code{DataManager$logout()}}
+\item \href{#method-DataManager-restore_session}{\code{DataManager$restore_session()}}
 \item \href{#method-DataManager-refresh_user_data}{\code{DataManager$refresh_user_data()}}
 \item \href{#method-DataManager-save_user_profile}{\code{DataManager$save_user_profile()}}
 \item \href{#method-DataManager-save_chart_to_library}{\code{DataManager$save_chart_to_library()}}
@@ -175,14 +178,50 @@ Handle Google Login
 \describe{
 \item{\code{email}}{google email}
 
-\item{\code{google_id}}{google id (returned by google auth0)}
+\item{\code{google_id}}{google id (returned by google)}
 
-\item{\code{name}}{name of user (returned by google auth0)}
+\item{\code{name}}{name of user (returned by google)}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
 Session Token
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-trigger_password_reset"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-trigger_password_reset}{}}}
+\subsection{Method \code{trigger_password_reset()}}{
+Trigger password reset email
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$trigger_password_reset(email)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{email}}{user email}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-reset_password"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-reset_password}{}}}
+\subsection{Method \code{reset_password()}}{
+Reset password using a token
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$reset_password(token, new_password)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{token}}{reset token}
+
+\item{\code{new_password}}{new password string}
+}
+\if{html}{\out{</div>}}
 }
 }
 \if{html}{\out{<hr>}}
@@ -211,6 +250,26 @@ Logout
 \if{html}{\out{<div class="r">}}\preformatted{DataManager$logout()}\if{html}{\out{</div>}}
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-restore_session"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-restore_session}{}}}
+\subsection{Method \code{restore_session()}}{
+Attempt to restore session from a cookie token
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$restore_session(token)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{token}}{The session UUID string}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Logical TRUE if successful, FALSE otherwise
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DataManager-refresh_user_data"></a>}}

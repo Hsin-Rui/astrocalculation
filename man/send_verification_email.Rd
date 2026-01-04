@@ -13,6 +13,9 @@ send_verification_email(to_email, token, base_url = "http://127.0.0.1:3000")
 
 \item{base_url}{The base URL of your Shiny app (for the link)}
 }
+\value{
+TRUE if email sent successfully, FALSE otherwise
+}
 \description{
 Send Verification Email via SMTP
 }
