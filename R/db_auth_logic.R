@@ -206,7 +206,7 @@ auth_reset_password <- function(pool, token, new_password) {
   DBI::dbExecute(pool, DBI::sqlInterpolate(pool, "
     UPDATE auth_credentials
     SET password_hash = ?hash,
-        salt = NA,
+        salt = 'NA',
         reset_token = NULL,
         reset_token_expires_at = NULL,
         is_verified = TRUE
