@@ -49,9 +49,9 @@ test_that("validate_email enforces basic format", {
 
 test_that("validate_password enforces length, number, special", {
     expect_true(validate_password("Abcd123!"))
-    expect_error(validate_password("short1!")) # too short
-    expect_error(validate_password("NoNumber!"))
-    expect_error(validate_password("NoSpecial123"))
+    expect_error(validate_password("short1!"), "at least 8 characters")
+    expect_error(validate_password("NoNumber!"), "at least one number")
+    expect_error(validate_password("NoSpecial123"), "at least one special character")
 })
 
 test_that("auth_verify_user returns NULL when user not found", {
@@ -64,7 +64,13 @@ test_that("auth_verify_user returns id and updates last_login on success", {
     exec_calls <- list(count = 0)
 
     pool <- make_mock_conn(
-        query_res = data.frame(user_entity_id = "u-1", password_hash = sodium::password_store("pw"), is_verified = TRUE),
+        query_res = data.frame(
+            user_entity_id = "u-1", 
+            password_hash = sodium::password_store("pw"), 
+            is_verified = TRUE,
+            failed_attempts = 0,
+            locked_until = as.POSIXct(NA)
+        ),
         exec_side = function() exec_calls$count <<- exec_calls$count + 1
     )
 
@@ -185,5 +191,148 @@ test_that("auth_reset_password updates password and clears token", {
 
     res <- auth_reset_password(pool, "token-ok", "Abcd123!")
     expect_true(res)
+    expect_equal(exec_calls$count, 1)
+})
+
+# Story 1.3: Account Lockout Tests
+
+test_that("auth_verify_user increments failed_attempts on wrong password", {
+    exec_calls <- list(count = 0, statement = "")
+    
+    pool <- make_mock_conn(
+        query_res = data.frame(
+            user_entity_id = "u-1", 
+            password_hash = sodium::password_store("correct_pw"), 
+            is_verified = TRUE,
+            failed_attempts = 2,
+            locked_until = as.POSIXct(NA)
+        )
+    )
+    
+    # Override dbExecute to capture the statement
+    methods::setMethod(
+        "dbExecute",
+        signature(conn = "MockConn", statement = "character"),
+        function(conn, statement, ...) {
+            exec_calls$statement <<- statement
+            exec_calls$count <<- exec_calls$count + 1
+            1
+        }
+    )
+    
+    res <- auth_verify_user(pool, "u-1", "wrong_pw")
+    
+    expect_null(res)
+    expect_equal(exec_calls$count, 1)
+    # Check that statement updates failed_attempts (value will be interpolated)
+    expect_true(grepl("SET failed_attempts", exec_calls$statement, fixed = TRUE))
+    expect_false(grepl("locked_until", exec_calls$statement, fixed = TRUE))
+})
+
+test_that("auth_verify_user locks account after 5 failed attempts", {
+    exec_calls <- list(count = 0, statement = "")
+    
+    pool <- make_mock_conn(
+        query_res = data.frame(
+            user_entity_id = "u-1", 
+            password_hash = sodium::password_store("correct_pw"), 
+            is_verified = TRUE,
+            failed_attempts = 4,
+            locked_until = as.POSIXct(NA)
+        )
+    )
+    
+    # Override dbExecute to capture the statement
+    methods::setMethod(
+        "dbExecute",
+        signature(conn = "MockConn", statement = "character"),
+        function(conn, statement, ...) {
+            exec_calls$statement <<- statement
+            exec_calls$count <<- exec_calls$count + 1
+            1
+        }
+    )
+    
+    res <- auth_verify_user(pool, "u-1", "wrong_pw")
+    
+    expect_null(res)
+    expect_equal(exec_calls$count, 1)
+    # Check that the statement includes both failed_attempts and lockout logic
+    expect_true(grepl("SET failed_attempts", exec_calls$statement, fixed = TRUE))
+    expect_true(grepl("locked_until", exec_calls$statement, fixed = TRUE))
+    expect_true(grepl("15 minutes", exec_calls$statement, fixed = TRUE))
+})
+
+test_that("auth_verify_user resets failed_attempts on successful login", {
+    exec_calls <- list(count = 0, statement = "")
+    
+    pool <- make_mock_conn(
+        query_res = data.frame(
+            user_entity_id = "u-1", 
+            password_hash = sodium::password_store("correct_pw"), 
+            is_verified = TRUE,
+            failed_attempts = 3,
+            locked_until = as.POSIXct(NA)
+        )
+    )
+    
+    # Override dbExecute to capture the statement
+    methods::setMethod(
+        "dbExecute",
+        signature(conn = "MockConn", statement = "character"),
+        function(conn, statement, ...) {
+            exec_calls$statement <<- statement
+            exec_calls$count <<- exec_calls$count + 1
+            1
+        }
+    )
+    
+    res <- auth_verify_user(pool, "u-1", "correct_pw")
+    
+    expect_equal(res$id, "u-1")
+    expect_true(res$verified)
+    expect_equal(exec_calls$count, 1)
+    expect_true(grepl("failed_attempts = 0", exec_calls$statement, fixed = TRUE))
+})
+
+test_that("auth_verify_user returns locked status for locked account", {
+    future_time <- Sys.time() + 600  # 10 minutes from now
+    
+    pool <- make_mock_conn(
+        query_res = data.frame(
+            user_entity_id = "u-1", 
+            password_hash = sodium::password_store("correct_pw"), 
+            is_verified = TRUE,
+            failed_attempts = 5,
+            locked_until = future_time
+        )
+    )
+    
+    res <- auth_verify_user(pool, "u-1", "correct_pw")
+    
+    expect_true(!is.null(res$locked))
+    expect_true(res$locked)
+    expect_equal(res$locked_until, future_time)
+})
+
+test_that("auth_verify_user allows login after lockout expires", {
+    exec_calls <- list(count = 0)
+    past_time <- Sys.time() - 600  # 10 minutes ago
+    
+    pool <- make_mock_conn(
+        query_res = data.frame(
+            user_entity_id = "u-1", 
+            password_hash = sodium::password_store("correct_pw"), 
+            is_verified = TRUE,
+            failed_attempts = 5,
+            locked_until = past_time
+        ),
+        exec_side = function() exec_calls$count <<- exec_calls$count + 1
+    )
+    
+    res <- auth_verify_user(pool, "u-1", "correct_pw")
+    
+    expect_equal(res$id, "u-1")
+    expect_true(res$verified)
     expect_equal(exec_calls$count, 1)
 })
