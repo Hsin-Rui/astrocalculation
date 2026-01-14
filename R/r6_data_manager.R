@@ -174,6 +174,12 @@ DataManager <- R6::R6Class(
 
       user_info <- auth_verify_user(self$pool, login_id, password)
 
+      # 1. Check for account lockout
+      if (!is.null(user_info) && !is.null(user_info$locked) && user_info$locked) {
+        lockout_mins <- round(as.numeric(difftime(user_info$locked_until, Sys.time(), units = "mins")))
+        stop(paste0("Account locked due to too many failed login attempts. Please try again in ", lockout_mins, " minutes or use 'Forgot Password'."))
+      }
+
       if (is.null(user_info)) {
         stop("Invalid username/email or password.")
       }

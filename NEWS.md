@@ -1,3 +1,6 @@
+# astrocalculation 0.1.14 -- 2026-1-6
+* Implement password lock logic
+
 # astrocalculation 0.1.13 -- 2026-1-4
 * Implement backend logic for reset password
 

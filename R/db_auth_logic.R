@@ -110,10 +110,10 @@ auth_verify_email <- function(pool, token) {
 
 #'
 auth_verify_user <- function(pool, login_id, password) {
-  # 1. Find User & Hash by Email OR User ID
-  # We use the same input for both checks (OR condition)
+  # 1. Find User & Hash by Email OR User ID (including lockout fields)
   res <- DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool,
-    "SELECT user_entity_id, password_hash, is_verified FROM auth_credentials
+    "SELECT user_entity_id, password_hash, is_verified, failed_attempts, locked_until 
+     FROM auth_credentials
      WHERE user_entity_id = ?input OR email = ?input",
     input = login_id
   ))
@@ -122,18 +122,46 @@ auth_verify_user <- function(pool, login_id, password) {
     return(NULL)
   }
 
-  # 2. Verify Hash
+  # 2. Check if account is locked
+  if (!is.na(res$locked_until) && res$locked_until > Sys.time()) {
+    return(list(locked = TRUE, locked_until = res$locked_until))
+  }
+
+  # 3. Verify Hash
   is_valid <- sodium::password_verify(res$password_hash, password)
 
   if (is_valid) {
-    # Update Last Login
+    # Reset failed attempts and update last login
     DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
-      "UPDATE auth_credentials SET last_login = NOW() WHERE user_entity_id = ?id",
+      "UPDATE auth_credentials 
+       SET last_login = NOW(), failed_attempts = 0, locked_until = NULL 
+       WHERE user_entity_id = ?id",
       id = res$user_entity_id
     ))
 
     return(list(id = res$user_entity_id, verified = res$is_verified))
   } else {
+    # Increment failed attempts
+    new_attempts <- res$failed_attempts + 1
+    
+    if (new_attempts >= 5) {
+      # Lock account for 15 minutes
+      DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
+        "UPDATE auth_credentials 
+         SET failed_attempts = ?attempts, locked_until = NOW() + INTERVAL '15 minutes'
+         WHERE user_entity_id = ?id",
+        attempts = new_attempts, id = res$user_entity_id
+      ))
+    } else {
+      # Just increment the counter
+      DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
+        "UPDATE auth_credentials 
+         SET failed_attempts = ?attempts
+         WHERE user_entity_id = ?id",
+        attempts = new_attempts, id = res$user_entity_id
+      ))
+    }
+    
     return(NULL)
   }
 }
