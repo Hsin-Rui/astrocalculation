@@ -197,7 +197,8 @@ DataManager <- R6::R6Class(
       # Calls your existing auth_create_session logic
       session_token <- auth_create_session(self$pool, self$user_id)
 
-      self$logger$log_info("LOGIN", "User logged in", self$user_id)
+      self$logger$log_info("LOGIN", "User logged in", self$user_id,
+        context = list(auth_method = "password", login_id = login_id))
 
       return(session_token)
     },
@@ -219,7 +220,8 @@ DataManager <- R6::R6Class(
       self$user_id <- uid
 
       self$refresh_user_data()
-      self$logger$log_info("LOGIN_GOOGLE", "User logged in", self$user_id)
+      self$logger$log_info("LOGIN_GOOGLE", "User logged in", self$user_id,
+        context = list(auth_method = "google", email = email))
       session_token <- auth_create_session(self$pool, self$user_id)
 
       # 3. Create Session

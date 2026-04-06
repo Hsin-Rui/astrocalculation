@@ -230,9 +230,6 @@ tables:
       was_locked:
         type: "BOOLEAN"
         description: "Whether the account was locked when the event occurred."
-      ip_address:
-        type: "VARCHAR(45)"
-        description: "Client IP address if available."
       created_at:
         type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
     indices:

@@ -1,6 +1,7 @@
 # astrocalculation 0.1.15 -- 2026-4-6
 * Update auth_reset_password to unlock account after resetting password
 * reduce amount of CICD checks (leave out windows and ubuntu devel)
+* Improve logging (log user id etc.)
 
 # astrocalculation 0.1.14 -- 2026-1-6
 * Implement password lock logic

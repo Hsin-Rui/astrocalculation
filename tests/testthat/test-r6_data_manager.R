@@ -203,3 +203,100 @@ test_that("adjust_time delegates to add/minus helpers and refreshes chart", {
     .env = asNamespace("astrocalculation")
   )
 })
+
+# Login logging tests ----------------------------------------------------------
+
+# Helper: build a capturing Logger mock
+make_log_capture <- function() {
+  log_calls <- list()
+  logger_mock <- list(
+    new = function(pool) {
+      list(
+        log_info = function(event, message, user_id = NULL, context = list()) {
+          log_calls[[length(log_calls) + 1]] <<- list(
+            event = event, message = message,
+            user_id = user_id, context = context
+          )
+        },
+        log_error = function(...) NULL
+      )
+    }
+  )
+  list(mock = logger_mock, calls = function() log_calls)
+}
+
+test_that("login logs auth_method=password and login_id in context", {
+  capture <- make_log_capture()
+
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      on.exit({ r6$pool <- NULL }, add = TRUE)
+
+      token <- r6$login("user@example.com", "Abcd123!")
+
+      expect_equal(token, "session-token")
+
+      login_log <- Filter(function(x) x$event == "LOGIN", capture$calls())
+      expect_length(login_log, 1L)
+      expect_equal(login_log[[1]]$context$auth_method, "password")
+      expect_equal(login_log[[1]]$context$login_id, "user@example.com")
+      expect_equal(login_log[[1]]$user_id, "uid-pw")
+    },
+    connect_postgres_db = function() list(conn = TRUE),
+    Logger = capture$mock,
+    lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
+    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_aspect = function(data) data.frame(),
+    draw_whole_sign_chart = function(...) list(),
+    auth_verify_user = function(pool, login_id, password) list(id = "uid-pw", verified = TRUE),
+    auth_create_session = function(pool, uid) "session-token",
+    db_get_profile = function(pool, uid) data.frame(display_name = "Display", birth_timestamp = as.POSIXct("2020-01-01", tz = "UTC"), timezone = "UTC", city_name = "City", country = "Country", lat = 0, lng = 0),
+    db_get_library = function(pool, uid) data.frame(entity_id = "lib1", name = "Lib", birth_timestamp = as.POSIXct("2020-01-01", tz = "UTC"), timezone = "UTC", city_name = "City", country = "Country", lat = 0, lng = 0),
+    poolWithTransaction = function(pool, code) code(NULL),
+    .env = asNamespace("astrocalculation")
+  )
+})
+
+test_that("login_with_google logs auth_method=google and email in context", {
+  capture <- make_log_capture()
+
+  with_mocked_bindings(
+    {
+      with_mocked_bindings(
+        {
+          r6 <- suppressMessages(DataManager$new())
+          on.exit({ r6$pool <- NULL }, add = TRUE)
+
+          token <- r6$login_with_google("google@example.com", "gid-99", "GUser")
+
+          expect_equal(token, "session-token")
+
+          login_log <- Filter(
+            function(x) x$event == "LOGIN_GOOGLE" && x$message == "User logged in",
+            capture$calls()
+          )
+          expect_length(login_log, 1L)
+          expect_equal(login_log[[1]]$context$auth_method, "google")
+          expect_equal(login_log[[1]]$context$email, "google@example.com")
+          expect_equal(login_log[[1]]$user_id, "uid-goog")
+        },
+        poolWithTransaction = function(pool, code) code(NULL),
+        .env = asNamespace("pool")
+      )
+    },
+    connect_postgres_db = function() list(conn = TRUE),
+    Logger = capture$mock,
+    lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
+    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_aspect = function(data) data.frame(),
+    draw_whole_sign_chart = function(...) list(),
+    auth_handle_oauth_user = function(pool, email, google_id, name) "uid-goog",
+    auth_create_session = function(pool, uid) "session-token",
+    db_get_profile = function(pool, uid) data.frame(display_name = "GUser", birth_timestamp = as.POSIXct("2020-01-01", tz = "UTC"), timezone = "UTC", city_name = "City", country = "Country", lat = 0, lng = 0),
+    db_get_library = function(pool, uid) data.frame(entity_id = "lib1", name = "Lib", birth_timestamp = as.POSIXct("2020-01-01", tz = "UTC"), timezone = "UTC", city_name = "City", country = "Country", lat = 0, lng = 0),
+    auth_validate_session = function(pool, token) "uid-goog",
+    poolWithTransaction = function(pool, code) code(NULL),
+    .env = asNamespace("astrocalculation")
+  )
+})
