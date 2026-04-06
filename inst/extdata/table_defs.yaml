@@ -16,7 +16,7 @@ tables:
         type: "VARCHAR(255) NOT NULL UNIQUE"
         description: "Login email. Must be unique system-wide."
       password_hash:
-        type: "VARCHAR(512) NOT NULL"
+        type: "VARCHAR(512)"
       is_verified:
         type: "BOOLEAN DEFAULT FALSE"
       verification_token:

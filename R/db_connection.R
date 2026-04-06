@@ -79,6 +79,7 @@ close_postgres_db <- function(pool) {
 #'
 #' Reads inst/extdata/table_defs.yml, translates it to SQL, and executes it.
 #'
+#' @param pool database connection (connect_postgres_db)
 #' @param overwrite Logical. If TRUE, drops existing tables before creating them.
 #'   Use with caution!
 #'
