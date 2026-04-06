@@ -33,16 +33,14 @@ connect_cities_db <- function() {
 connect_postgres_db <- function() {
 
   # 1. Read Credentials
-  #db_host <- Sys.getenv("DB_HOST")
   db_host <- Sys.getenv("PGHOST")
   db_port <- Sys.getenv("DB_PORT")
-  #db_name <- Sys.getenv("DB_NAME")
   db_name <- Sys.getenv("PGDATABASE")
   #db_user <- Sys.getenv("DB_USER")
   db_user <- Sys.getenv("PGUSER")
   #db_pass <- Sys.getenv("DB_PASSWORD")
   db_pass <- Sys.getenv("PGPASSWORD")
-  #ssl_mode <- Sys.getenv("DB_SSL_MODE", "require")
+  # ssl_mode <- Sys.getenv("DB_SSL_MODE", "require")
   ssl_mode <- Sys.getenv("PGSSLMODE", "require")
 
   # 2. Check for missing config
@@ -60,7 +58,8 @@ connect_postgres_db <- function() {
     port = db_port,
     user = db_user,
     password = db_pass,
-    sslmode = ssl_mode
+    sslmode = ssl_mode,
+    options = paste0("-c search_path=", Sys.getenv("R_CONFIG_ACTIVE"))
   )
 
   return(pool)
@@ -86,10 +85,10 @@ close_postgres_db <- function(pool) {
 #' @importFrom yaml read_yaml
 #' @importFrom pool poolWithTransaction
 #'
-db_initialize_schema <- function(overwrite = FALSE) {
+db_initialize_schema <- function(pool = NULL, overwrite = FALSE) {
 
   # 1. Connect using your new function name
-  pool <- connect_postgres_db()
+  if (is.null(pool)) pool <- connect_postgres_db()
   on.exit(close_postgres_db(pool))
 
   # 2. Locate the YAML file
