@@ -182,16 +182,20 @@ test_that("auth_reset_password fails on invalid token", {
 
 test_that("auth_reset_password updates password and clears token", {
     exec_calls <- list(count = 0)
+    # Now needs 2 query results: token validation + current state fetch
     pool <- make_mock_conn(
         query_res = list(
-            data.frame(user_entity_id = "uid-1", stringsAsFactors = FALSE)
+            data.frame(user_entity_id = "uid-1", stringsAsFactors = FALSE),
+            data.frame(failed_attempts = 0L, locked_until = as.POSIXct(NA),
+                       stringsAsFactors = FALSE)
         ),
         exec_side = function() exec_calls$count <<- exec_calls$count + 1
     )
 
     res <- auth_reset_password(pool, "token-ok", "Abcd123!")
     expect_true(res)
-    expect_equal(exec_calls$count, 1)
+    # 2 dbExecute calls: security log INSERT + credentials UPDATE
+    expect_equal(exec_calls$count, 2)
 })
 
 # Story 1.3: Account Lockout Tests
@@ -230,7 +234,7 @@ test_that("auth_verify_user increments failed_attempts on wrong password", {
 })
 
 test_that("auth_verify_user locks account after 5 failed attempts", {
-    exec_calls <- list(count = 0, statement = "")
+    exec_calls <- list(count = 0, statements = character(0))
     
     pool <- make_mock_conn(
         query_res = data.frame(
@@ -242,12 +246,12 @@ test_that("auth_verify_user locks account after 5 failed attempts", {
         )
     )
     
-    # Override dbExecute to capture the statement
+    # Override dbExecute to capture all statements (list, not single)
     methods::setMethod(
         "dbExecute",
         signature(conn = "MockConn", statement = "character"),
         function(conn, statement, ...) {
-            exec_calls$statement <<- statement
+            exec_calls$statements <<- c(exec_calls$statements, statement)
             exec_calls$count <<- exec_calls$count + 1
             1
         }
@@ -256,11 +260,14 @@ test_that("auth_verify_user locks account after 5 failed attempts", {
     res <- auth_verify_user(pool, "u-1", "wrong_pw")
     
     expect_null(res)
-    expect_equal(exec_calls$count, 1)
-    # Check that the statement includes both failed_attempts and lockout logic
-    expect_true(grepl("SET failed_attempts", exec_calls$statement, fixed = TRUE))
-    expect_true(grepl("locked_until", exec_calls$statement, fixed = TRUE))
-    expect_true(grepl("15 minutes", exec_calls$statement, fixed = TRUE))
+    # 2 dbExecute calls: UPDATE locked_until + INSERT security log
+    expect_equal(exec_calls$count, 2)
+    # First statement is the lockout UPDATE
+    expect_true(grepl("SET failed_attempts", exec_calls$statements[1], fixed = TRUE))
+    expect_true(grepl("locked_until", exec_calls$statements[1], fixed = TRUE))
+    expect_true(grepl("15 minutes", exec_calls$statements[1], fixed = TRUE))
+    # Second statement is the security log INSERT
+    expect_true(grepl("auth_security_log", exec_calls$statements[2], fixed = TRUE))
 })
 
 test_that("auth_verify_user resets failed_attempts on successful login", {
@@ -335,4 +342,228 @@ test_that("auth_verify_user allows login after lockout expires", {
     expect_equal(res$id, "u-1")
     expect_true(res$verified)
     expect_equal(exec_calls$count, 1)
+})
+
+# Security Logging Tests -------------------------------------------------------
+
+test_that("auth_verify_user inserts security log when account is locked", {
+    exec_calls <- list(count = 0, statements = character(0))
+
+    pool <- make_mock_conn(
+        query_res = data.frame(
+            user_entity_id = "u-1",
+            password_hash = sodium::password_store("correct_pw"),
+            is_verified = TRUE,
+            failed_attempts = 4L,
+            locked_until = as.POSIXct(NA)
+        )
+    )
+
+    methods::setMethod(
+        "dbExecute",
+        signature(conn = "MockConn", statement = "character"),
+        function(conn, statement, ...) {
+            exec_calls$statements <<- c(exec_calls$statements, statement)
+            exec_calls$count <<- exec_calls$count + 1L
+            1
+        }
+    )
+
+    res <- auth_verify_user(pool, "u-1", "wrong_pw")
+
+    expect_null(res)
+    # Expected: 1st dbExecute = UPDATE locked_until, 2nd = INSERT security log
+    expect_equal(exec_calls$count, 2L)
+    expect_true(any(grepl("auth_security_log", exec_calls$statements, fixed = TRUE)))
+    expect_true(any(grepl("account_locked", exec_calls$statements, fixed = TRUE)))
+})
+
+test_that("auth_verify_user does NOT insert security log for non-locking failure", {
+    exec_calls <- list(count = 0, statements = character(0))
+
+    pool <- make_mock_conn(
+        query_res = data.frame(
+            user_entity_id = "u-1",
+            password_hash = sodium::password_store("correct_pw"),
+            is_verified = TRUE,
+            failed_attempts = 2L,
+            locked_until = as.POSIXct(NA)
+        )
+    )
+
+    methods::setMethod(
+        "dbExecute",
+        signature(conn = "MockConn", statement = "character"),
+        function(conn, statement, ...) {
+            exec_calls$statements <<- c(exec_calls$statements, statement)
+            exec_calls$count <<- exec_calls$count + 1L
+            1
+        }
+    )
+
+    res <- auth_verify_user(pool, "u-1", "wrong_pw")
+
+    expect_null(res)
+    # Only 1 dbExecute: UPDATE failed_attempts (no security log)
+    expect_equal(exec_calls$count, 1L)
+    expect_false(any(grepl("auth_security_log", exec_calls$statements, fixed = TRUE)))
+})
+
+test_that("auth_reset_password inserts security log before unlocking", {
+    exec_calls <- list(count = 0, statements = character(0))
+
+    # make_mock_conn with sequential query results:
+    # 1st dbGetQuery = token validation (user found)
+    # 2nd dbGetQuery = fetch current lockout state
+    pool <- make_mock_conn(
+        query_res = list(
+            data.frame(user_entity_id = "uid-1", stringsAsFactors = FALSE),
+            data.frame(failed_attempts = 5L, locked_until = Sys.time() + 300,
+                       stringsAsFactors = FALSE)
+        )
+    )
+
+    methods::setMethod(
+        "dbExecute",
+        signature(conn = "MockConn", statement = "character"),
+        function(conn, statement, ...) {
+            exec_calls$statements <<- c(exec_calls$statements, statement)
+            exec_calls$count <<- exec_calls$count + 1L
+            1
+        }
+    )
+
+    res <- auth_reset_password(pool, "token-ok", "Abcd123!")
+
+    expect_true(res)
+    # Expected: 1st = INSERT security log, 2nd = UPDATE credentials (unlock)
+    expect_equal(exec_calls$count, 2L)
+
+    # Security log INSERT comes first
+    expect_true(grepl("auth_security_log", exec_calls$statements[1], fixed = TRUE))
+    expect_true(grepl("password_reset", exec_calls$statements[1], fixed = TRUE))
+
+    # Credential UPDATE comes second and contains unlock fields
+    expect_true(grepl("failed_attempts = 0", exec_calls$statements[2], fixed = TRUE))
+    expect_true(grepl("locked_until = NULL", exec_calls$statements[2], fixed = TRUE))
+})
+
+test_that("auth_reset_password security log records was_locked = TRUE when account locked", {
+    exec_calls <- list(statements = character(0))
+    future_lock <- Sys.time() + 600
+
+    pool <- make_mock_conn(
+        query_res = list(
+            data.frame(user_entity_id = "uid-1", stringsAsFactors = FALSE),
+            data.frame(failed_attempts = 5L, locked_until = future_lock,
+                       stringsAsFactors = FALSE)
+        )
+    )
+
+    # Override sqlInterpolate to do real named-param substitution so we can
+    # check actual values (TRUE/FALSE) in the resulting SQL string
+    methods::setMethod(
+        "sqlInterpolate",
+        signature(conn = "MockConn", sql = "character"),
+        function(conn, sql, ...) {
+            args <- list(...)
+            for (nm in names(args)) {
+                val <- args[[nm]]
+                repl <- if (is.logical(val)) toupper(as.character(val)) else as.character(val)
+                sql <- gsub(paste0("?", nm), repl, sql, fixed = TRUE)
+            }
+            sql
+        }
+    )
+
+    methods::setMethod(
+        "dbExecute",
+        signature(conn = "MockConn", statement = "character"),
+        function(conn, statement, ...) {
+            exec_calls$statements <<- c(exec_calls$statements, statement)
+            1
+        }
+    )
+
+    res <- auth_reset_password(pool, "token-ok", "Abcd123!")
+
+    expect_true(res)
+    log_stmt <- exec_calls$statements[grepl("auth_security_log", exec_calls$statements, fixed = TRUE)]
+    expect_length(log_stmt, 1L)
+    expect_true(grepl("TRUE", log_stmt, fixed = TRUE))   # was_locked = TRUE
+})
+
+test_that("auth_reset_password security log records was_locked = FALSE when not locked", {
+    exec_calls <- list(statements = character(0))
+
+    pool <- make_mock_conn(
+        query_res = list(
+            data.frame(user_entity_id = "uid-1", stringsAsFactors = FALSE),
+            data.frame(failed_attempts = 0L, locked_until = as.POSIXct(NA),
+                       stringsAsFactors = FALSE)
+        )
+    )
+
+    # Override sqlInterpolate to do real named-param substitution
+    methods::setMethod(
+        "sqlInterpolate",
+        signature(conn = "MockConn", sql = "character"),
+        function(conn, sql, ...) {
+            args <- list(...)
+            for (nm in names(args)) {
+                val <- args[[nm]]
+                repl <- if (is.logical(val)) toupper(as.character(val)) else as.character(val)
+                sql <- gsub(paste0("?", nm), repl, sql, fixed = TRUE)
+            }
+            sql
+        }
+    )
+
+    methods::setMethod(
+        "dbExecute",
+        signature(conn = "MockConn", statement = "character"),
+        function(conn, statement, ...) {
+            exec_calls$statements <<- c(exec_calls$statements, statement)
+            1
+        }
+    )
+
+    res <- auth_reset_password(pool, "token-ok", "Abcd123!")
+
+    expect_true(res)
+    log_stmt <- exec_calls$statements[grepl("auth_security_log", exec_calls$statements, fixed = TRUE)]
+    expect_length(log_stmt, 1L)
+    expect_true(grepl("FALSE", log_stmt, fixed = TRUE))  # was_locked = FALSE
+})
+
+test_that("auth_reset_password still succeeds if security log insert fails", {
+    exec_calls <- list(count = 0L)
+
+    pool <- make_mock_conn(
+        query_res = list(
+            data.frame(user_entity_id = "uid-1", stringsAsFactors = FALSE),
+            data.frame(failed_attempts = 3L, locked_until = as.POSIXct(NA),
+                       stringsAsFactors = FALSE)
+        )
+    )
+
+    call_num <- 0L
+    methods::setMethod(
+        "dbExecute",
+        signature(conn = "MockConn", statement = "character"),
+        function(conn, statement, ...) {
+            call_num <<- call_num + 1L
+            if (call_num == 1L) stop("auth_security_log does not exist") # simulate missing table
+            exec_calls$count <<- exec_calls$count + 1L
+            1
+        }
+    )
+
+    # Should NOT throw — security log failure is wrapped in tryCatch(warning(...))
+    expect_warning(
+        res <- auth_reset_password(pool, "token-ok", "Abcd123!"),
+        "Security log insert failed"
+    )
+    expect_true(res)
+    expect_equal(exec_calls$count, 1L) # UPDATE still executed
 })

@@ -211,3 +211,31 @@ tables:
       - timestamp
       - level
       - event
+
+  auth_security_log:
+    title: "Auth Security Log"
+    description: "Immutable log of security events: lockouts and password resets. Never deleted, used for threat detection."
+    columns:
+      log_id:
+        type: "UUID PRIMARY KEY DEFAULT uuid_generate_v4()"
+      user_entity_id:
+        type: "VARCHAR(255) NOT NULL"
+        description: "The affected account."
+      event_type:
+        type: "VARCHAR(50) NOT NULL"
+        description: "Event type: account_locked, password_reset."
+      failed_attempts_at_event:
+        type: "INTEGER"
+        description: "Value of failed_attempts at the time of the event."
+      was_locked:
+        type: "BOOLEAN"
+        description: "Whether the account was locked when the event occurred."
+      ip_address:
+        type: "VARCHAR(45)"
+        description: "Client IP address if available."
+      created_at:
+        type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
+    indices:
+      - user_entity_id
+      - event_type
+      - created_at
