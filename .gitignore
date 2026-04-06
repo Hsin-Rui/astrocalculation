@@ -6,3 +6,4 @@
 .quarto
 .Rprofile
 .Renviron
+renv/settings.json

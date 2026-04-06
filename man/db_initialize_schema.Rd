@@ -4,9 +4,11 @@
 \alias{db_initialize_schema}
 \title{Initialize Database Schema from YAML}
 \usage{
-db_initialize_schema(overwrite = FALSE)
+db_initialize_schema(pool = NULL, overwrite = FALSE)
 }
 \arguments{
+\item{pool}{database connection (connect_postgres_db)}
+
 \item{overwrite}{Logical. If TRUE, drops existing tables before creating them.
 Use with caution!}
 }

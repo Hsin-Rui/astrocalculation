@@ -152,6 +152,13 @@ auth_verify_user <- function(pool, login_id, password) {
          WHERE user_entity_id = ?id",
         attempts = new_attempts, id = res$user_entity_id
       ))
+      # Log the lockout event for security tracking
+      tryCatch(DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
+        "INSERT INTO auth_security_log
+           (user_entity_id, event_type, failed_attempts_at_event, was_locked)
+         VALUES (?uid, 'account_locked', ?attempts, FALSE)",
+        uid = res$user_entity_id, attempts = new_attempts
+      )), error = function(e) warning("Security log insert failed: ", e$message))
     } else {
       # Just increment the counter
       DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
@@ -231,12 +238,31 @@ auth_reset_password <- function(pool, token, new_password) {
 
   hashed_pw <- sodium::password_store(new_password)
 
+  # Fetch current lockout state before resetting (for the security log)
+  current_state <- DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool,
+    "SELECT failed_attempts, locked_until FROM auth_credentials WHERE user_entity_id = ?id",
+    id = res$user_entity_id[1]
+  ))
+  was_locked <- !is.na(current_state$locked_until[1]) && current_state$locked_until[1] > Sys.time()
+
+  # Log the password reset event (immutable record) before making any changes
+  tryCatch(DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
+    "INSERT INTO auth_security_log
+       (user_entity_id, event_type, failed_attempts_at_event, was_locked)
+     VALUES (?uid, 'password_reset', ?attempts, ?locked)",
+    uid = res$user_entity_id[1],
+    attempts = current_state$failed_attempts[1],
+    locked = was_locked
+  )), error = function(e) warning("Security log insert failed: ", e$message))
+
   DBI::dbExecute(pool, DBI::sqlInterpolate(pool, "
     UPDATE auth_credentials
     SET password_hash = ?hash,
         reset_token = NULL,
         reset_token_expires_at = NULL,
-        is_verified = TRUE
+        is_verified = TRUE,
+        failed_attempts = 0,
+        locked_until = NULL
     WHERE user_entity_id = ?id
   ", hash = hashed_pw, id = res$user_entity_id[1]))
 
