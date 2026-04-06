@@ -105,6 +105,19 @@ db_initialize_schema <- function(pool = NULL, overwrite = FALSE) {
   message("Reading schema config from: ", schema_path)
 
   # 3. Execute Transaction
+  # B. Enable Extensions (outside the transaction — DDL in some managed PG
+  #    environments requires superuser and cannot run inside a transaction block)
+  if (!is.null(defs$config$extensions)) {
+    for (ext in defs$config$extensions) {
+      tryCatch(
+        DBI::dbExecute(pool, sprintf('CREATE EXTENSION IF NOT EXISTS "%s"', ext)),
+        error = function(e) message(sprintf(
+          "Note: Could not install extension '%s': %s (may require superuser)", ext, e$message
+        ))
+      )
+    }
+  }
+
   pool::poolWithTransaction(pool, function(con) {
 
     # A. OPTIONAL: Drop Tables if overwrite requested
@@ -118,11 +131,7 @@ db_initialize_schema <- function(pool = NULL, overwrite = FALSE) {
     }
 
     # B. Enable Extensions
-    if (!is.null(defs$config$extensions)) {
-      for (ext in defs$config$extensions) {
-        DBI::dbExecute(con, sprintf('CREATE EXTENSION IF NOT EXISTS "%s"', ext))
-      }
-    }
+    # (moved outside the transaction — handled before poolWithTransaction)
 
     # C. Create Tables
     for (table_name in names(defs$tables)) {

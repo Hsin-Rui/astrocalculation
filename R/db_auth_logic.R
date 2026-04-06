@@ -112,7 +112,7 @@ auth_verify_email <- function(pool, token) {
 auth_verify_user <- function(pool, login_id, password) {
   # 1. Find User & Hash by Email OR User ID (including lockout fields)
   res <- DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool,
-    "SELECT user_entity_id, password_hash, is_verified, failed_attempts, locked_until 
+    "SELECT user_entity_id, password_hash, is_verified, failed_attempts, locked_until
      FROM auth_credentials
      WHERE user_entity_id = ?input OR email = ?input",
     input = login_id
@@ -133,8 +133,8 @@ auth_verify_user <- function(pool, login_id, password) {
   if (is_valid) {
     # Reset failed attempts and update last login
     DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
-      "UPDATE auth_credentials 
-       SET last_login = NOW(), failed_attempts = 0, locked_until = NULL 
+      "UPDATE auth_credentials
+       SET last_login = NOW(), failed_attempts = 0, locked_until = NULL
        WHERE user_entity_id = ?id",
       id = res$user_entity_id
     ))
@@ -143,11 +143,11 @@ auth_verify_user <- function(pool, login_id, password) {
   } else {
     # Increment failed attempts
     new_attempts <- res$failed_attempts + 1
-    
+
     if (new_attempts >= 5) {
       # Lock account for 15 minutes
       DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
-        "UPDATE auth_credentials 
+        "UPDATE auth_credentials
          SET failed_attempts = ?attempts, locked_until = NOW() + INTERVAL '15 minutes'
          WHERE user_entity_id = ?id",
         attempts = new_attempts, id = res$user_entity_id
@@ -162,13 +162,13 @@ auth_verify_user <- function(pool, login_id, password) {
     } else {
       # Just increment the counter
       DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
-        "UPDATE auth_credentials 
+        "UPDATE auth_credentials
          SET failed_attempts = ?attempts
          WHERE user_entity_id = ?id",
         attempts = new_attempts, id = res$user_entity_id
       ))
     }
-    
+
     return(NULL)
   }
 }
@@ -476,7 +476,7 @@ auth_handle_oauth_user <- function(pool, email, google_id, name) {
           user_entity_id, email, password_hash,
           is_verified, oauth_provider, oauth_subject_id, created_at
         ) VALUES (
-          ?uid, ?email, NA,
+          ?uid, ?email, NULL,
           TRUE, 'google', ?gid, NOW()
         )
       ", uid = new_uid, email = email, gid = google_id))

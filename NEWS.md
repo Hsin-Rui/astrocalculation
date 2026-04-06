@@ -1,3 +1,7 @@
+# astrocalculation 0.1.16 -- 2026-4-7
+* Update DB schema spec
+* Fix bugs in auth_handler for Google login
+
 # astrocalculation 0.1.15 -- 2026-4-6
 * Update auth_reset_password to unlock account after resetting password
 * reduce amount of CICD checks (leave out windows and ubuntu devel)

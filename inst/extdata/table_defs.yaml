@@ -46,7 +46,7 @@ tables:
     description: "Versioning of user details (Name, Birth Data, Photo)."
     columns:
       entry_id:
-        type: "UUID PRIMARY KEY DEFAULT uuid_generate_v4()"
+        type: "UUID PRIMARY KEY DEFAULT gen_random_uuid()"
         title: "Entry ID"
         description: "Unique surrogate key for this version."
       user_entity_id:
@@ -125,7 +125,7 @@ tables:
     description: "A collection of saved charts owned by a user."
     columns:
       entry_id:
-        type: "UUID PRIMARY KEY DEFAULT uuid_generate_v4()"
+        type: "UUID PRIMARY KEY DEFAULT gen_random_uuid()"
         title: "Entry ID"
         description: "Unique surrogate key."
       entity_id:
@@ -192,7 +192,7 @@ tables:
     description: "Structured logs for debugging and errors."
     columns:
       log_id:
-        type: "UUID PRIMARY KEY DEFAULT uuid_generate_v4()"
+        type: "UUID PRIMARY KEY DEFAULT gen_random_uuid()"
       timestamp:
         type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
       level:
@@ -217,7 +217,7 @@ tables:
     description: "Immutable log of security events: lockouts and password resets. Never deleted, used for threat detection."
     columns:
       log_id:
-        type: "UUID PRIMARY KEY DEFAULT uuid_generate_v4()"
+        type: "UUID PRIMARY KEY DEFAULT gen_random_uuid()"
       user_entity_id:
         type: "VARCHAR(255) NOT NULL"
         description: "The affected account."
