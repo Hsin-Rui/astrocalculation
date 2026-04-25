@@ -429,6 +429,46 @@ DataManager <- R6::R6Class(
         }
       )
     },
+
+    #' @description
+    #' Async variant of update_chart for non-blocking guest IP-geo chart rendering.
+    #' Runs the heavy computation in a future worker — bypasses city lookup, using
+    #' caller-supplied timezone / coordinates from IP geolocation instead.
+    #' @param timezone Character. IANA timezone string from IP lookup.
+    #' @param latitude Numeric. Latitude from IP lookup.
+    #' @param longitude Numeric. Longitude from IP lookup.
+    #' @return A \code{future::Future} that resolves to a named list with keys
+    #'   \code{planet_position}, \code{aspect_table}, \code{chart},
+    #'   \code{timezone}, \code{latitude}, \code{longitude}.
+    #' @importFrom future future
+    update_chart_async = function(timezone, latitude, longitude) {
+      # Capture all needed state as plain values before entering the future worker
+      dt      <- self$horoscope_datetime
+      name    <- self$chart_name
+      city    <- self$horoscope_city
+      country <- self$horoscope_country
+      planets <- self$selected_planets
+
+      future::future({
+        planet_pos <- calculate_planet_position(dt, timezone, longitude, latitude)
+        data_df    <- planet_pos$planetary_position
+        data_df    <- data_df[(row.names(data_df) %in% planets), ]
+        aspect     <- calculate_aspect(data_df)
+        planet_pos$planetary_position <- data_df
+        chart      <- draw_whole_sign_chart(
+          data_df, name, dt, city, country, timezone, aspect
+        )
+        list(
+          planet_position = planet_pos,
+          aspect_table    = aspect,
+          chart           = chart,
+          timezone        = timezone,
+          latitude        = latitude,
+          longitude       = longitude
+        )
+      }, packages = "astrocalculation", seed = NULL)
+    },
+
     #' @description
     #' Add or minus datetime according for a certain value and unit, then plot the chart
     #' @param operation add or minus (interact with an action button)

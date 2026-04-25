@@ -32,7 +32,8 @@ Imports:
     sodium,
     jsonlite,
     emayili,
-    rlang
+    rlang,
+    future
 Date: 2025-07-27
 Suggests: 
     dbplyr,
