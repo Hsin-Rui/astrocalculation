@@ -1908,6 +1908,36 @@
       "Maintainer": "Yihui Xie <xie@yihui.name>",
       "Repository": "RSPM"
     },
+    "mockery": {
+      "Package": "mockery",
+      "Version": "0.4.5",
+      "Source": "Repository",
+      "Title": "Mocking Library for R",
+      "Authors@R": "c( person(\"Noam\", \"Finkelstein\", role = \"aut\"), person(\"Lukasz\", \"Bartnik\", role = \"aut\"), person(\"Jim\", \"Hester\", role = \"aut\"), person(\"Hadley\", \"Wickham\", , \"hadley@posit.co\", role = c(\"aut\", \"cre\")) )",
+      "Description": "The two main functionalities of this package are creating mock objects (functions) and selectively intercepting calls to a given function that originate in some other function. It can be used with any testing framework available for R. Mock objects can be injected with either this package's own stub() function or a similar with_mocked_binding() facility present in the 'testthat' package.",
+      "License": "MIT + file LICENSE",
+      "URL": "https://github.com/r-lib/mockery",
+      "BugReports": "https://github.com/r-lib/mockery/issues",
+      "Depends": [
+        "R (>= 3.6)"
+      ],
+      "Imports": [
+        "testthat"
+      ],
+      "Suggests": [
+        "knitr",
+        "R6",
+        "rmarkdown (>= 1.0)"
+      ],
+      "VignetteBuilder": "knitr",
+      "Encoding": "UTF-8",
+      "RoxygenNote": "7.3.2.9000",
+      "Collate": "'expectations.R' 'mockery.R' 'mock-object.R' 'stub.R'",
+      "NeedsCompilation": "no",
+      "Author": "Noam Finkelstein [aut], Lukasz Bartnik [aut], Jim Hester [aut], Hadley Wickham [aut, cre]",
+      "Maintainer": "Hadley Wickham <hadley@posit.co>",
+      "Repository": "CRAN"
+    },
     "openssl": {
       "Package": "openssl",
       "Version": "2.3.5",
@@ -2385,6 +2415,41 @@
       "Author": "Kevin Ushey [aut, cre] (ORCID: <https://orcid.org/0000-0003-2880-7407>), Hadley Wickham [aut] (ORCID: <https://orcid.org/0000-0003-4757-117X>), Posit Software, PBC [cph, fnd]",
       "Maintainer": "Kevin Ushey <kevin@rstudio.com>",
       "Repository": "CRAN"
+    },
+    "rgeolocate": {
+      "Package": "rgeolocate",
+      "Version": "1.4.2",
+      "Source": "GitHub",
+      "Type": "Package",
+      "Title": "IP Address Geolocation",
+      "Date": "2021-12-18",
+      "Author": "Os Keyes [aut, cre], Drew Schmidt [aut], David Robinson [ctb], Chris Davis [ctb], Bob Rudis [ctb], Maxmind, Inc. [cph], Pascal Gloor [cph], IP2Location.com [cph]",
+      "Maintainer": "Os Keyes <ironholds@gmail.com>",
+      "Copyright": "MaxMind, Inc. for the underlying libmaxmminddb library, IP2Location.com for libip2location, and the package authors for all other content.",
+      "Description": "Connectors to online and offline sources for taking IP addresses and geolocating them to country, city, timezone and other geographic ranges. For individual connectors, see the package index.",
+      "License": "Apache License (== 2.0)",
+      "BugReports": "https://github.com/ironholds/rgeolocate/issues",
+      "LinkingTo": [
+        "Rcpp"
+      ],
+      "Imports": [
+        "Rcpp",
+        "httr"
+      ],
+      "Suggests": [
+        "testthat",
+        "knitr",
+        "rmarkdown"
+      ],
+      "VignetteBuilder": "knitr",
+      "RoxygenNote": "7.1.2",
+      "Encoding": "UTF-8",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteUsername": "Ironholds",
+      "RemoteRepo": "rgeolocate",
+      "RemoteRef": "master",
+      "RemoteSha": "d2f550ee9ec3bfe1a24449eae0f40c65b7ee0042"
     },
     "rlang": {
       "Package": "rlang",

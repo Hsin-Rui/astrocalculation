@@ -32,11 +32,15 @@ Imports:
     sodium,
     jsonlite,
     emayili,
-    rlang
+    rlang,
+    rgeolocate
 Date: 2025-07-27
 Suggests: 
     dbplyr,
     testthat,
     utils,
-    tibble
+    tibble,
+    mockery
+Remotes:
+    Ironholds/rgeolocate
 Config/testthat/edition: 3
