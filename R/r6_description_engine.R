@@ -13,7 +13,37 @@ DescriptionEngine <- R6::R6Class(
     # Canonical set of planet keys supported by get_summary()
     supported_planet_keys = c("sun", "moon", "asc", "mercury", "venus", "mars", "jupiter", "saturn"),
     # Canonical set of major aspect labels supported by get_aspect_summary()
-    supported_aspect_labels = c("conjunction", "square", "trine", "opposition")
+    supported_aspect_labels = c("conjunction", "square", "trine", "opposition"),
+
+    # Recursively reject non-serializable references before JSON handoff.
+    assert_serializable_metadata = function(x, path = "metadata") {
+      if (is.environment(x)) {
+        stop(sprintf("%s contains a non-serializable environment.", path), call. = FALSE)
+      }
+      if (is.function(x)) {
+        stop(sprintf("%s contains a non-serializable function.", path), call. = FALSE)
+      }
+      if (inherits(x, "R6") || methods::is(x, "R6")) {
+        stop(sprintf("%s contains a non-serializable R6 object.", path), call. = FALSE)
+      }
+      if (typeof(x) %in% c("externalptr", "weakref", "symbol", "language", "bytecode")) {
+        stop(sprintf("%s contains a non-serializable reference.", path), call. = FALSE)
+      }
+
+      if (is.list(x)) {
+        if (length(x) == 0L) {
+          return(invisible(TRUE))
+        }
+
+        item_names <- names(x)
+        for (i in seq_along(x)) {
+          item_label <- if (!is.null(item_names) && nzchar(item_names[[i]])) item_names[[i]] else as.character(i)
+          private$assert_serializable_metadata(x[[i]], sprintf("%s$%s", path, item_label))
+        }
+      }
+
+      invisible(TRUE)
+    }
   ),
   public = list(
     #' @description
@@ -67,7 +97,12 @@ DescriptionEngine <- R6::R6Class(
         return(NA_character_)
       }
 
-      as.character(localized_values[[lang]])
+      localized_value <- localized_values[[lang]]
+      if (length(localized_value) != 1L) {
+        return(NA_character_)
+      }
+
+      as.character(localized_value)
     },
 
     #' @description
@@ -112,6 +147,7 @@ DescriptionEngine <- R6::R6Class(
       if (!is.list(metadata)) {
         stop("metadata must be a list.", call. = FALSE)
       }
+      private$assert_serializable_metadata(metadata)
 
       summary_id <- paste0("summary.", planet_key)
 

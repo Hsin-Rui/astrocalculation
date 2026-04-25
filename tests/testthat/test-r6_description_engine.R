@@ -99,6 +99,25 @@ test_that("DescriptionEngine handles invalid localize input deterministically", 
   expect_true(is.na(engine$localize("welcome_message", c("en", "de"))))
 })
 
+test_that("DescriptionEngine returns NA when locale value is not scalar", {
+  yaml_file <- tempfile(fileext = ".yaml")
+  writeLines("summary.sun: {}", yaml_file)
+
+  with_mocked_bindings(
+    {
+      engine <- DescriptionEngine$new(yaml_path = yaml_file)
+      expect_true(is.na(engine$localize("summary.sun", "en")))
+    },
+    read_yaml = function(path) {
+      list(
+        `summary.sun` = list(
+          en = c("first", "second")
+        )
+      )
+    }
+  )
+})
+
 test_that("DescriptionEngine errors for malformed YAML, directory path, and unnamed keys", {
   valid_yaml <- tempfile(fileext = ".yaml")
   write_sample_yaml(valid_yaml)
@@ -259,6 +278,21 @@ test_that("get_summary() errors when metadata is not a list", {
   expect_error(engine$get_summary("sun", "en", metadata = 42L), "metadata must be a list")
 })
 
+test_that("get_summary() errors when metadata contains non-serializable references", {
+  yaml_file <- tempfile(fileext = ".yaml")
+  write_semantic_yaml(yaml_file)
+  engine <- DescriptionEngine$new(yaml_path = yaml_file)
+
+  expect_error(
+    engine$get_summary("sun", "en", metadata = list(handler = function() TRUE)),
+    "non-serializable"
+  )
+  expect_error(
+    engine$get_summary("sun", "en", metadata = list(ctx = new.env())),
+    "non-serializable"
+  )
+})
+
 test_that("get_summary() return value contains no R6 or environment references (serialization-safe)", {
   engine <- DescriptionEngine$new()
 
@@ -396,5 +430,19 @@ test_that("filter_major_aspects() errors on non-data-frame input", {
 test_that("filter_major_aspects() errors when 'aspect' column is absent", {
   df <- data.frame(planet = "sun", planet2 = "moon", stringsAsFactors = FALSE)
   expect_error(filter_major_aspects(df), "must contain an 'aspect' column")
+})
+
+test_that("filter_major_aspects() preserves data.frame shape for single-column input", {
+  df <- data.frame(
+    aspect = c("conjunction", "sextile"),
+    stringsAsFactors = FALSE
+  )
+
+  result <- filter_major_aspects(df)
+
+  expect_true(is.data.frame(result))
+  expect_named(result, "aspect")
+  expect_equal(nrow(result), 1L)
+  expect_equal(result$aspect[[1]], "conjunction")
 })
 

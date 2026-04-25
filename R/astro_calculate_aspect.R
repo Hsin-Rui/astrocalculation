@@ -170,5 +170,5 @@ filter_major_aspects <- function(aspect_result) {
   }
 
   major_labels <- c("conjunction", "square", "trine", "opposition")
-  aspect_result[aspect_result$aspect %in% major_labels, ]
+  aspect_result[aspect_result$aspect %in% major_labels, , drop = FALSE]
 }
