@@ -1,0 +1,9 @@
+welcome_message:
+  zh: "歡迎來到星盤引擎"
+  en: "Welcome to the chart engine"
+  de: "Willkommen bei der Horoskop-Engine"
+
+sun_sign_label:
+  zh: "太陽星座"
+  en: "Sun sign"
+  de: "Sternzeichen"
