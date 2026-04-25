@@ -7,3 +7,67 @@ sun_sign_label:
   zh: "太陽星座"
   en: "Sun sign"
   de: "Sternzeichen"
+
+# --- Semantic Planet Summaries (summary.*) ---
+
+summary.sun:
+  zh: "太陽代表您的核心身份、生命目的與自我意志。"
+  en: "The Sun represents your core identity, life purpose, and conscious will."
+  de: "Die Sonne repräsentiert Ihre Kernidentität, Ihren Lebensweg und Ihren bewussten Willen."
+
+summary.moon:
+  zh: "月亮反映您的情感世界、直覺本能與內在需求。"
+  en: "The Moon reflects your emotional world, instinctive reactions, and inner needs."
+  de: "Der Mond spiegelt Ihre emotionale Welt, Instinkte und innere Bedürfnisse wider."
+
+summary.asc:
+  zh: "上升點代表您給外界的第一印象與外在人格面貌。"
+  en: "The Ascendant represents the first impression you project and your outward personality."
+  de: "Der Aszendent steht für den ersten Eindruck, den Sie hinterlassen, und Ihre äußere Persönlichkeit."
+
+summary.mercury:
+  zh: "水星主宰您的思維方式、溝通風格與資訊處理能力。"
+  en: "Mercury governs your thinking style, communication, and how you process information."
+  de: "Merkur regiert Ihren Denkstil, Ihre Kommunikation und Informationsverarbeitung."
+
+summary.venus:
+  zh: "金星象徵您在愛情、美感與人際關係中的偏好與渴望。"
+  en: "Venus symbolises your approach to love, aesthetics, and interpersonal connection."
+  de: "Venus symbolisiert Ihre Einstellung zu Liebe, Ästhetik und zwischenmenschlichen Beziehungen."
+
+summary.mars:
+  zh: "火星代表您的行動力、慾望衝動與面對挑戰的方式。"
+  en: "Mars represents your drive, desires, and how you take action under challenge."
+  de: "Mars steht für Ihren Antrieb, Ihre Wünsche und die Art, wie Sie Herausforderungen begegnen."
+
+summary.jupiter:
+  zh: "木星象徵擴展、成長、幸運與您追求更大視野的能力。"
+  en: "Jupiter symbolises expansion, growth, fortune, and the pursuit of a broader vision."
+  de: "Jupiter symbolisiert Expansion, Wachstum, Glück und das Streben nach einem größeren Horizont."
+
+summary.saturn:
+  zh: "土星代表紀律、責任、考驗與您在時間中積累智慧的過程。"
+  en: "Saturn represents discipline, responsibility, and the wisdom earned through perseverance."
+  de: "Saturn steht für Disziplin, Verantwortung und die durch Beharrlichkeit gewonnene Weisheit."
+
+# --- Semantic Aspect Summaries (aspect.*) ---
+
+aspect.conjunction:
+  zh: "合相：兩顆行星能量融合，強化彼此的影響力，形成專注與集中的力量。"
+  en: "Conjunction: two planets merge their energies, intensifying and focusing their combined influence."
+  de: "Konjunktion: Zwei Planeten verbinden ihre Energien und verstärken gemeinsam ihren Einfluss."
+
+aspect.square:
+  zh: "四分相：兩顆行星形成張力與摩擦，促使透過衝突尋找動力與突破。"
+  en: "Square: two planets create tension and friction, driving growth through challenge and conflict."
+  de: "Quadrat: Zwei Planeten erzeugen Spannung und Reibung, die durch Herausforderungen Wachstum antreibt."
+
+aspect.trine:
+  zh: "三分相：兩顆行星和諧共鳴，帶來流暢的才能表達與自然的幸運。"
+  en: "Trine: two planets resonate harmoniously, bringing natural talent and ease of expression."
+  de: "Trigon: Zwei Planeten harmonieren miteinander und bringen natürliche Talente und Leichtigkeit."
+
+aspect.opposition:
+  zh: "對分相：兩顆行星形成對立張力，呼喚整合與在兩極之間尋求平衡。"
+  en: "Opposition: two planets stand in polar tension, calling for integration and balance between extremes."
+  de: "Opposition: Zwei Planeten stehen in polarer Spannung und verlangen nach Integration und Balance."
