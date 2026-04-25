@@ -93,7 +93,7 @@ db_initialize_schema <- function(pool = NULL, overwrite = FALSE) {
   on.exit(close_postgres_db(pool))
 
   # 2. Locate the YAML file
-  schema_path <- system.file("extdata", "table_defs.yml", package = "astrocalculations")
+  schema_path <- system.file("extdata", "table_defs.yml", package = "astrocalculation")
   if (schema_path == "") schema_path <- "inst/extdata/table_defs.yml"
 
   if (!file.exists(schema_path)) {
@@ -179,4 +179,30 @@ db_initialize_schema <- function(pool = NULL, overwrite = FALSE) {
   })
 
   message("Schema migration complete.")
+}
+
+#' Get a connection to the tarot SQLite database
+#'
+#' This function locates the 'tarot.sqlite' database included with the package
+#' and returns a DBI connection to it.
+#'
+#' @return A DBI database connection object.
+#' @export
+#' @importFrom RSQLite SQLite
+#' @importFrom DBI dbConnect
+#' @examples
+#' \dontrun{
+#' con <- get_tarot_connection()
+#' DBI::dbListTables(con)
+#' DBI::dbGetQuery(con, "select * from tarot_cards")
+#' DBI::dbDisconnect(con)
+#' }
+connect_tarot_db <- function() {
+  # Locate the database file within the installed package
+  path <- system.file("extdata", "tarot.sqlite", package = "astrocalculation", mustWork = TRUE)
+
+  # Establish and return the connection
+  con <- DBI::dbConnect(RSQLite::SQLite(), dbname = path)
+
+  return(con)
 }
