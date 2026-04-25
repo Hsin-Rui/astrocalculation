@@ -20,7 +20,7 @@ DescriptionEngine <- R6::R6Class(
         yaml_path <- system.file("i18n", "descriptions.yaml", package = "astrocalculation")
       }
 
-      if (!nzchar(yaml_path) || !file.exists(yaml_path) || isTRUE(file.info(yaml_path)$isdir)) {
+      if (!nzchar(yaml_path) || !file.exists(yaml_path) || dir.exists(yaml_path)) {
         stop("Description YAML file not found.")
       }
 
@@ -32,14 +32,13 @@ DescriptionEngine <- R6::R6Class(
       )
 
       parsed_names <- names(parsed)
-      if (!is.list(parsed) || length(parsed) == 0L || is.null(parsed_names) || anyNA(parsed_names) || any(parsed_names == "")) {
+      if (!is.list(parsed) || length(parsed) == 0L || is.null(parsed_names) || anyNA(parsed_names) || any(!nzchar(parsed_names))) {
         stop("Description YAML must be a named list of keys.")
       }
 
       private$dictionary <- new.env(parent = emptyenv(), hash = TRUE)
-      for (key in names(parsed)) {
-        private$dictionary[[key]] <- parsed[[key]]
-      }
+      list2env(parsed, envir = private$dictionary)
+
     },
 
     #' @description

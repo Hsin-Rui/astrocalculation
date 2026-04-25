@@ -61,8 +61,6 @@ test_that("Story 3: Personal Library (Save, Load, Delete)", {
     stop(e)
   })
 
-  if (isFALSE(save_result)) return()
-
   # 3. Retrieve Library
   lib <- db_get_library(pool, user_oid)
   expect_equal(nrow(lib), 1)
