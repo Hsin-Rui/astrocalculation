@@ -17,14 +17,14 @@ DescriptionEngine <- R6::R6Class(
 
     # Recursively reject non-serializable references before JSON handoff.
     assert_serializable_metadata = function(x, path = "metadata") {
+      if (inherits(x, "R6")) {
+        stop(sprintf("%s contains a non-serializable R6 object.", path), call. = FALSE)
+      }
       if (is.environment(x)) {
         stop(sprintf("%s contains a non-serializable environment.", path), call. = FALSE)
       }
       if (is.function(x)) {
         stop(sprintf("%s contains a non-serializable function.", path), call. = FALSE)
-      }
-      if (inherits(x, "R6") || methods::is(x, "R6")) {
-        stop(sprintf("%s contains a non-serializable R6 object.", path), call. = FALSE)
       }
       if (typeof(x) %in% c("externalptr", "weakref", "symbol", "language", "bytecode")) {
         stop(sprintf("%s contains a non-serializable reference.", path), call. = FALSE)
