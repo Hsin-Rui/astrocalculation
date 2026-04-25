@@ -144,3 +144,31 @@ calculate_aspect <- function(data){
 # TODO.5 enabling modern aspects
 
 # NOTE. this will be an adjacency matrix
+
+#' Filter aspect results to the four major aspects only
+#'
+#' Reduces the data frame returned by [calculate_aspect()] to rows whose
+#' `aspect` column matches one of the four major aspects: conjunction, square,
+#' trine, and opposition.  Sextile and any other non-major aspects are excluded.
+#'
+#' This is the recommended entry point when semantic summaries are required for
+#' the major-4 subset, as it pairs with [DescriptionEngine]`$get_aspect_summary()`
+#' without needing to filter again at the consumer.
+#'
+#' @param aspect_result A data frame produced by [calculate_aspect()].  Must
+#'   contain at minimum an `aspect` column of character strings.
+#' @return A data frame with only rows where `aspect` is one of
+#'   `"conjunction"`, `"square"`, `"trine"`, or `"opposition"`.  Column
+#'   structure is identical to the input.
+#' @export
+filter_major_aspects <- function(aspect_result) {
+  if (!is.data.frame(aspect_result)) {
+    stop("aspect_result must be a data frame.", call. = FALSE)
+  }
+  if (!"aspect" %in% names(aspect_result)) {
+    stop("aspect_result must contain an 'aspect' column.", call. = FALSE)
+  }
+
+  major_labels <- c("conjunction", "square", "trine", "opposition")
+  aspect_result[aspect_result$aspect %in% major_labels, , drop = FALSE]
+}

@@ -17,6 +17,8 @@ environment to provide fast locale-aware lookups.
 \itemize{
 \item \href{#method-DescriptionEngine-new}{\code{DescriptionEngine$new()}}
 \item \href{#method-DescriptionEngine-localize}{\code{DescriptionEngine$localize()}}
+\item \href{#method-DescriptionEngine-get_summary}{\code{DescriptionEngine$get_summary()}}
+\item \href{#method-DescriptionEngine-get_aspect_summary}{\code{DescriptionEngine$get_aspect_summary()}}
 \item \href{#method-DescriptionEngine-clone}{\code{DescriptionEngine$clone()}}
 }
 }
@@ -57,6 +59,77 @@ Get a localized string from the loaded semantic key dictionary.
 }
 \subsection{Returns}{
 A localized string or \code{NA_character_} when missing.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DescriptionEngine-get_summary"></a>}}
+\if{latex}{\out{\hypertarget{method-DescriptionEngine-get_summary}{}}}
+\subsection{Method \code{get_summary()}}{
+Build a structured, JSON-serializable semantic summary for a planet or chart point.
+
+Returns a plain R list with no R6 objects or environment references so the
+payload is safe to pass across a \code{future_promise()} process boundary via
+\code{jsonlite::toJSON()}.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DescriptionEngine$get_summary(planet_key, lang, metadata = list())}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{planet_key}}{A single character string identifying the planet or chart
+point. Supported values: \code{"sun"}, \code{"moon"}, \code{"asc"}, \code{"mercury"},
+\code{"venus"}, \code{"mars"}, \code{"jupiter"}, \code{"saturn"}.}
+
+\item{\code{lang}}{Locale code (\code{"zh"}, \code{"en"}, \code{"de"}). Falls back to \code{"en"} when
+the requested locale is absent for a given key.}
+
+\item{\code{metadata}}{An optional named list of caller-supplied context to embed
+in the payload (e.g. degree, sign).  Must be a list.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A named list:
+\describe{
+\item{\code{summary_id}}{Stable key string of the form \code{"summary.<planet_key>"}.}
+\item{\code{summary}}{Localized sentence string, or \code{NA_character_} when
+neither the requested locale nor the \code{"en"} fallback is available.}
+\item{\code{lang}}{The locale code passed in.}
+\item{\code{metadata}}{The metadata list passed in (may be empty).}
+}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DescriptionEngine-get_aspect_summary"></a>}}
+\if{latex}{\out{\hypertarget{method-DescriptionEngine-get_aspect_summary}{}}}
+\subsection{Method \code{get_aspect_summary()}}{
+Build a structured, JSON-serializable semantic summary for a major aspect.
+
+Only the four major aspects are supported: conjunction, square, trine,
+opposition.  Returns a plain R list safe for \code{jsonlite::toJSON()}.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DescriptionEngine$get_aspect_summary(aspect_label, lang)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{aspect_label}}{A single character string identifying the aspect.
+Supported values: \code{"conjunction"}, \code{"square"}, \code{"trine"}, \code{"opposition"}.}
+
+\item{\code{lang}}{Locale code (\code{"zh"}, \code{"en"}, \code{"de"}). Falls back to \code{"en"} when
+the requested locale is absent.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A named list:
+\describe{
+\item{\code{aspect_id}}{Stable key string of the form \code{"aspect.<aspect_label>"}.}
+\item{\code{summary}}{Localized sentence string, or \code{NA_character_} on fallback miss.}
+\item{\code{lang}}{The locale code passed in.}
+}
 }
 }
 \if{html}{\out{<hr>}}
