@@ -5,18 +5,11 @@ library(mockery)
 # Helpers
 # ---------------------------------------------------------------------------
 
-# Produces a minimal maxmind() return value for mocking.
-# Column is "time_zone" to match the GeoLite2-City MMDB field name used by
-# rgeolocate::maxmind() when requested as "time_zone".
-mock_maxmind_result <- function(tz = "Europe/London",
-                                lat = 51.5,
-                                lng = -0.1) {
-  data.frame(
-    time_zone = tz,
-    latitude  = lat,
-    longitude = lng,
-    stringsAsFactors = FALSE
-  )
+# Produces a minimal DBI::dbGetQuery return value for mocking.
+# Columns match the SQL SELECT: time_zone, latitude, longitude.
+mock_geo_result <- function(tz = "Europe/London", lat = 51.5, lng = -0.1) {
+  data.frame(time_zone = tz, latitude = lat, longitude = lng,
+             stringsAsFactors = FALSE)
 }
 
 # ---------------------------------------------------------------------------
@@ -46,29 +39,29 @@ test_that("get_client_ip returns 127.0.0.1 when no IP headers are present", {
 })
 
 # ---------------------------------------------------------------------------
-# get_ip_location — happy path (valid public IP, DB present)
+# get_ip_location — happy path
 # ---------------------------------------------------------------------------
 
-test_that("get_ip_location returns ok result for valid public IP", {
-  stub(get_ip_location, "rgeolocate::maxmind", function(...) {
-    mock_maxmind_result("Europe/London", 51.5, -0.1)
-  })
-  stub(get_ip_location, "file.exists", function(...) TRUE)
-  stub(get_ip_location, "system.file", function(...) "/fake/GeoLite2-City.mmdb")
+test_that("get_ip_location returns ok result for a valid public IP", {
+  fake_pool <- structure(list(), class = "Pool")
+  stub(get_ip_location, "connect_postgres_ipgeo_db", function() fake_pool)
+  stub(get_ip_location, "pool::poolClose",           function(...) invisible(NULL))
+  stub(get_ip_location, "DBI::dbGetQuery", function(pool, sql, params)
+    mock_geo_result("Europe/London", 51.5, -0.1))
 
   res <- get_ip_location("8.8.8.8")
 
   expect_equal(res$status,   "ok")
   expect_equal(res$timezone, "Europe/London")
-  expect_equal(res$latitude, 51.5)
+  expect_equal(res$latitude,  51.5)
 })
 
 test_that("get_ip_location returns Asia/Taipei timezone for a TW IP", {
-  stub(get_ip_location, "rgeolocate::maxmind", function(...) {
-    mock_maxmind_result("Asia/Taipei", 25.05, 121.52)
-  })
-  stub(get_ip_location, "file.exists", function(...) TRUE)
-  stub(get_ip_location, "system.file", function(...) "/fake/GeoLite2-City.mmdb")
+  fake_pool <- structure(list(), class = "Pool")
+  stub(get_ip_location, "connect_postgres_ipgeo_db", function() fake_pool)
+  stub(get_ip_location, "pool::poolClose",           function(...) invisible(NULL))
+  stub(get_ip_location, "DBI::dbGetQuery", function(pool, sql, params)
+    mock_geo_result("Asia/Taipei", 25.05, 121.52))
 
   res <- get_ip_location("1.34.0.0")
 
@@ -80,14 +73,16 @@ test_that("get_ip_location returns Asia/Taipei timezone for a TW IP", {
 # get_ip_location — fallback conditions (AC 13)
 # ---------------------------------------------------------------------------
 
-test_that("get_ip_location falls back when mmdb file is absent", {
-  expect_warning(
-    res <- get_ip_location("8.8.8.8"),
-    "GeoLite2-City.mmdb not found"
-  )
+test_that("get_ip_location falls back when DB returns zero rows", {
+  fake_pool <- structure(list(), class = "Pool")
+  stub(get_ip_location, "connect_postgres_ipgeo_db", function() fake_pool)
+  stub(get_ip_location, "pool::poolClose",           function(...) invisible(NULL))
+  stub(get_ip_location, "DBI::dbGetQuery", function(pool, sql, params)
+    data.frame(time_zone = character(0), latitude = numeric(0), longitude = numeric(0)))
+
+  res <- get_ip_location("8.8.8.8")
   expect_equal(res$status,   "fallback")
   expect_equal(res$timezone, "Asia/Taipei")
-  expect_true(is.na(res$latitude))
 })
 
 test_that("get_ip_location falls back to Asia/Taipei for NULL ip", {
@@ -102,7 +97,7 @@ test_that("get_ip_location falls back to Asia/Taipei for empty string ip", {
   expect_equal(res$timezone, "Asia/Taipei")
 })
 
-test_that("get_ip_location falls back for private loopback IP", {
+test_that("get_ip_location falls back for loopback IP", {
   res <- get_ip_location("127.0.0.1")
   expect_equal(res$status,   "fallback")
   expect_equal(res$timezone, "Asia/Taipei")
@@ -110,20 +105,20 @@ test_that("get_ip_location falls back for private loopback IP", {
 
 test_that("get_ip_location falls back for RFC-1918 IP (10.x)", {
   res <- get_ip_location("10.0.0.1")
-  expect_equal(res$status,   "fallback")
+  expect_equal(res$status, "fallback")
 })
 
 test_that("get_ip_location falls back for RFC-1918 IP (192.168.x)", {
   res <- get_ip_location("192.168.1.1")
-  expect_equal(res$status,   "fallback")
+  expect_equal(res$status, "fallback")
 })
 
-test_that("get_ip_location falls back when maxmind returns invalid timezone", {
-  stub(get_ip_location, "rgeolocate::maxmind", function(...) {
-    mock_maxmind_result(tz = "Not/ATimezone", lat = 0, lng = 0)
-  })
-  stub(get_ip_location, "file.exists", function(...) TRUE)
-  stub(get_ip_location, "system.file", function(...) "/fake/GeoLite2-City.mmdb")
+test_that("get_ip_location falls back when DB returns an invalid timezone", {
+  fake_pool <- structure(list(), class = "Pool")
+  stub(get_ip_location, "connect_postgres_ipgeo_db", function() fake_pool)
+  stub(get_ip_location, "pool::poolClose",           function(...) invisible(NULL))
+  stub(get_ip_location, "DBI::dbGetQuery", function(pool, sql, params)
+    mock_geo_result(tz = "Not/ATimezone", lat = 0, lng = 0))
 
   res <- get_ip_location("8.8.8.8")
 
@@ -131,13 +126,27 @@ test_that("get_ip_location falls back when maxmind returns invalid timezone", {
   expect_equal(res$timezone, "Asia/Taipei")
 })
 
-test_that("get_ip_location falls back and warns when maxmind throws an error", {
-  stub(get_ip_location, "rgeolocate::maxmind", function(...) stop("DB read error"))
-  stub(get_ip_location, "file.exists", function(...) TRUE)
-  stub(get_ip_location, "system.file", function(...) "/fake/GeoLite2-City.mmdb")
+test_that("get_ip_location falls back and warns when DB connection fails", {
+  stub(get_ip_location, "connect_postgres_ipgeo_db",
+       function() stop("Connection refused"))
 
   expect_warning(
     res <- get_ip_location("8.8.8.8"),
+    "IP geolocation failed"
+  )
+  expect_equal(res$status,   "fallback")
+  expect_equal(res$timezone, "Asia/Taipei")
+})
+
+test_that("get_ip_location falls back and warns when DBI::dbGetQuery throws", {
+  fake_pool <- structure(list(), class = "Pool")
+  stub(get_ip_location, "connect_postgres_ipgeo_db", function() fake_pool)
+  stub(get_ip_location, "pool::poolClose",           function(...) invisible(NULL))
+  stub(get_ip_location, "DBI::dbGetQuery",
+       function(...) stop("query execution failed"))
+
+  expect_warning(
+    res <- get_ip_location("5.5.5.5"),
     "IP geolocation failed"
   )
   expect_equal(res$status,   "fallback")
@@ -162,3 +171,4 @@ test_that(".is_private_ip does not block public IPs", {
   expect_false(astrocalculation:::.is_private_ip("1.34.0.0"))
   expect_false(astrocalculation:::.is_private_ip("203.69.0.1"))
 })
+

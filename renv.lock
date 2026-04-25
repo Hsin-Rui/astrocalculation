@@ -2416,41 +2416,6 @@
       "Maintainer": "Kevin Ushey <kevin@rstudio.com>",
       "Repository": "CRAN"
     },
-    "rgeolocate": {
-      "Package": "rgeolocate",
-      "Version": "1.4.2",
-      "Source": "GitHub",
-      "Type": "Package",
-      "Title": "IP Address Geolocation",
-      "Date": "2021-12-18",
-      "Author": "Os Keyes [aut, cre], Drew Schmidt [aut], David Robinson [ctb], Chris Davis [ctb], Bob Rudis [ctb], Maxmind, Inc. [cph], Pascal Gloor [cph], IP2Location.com [cph]",
-      "Maintainer": "Os Keyes <ironholds@gmail.com>",
-      "Copyright": "MaxMind, Inc. for the underlying libmaxmminddb library, IP2Location.com for libip2location, and the package authors for all other content.",
-      "Description": "Connectors to online and offline sources for taking IP addresses and geolocating them to country, city, timezone and other geographic ranges. For individual connectors, see the package index.",
-      "License": "Apache License (== 2.0)",
-      "BugReports": "https://github.com/ironholds/rgeolocate/issues",
-      "LinkingTo": [
-        "Rcpp"
-      ],
-      "Imports": [
-        "Rcpp",
-        "httr"
-      ],
-      "Suggests": [
-        "testthat",
-        "knitr",
-        "rmarkdown"
-      ],
-      "VignetteBuilder": "knitr",
-      "RoxygenNote": "7.1.2",
-      "Encoding": "UTF-8",
-      "RemoteType": "github",
-      "RemoteHost": "api.github.com",
-      "RemoteUsername": "Ironholds",
-      "RemoteRepo": "rgeolocate",
-      "RemoteRef": "master",
-      "RemoteSha": "d2f550ee9ec3bfe1a24449eae0f40c65b7ee0042"
-    },
     "rlang": {
       "Package": "rlang",
       "Version": "1.1.7",

@@ -23,17 +23,15 @@ get_client_ip <- function(session) {
   "127.0.0.1"
 }
 
-#' Look Up IP Location via Local MaxMind GeoLite2 Database
+#' Look Up IP Location via PostgreSQL GeoLite2 Database
 #'
-#' Resolves a client IP address to a timezone string using the bundled
-#' `GeoLite2-City.mmdb` file in `inst/extdata/`. Falls back to
-#' `Asia/Taipei` if the database is missing or if the lookup fails.
+#' Resolves a client IP address to a timezone, latitude, and longitude by
+#' querying the `ipgeo_city_blocks` and `ipgeo_city_locations` tables in the
+#' dedicated IP-geo PostgreSQL database. Falls back to `Asia/Taipei` if the
+#' lookup fails or exceeds the timeout (AC 13).
 #'
-#' @section MaxMind database setup:
-#' Download `GeoLite2-City.mmdb` from
-#' \url{https://dev.maxmind.com/geoip/geolite2-free-geolocation-data} and
-#' place it at `astrocalculation/inst/extdata/GeoLite2-City.mmdb`.
-#' The file is excluded from version control via `.gitignore`.
+#' The database connection is provided by `connect_postgres_ipgeo_db()`.
+#' Data population and updates are handled by separate data-engineering tasks.
 #'
 #' @param ip Character. IPv4 or IPv6 address string.
 #' @param timeout_secs Numeric. Maximum seconds allowed for the lookup.
@@ -45,9 +43,8 @@ get_client_ip <- function(session) {
 #'     \item{longitude}{Numeric. Approximate longitude, or `NA` on fallback.}
 #'     \item{status}{Character. `"ok"` or `"fallback"`.}
 #'   }
+#' @importFrom DBI dbGetQuery
 #' @export
-#' @importFrom rgeolocate maxmind
-#'
 get_ip_location <- function(ip, timeout_secs = 2) {
   fallback <- list(
     timezone  = "Asia/Taipei",
@@ -61,21 +58,29 @@ get_ip_location <- function(ip, timeout_secs = 2) {
     return(fallback)
   }
 
-  mmdb_path <- system.file("extdata", "GeoLite2-City.mmdb",
-                            package = "astrocalculation")
-  if (!nzchar(mmdb_path) || !file.exists(mmdb_path)) {
-    warning("GeoLite2-City.mmdb not found in inst/extdata. Falling back to Asia/Taipei.")
-    return(fallback)
-  }
-
   result <- tryCatch({
     # setTimeLimit enforces the strict 2-second ceiling (AC 13)
     setTimeLimit(elapsed = timeout_secs, transient = TRUE)
     on.exit(setTimeLimit(elapsed = Inf, transient = TRUE), add = TRUE)
 
-    # The GeoLite2-City MMDB stores timezone under the key "time_zone"
-    fields <- c("time_zone", "latitude", "longitude")
-    raw <- rgeolocate::maxmind(ip, mmdb_path, fields)
+    pool <- connect_postgres_ipgeo_db()
+    on.exit(pool::poolClose(pool), add = TRUE)
+
+    # CIDR containment query: find the most specific network block for this IP.
+    # $1::inet casts the parameter to PostgreSQL inet type safely (no injection risk).
+    sql <- paste(
+      "SELECT l.time_zone, b.latitude, b.longitude",
+      "FROM ipgeo_city_blocks b",
+      "JOIN ipgeo_city_locations l ON b.geoname_id = l.geoname_id",
+      "WHERE b.network >> $1::inet",
+      "ORDER BY masklen(b.network) DESC",
+      "LIMIT 1"
+    )
+    raw <- DBI::dbGetQuery(pool, sql, params = list(ip))
+
+    if (nrow(raw) == 0) {
+      return(fallback)
+    }
 
     tz  <- raw$time_zone[1]
     lat <- raw$latitude[1]
