@@ -87,6 +87,13 @@ DataManager <- R6::R6Class(
     #' @field card_reverse
     #' Boolean. If the card should be reversed
     card_reverse=NULL,
+    #' @field draw_status
+    #' State machine status for the tarot draw flow.
+    #' One of: "idle", "shuffling", "ready", "revealed".
+    draw_status = "idle",
+    #' @field llm_interpretation
+    #' Named list with `title`, `body`, `wisdom_tag` from the LLM (or fallback).
+    llm_interpretation = NULL,
 
     #' @description
     #' Initialize manager. If user_id is provided, connect to DB and load profile.
@@ -526,6 +533,37 @@ DataManager <- R6::R6Class(
     get_city_options = function(country_name) get_city_options(country_name),
 
     # 6. Draw Tarot Cards ---------------------------------------
+    #' @description
+    #' Shuffle the deck, draw a card synchronously, and fire an async LLM
+    #' interpretation request in the background.
+    #'
+    #' The caller (module server) is responsible for:
+    #' \enumerate{
+    #'   \item Updating \code{draw_status} to \code{"shuffling"} before calling
+    #'     this method.
+    #'   \item Chaining a 5-second delay promise and then setting
+    #'     \code{draw_status = "ready"} + triggering the gargoyle event there.
+    #'   \item Storing the resolved \code{llm_interpretation} from the returned
+    #'     promise.
+    #' }
+    #' @return A \code{future::Future} that resolves to a named list with
+    #'   \code{title}, \code{body}, and \code{wisdom_tag}.
+    shuffle_and_prepare = function() {
+      # Synchronously draw the card (fast — just DB + RNG)
+      self$draw_one_tarot_card()
+
+      # Capture card state as plain values before entering async worker
+      card_name    <- self$current_cards
+      card_meanings <- self$card_meanings
+      api_key      <- Sys.getenv("GROQ_API_KEY", unset = "")
+      if (nchar(api_key) == 0) api_key <- NULL
+
+      # Fire LLM call in background — caller chains the result
+      future::future({
+        get_tarot_interpretation(card_name, card_meanings, api_key = api_key)
+      }, packages = "astrocalculation", seed = NULL)
+    },
+
     #' @description
     #' Draw one tarot card for daily inspiration
     draw_one_tarot_card = function(){
