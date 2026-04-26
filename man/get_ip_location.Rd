@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_geo.R
 \name{get_ip_location}
 \alias{get_ip_location}
-\title{Look Up IP Location via Local MaxMind GeoLite2 Database}
+\title{Look Up IP Location via PostgreSQL GeoLite2 Database}
 \usage{
 get_ip_location(ip, timeout_secs = 2)
 }
@@ -22,15 +22,12 @@ A list with fields:
 }
 }
 \description{
-Resolves a client IP address to a timezone string using the bundled
-\code{GeoLite2-City.mmdb} file in \verb{inst/extdata/}. Falls back to
-\code{Asia/Taipei} if the database is missing or if the lookup fails.
+Resolves a client IP address to a timezone, latitude, and longitude by
+querying the \code{ipgeo_city_blocks} and \code{ipgeo_city_locations} tables in the
+dedicated IP-geo PostgreSQL database. Falls back to \code{Asia/Taipei} if the
+lookup fails or exceeds the timeout (AC 13).
 }
-\section{MaxMind database setup}{
-
-Download \code{GeoLite2-City.mmdb} from
-\url{https://dev.maxmind.com/geoip/geolite2-free-geolocation-data} and
-place it at \code{astrocalculation/inst/extdata/GeoLite2-City.mmdb}.
-The file is excluded from version control via \code{.gitignore}.
+\details{
+The database connection is provided by \code{connect_postgres_ipgeo_db()}.
+Data population and updates are handled by separate data-engineering tasks.
 }
-

@@ -38,6 +38,20 @@ test_that("get_client_ip returns 127.0.0.1 when no IP headers are present", {
   expect_equal(get_client_ip(mock_session), "127.0.0.1")
 })
 
+test_that("get_client_ip ignores invalid first X-Forwarded-For token", {
+  mock_session <- list(
+    request = list(
+      HTTP_X_FORWARDED_FOR = "unknown, 203.0.113.5",
+      REMOTE_ADDR = "192.168.1.1"
+    )
+  )
+  expect_equal(get_client_ip(mock_session), "203.0.113.5")
+})
+
+test_that("get_client_ip returns localhost for malformed session objects", {
+  expect_equal(get_client_ip(list()), "127.0.0.1")
+})
+
 # ---------------------------------------------------------------------------
 # get_ip_location — happy path
 # ---------------------------------------------------------------------------
@@ -67,6 +81,40 @@ test_that("get_ip_location returns Asia/Taipei timezone for a TW IP", {
 
   expect_equal(res$status,   "ok")
   expect_equal(res$timezone, "Asia/Taipei")
+})
+
+test_that("get_ip_location uses contains-or-equals CIDR operator", {
+  fake_pool <- structure(list(), class = "Pool")
+  captured_sql <- NULL
+
+  stub(get_ip_location, "connect_postgres_ipgeo_db", function() fake_pool)
+  stub(get_ip_location, "pool::poolClose",           function(...) invisible(NULL))
+  stub(get_ip_location, "DBI::dbGetQuery", function(pool, sql, params) {
+    captured_sql <<- sql
+    mock_geo_result("Asia/Taipei", 25.05, 121.52)
+  })
+
+  get_ip_location("1.34.0.0")
+
+  expect_match(captured_sql, ">>=")
+})
+
+test_that("get_ip_location enforces strict 2-second timeout cap", {
+  fake_pool <- structure(list(), class = "Pool")
+  captured_elapsed <- numeric(0)
+
+  stub(get_ip_location, "connect_postgres_ipgeo_db", function() fake_pool)
+  stub(get_ip_location, "pool::poolClose",           function(...) invisible(NULL))
+  stub(get_ip_location, "DBI::dbGetQuery", function(pool, sql, params)
+    mock_geo_result("Europe/London", 51.5, -0.1))
+  stub(get_ip_location, "setTimeLimit", function(elapsed, transient = TRUE) {
+    captured_elapsed <<- c(captured_elapsed, elapsed)
+    invisible(NULL)
+  })
+
+  get_ip_location("8.8.8.8", timeout_secs = 20)
+
+  expect_lte(captured_elapsed[[1]], 2)
 })
 
 # ---------------------------------------------------------------------------
@@ -153,6 +201,21 @@ test_that("get_ip_location falls back and warns when DBI::dbGetQuery throws", {
   expect_equal(res$timezone, "Asia/Taipei")
 })
 
+test_that("get_ip_location falls back and warns when lookup exceeds timeout", {
+  fake_pool <- structure(list(), class = "Pool")
+  stub(get_ip_location, "connect_postgres_ipgeo_db", function() fake_pool)
+  stub(get_ip_location, "pool::poolClose",           function(...) invisible(NULL))
+  stub(get_ip_location, "DBI::dbGetQuery",
+       function(...) stop("reached elapsed time limit"))
+
+  expect_warning(
+    res <- get_ip_location("8.8.8.8"),
+    "IP geolocation failed"
+  )
+  expect_equal(res$status,   "fallback")
+  expect_equal(res$timezone, "Asia/Taipei")
+})
+
 # ---------------------------------------------------------------------------
 # Internal helper: .is_private_ip
 # ---------------------------------------------------------------------------
@@ -164,6 +227,8 @@ test_that(".is_private_ip correctly identifies private ranges", {
   expect_true(astrocalculation:::.is_private_ip("172.31.255.255"))
   expect_true(astrocalculation:::.is_private_ip("192.168.0.1"))
   expect_true(astrocalculation:::.is_private_ip("::1"))
+  expect_true(astrocalculation:::.is_private_ip("FD12::1"))
+  expect_true(astrocalculation:::.is_private_ip("fe80::1"))
 })
 
 test_that(".is_private_ip does not block public IPs", {

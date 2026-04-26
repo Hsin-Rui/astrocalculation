@@ -7,16 +7,25 @@
 #' @return A single IP address string, or `"127.0.0.1"` if none is detectable.
 #' @export
 get_client_ip <- function(session) {
-  forwarded <- session$request$HTTP_X_FORWARDED_FOR
-
-  if (!is.null(forwarded) && nzchar(trimws(forwarded))) {
-    # X-Forwarded-For may be comma-separated; take the leftmost (original client)
-    ips <- strsplit(forwarded, ",", fixed = TRUE)[[1]]
-    return(trimws(ips[[1]]))
+  req <- tryCatch(session$request, error = function(...) NULL)
+  if (is.null(req)) {
+    return("127.0.0.1")
   }
 
-  remote <- session$request$REMOTE_ADDR
-  if (!is.null(remote) && nzchar(trimws(remote))) {
+  forwarded <- req$HTTP_X_FORWARDED_FOR
+
+  if (!is.null(forwarded) && nzchar(trimws(forwarded))) {
+    # X-Forwarded-For may be comma-separated; use the first valid token.
+    ips <- strsplit(forwarded, ",", fixed = TRUE)[[1]]
+    ips <- trimws(ips)
+    valid_ips <- ips[nzchar(ips) & vapply(ips, .is_valid_ip, logical(1))]
+    if (length(valid_ips) > 0) {
+      return(valid_ips[[1]])
+    }
+  }
+
+  remote <- req$REMOTE_ADDR
+  if (!is.null(remote) && nzchar(trimws(remote)) && .is_valid_ip(trimws(remote))) {
     return(trimws(remote))
   }
 
@@ -53,14 +62,25 @@ get_ip_location <- function(ip, timeout_secs = 2) {
     status    = "fallback"
   )
 
+  if (is.null(ip) || length(ip) == 0) {
+    return(fallback)
+  }
+
+  ip <- trimws(as.character(ip[[1]]))
+
   # Guard: reject obviously invalid / private / loopback addresses early
-  if (is.null(ip) || !nzchar(ip) || .is_private_ip(ip)) {
+  if (is.null(ip) || !nzchar(ip) || !.is_valid_ip(ip) || .is_private_ip(ip)) {
     return(fallback)
   }
 
   result <- tryCatch({
-    # setTimeLimit enforces the strict 2-second ceiling (AC 13)
-    setTimeLimit(elapsed = timeout_secs, transient = TRUE)
+    # setTimeLimit enforces AC 13 with a hard cap at 2 seconds.
+    timeout <- suppressWarnings(as.numeric(timeout_secs))
+    if (is.na(timeout) || timeout <= 0) {
+      timeout <- 2
+    }
+    timeout <- min(timeout, 2)
+    setTimeLimit(elapsed = timeout, transient = TRUE)
     on.exit(setTimeLimit(elapsed = Inf, transient = TRUE), add = TRUE)
 
     pool <- connect_postgres_ipgeo_db()
@@ -72,7 +92,7 @@ get_ip_location <- function(ip, timeout_secs = 2) {
       "SELECT l.time_zone, b.latitude, b.longitude",
       "FROM ipgeo_city_blocks b",
       "JOIN ipgeo_city_locations l ON b.geoname_id = l.geoname_id",
-      "WHERE b.network >> $1::inet",
+      "WHERE b.network >>= $1::inet",
       "ORDER BY masklen(b.network) DESC",
       "LIMIT 1"
     )
@@ -109,19 +129,48 @@ get_ip_location <- function(ip, timeout_secs = 2) {
 # Internal helpers (not exported)                                              #
 # --------------------------------------------------------------------------- #
 
-#' Detect private / reserved IP ranges (IPv4 only)
+#' Detect private / reserved IP ranges
 #'
 #' @param ip Character.
 #' @return Logical.
 #' @noRd
 .is_private_ip <- function(ip) {
+  if (is.null(ip) || length(ip) == 0) {
+    return(FALSE)
+  }
+
+  ip <- tolower(trimws(as.character(ip[[1]])))
+
   private_patterns <- c(
     "^127\\.",          # loopback
     "^10\\.",           # RFC 1918
     "^172\\.(1[6-9]|2[0-9]|3[01])\\.",  # RFC 1918
     "^192\\.168\\.",    # RFC 1918
     "^::1$",            # IPv6 loopback
-    "^fc", "^fd"        # IPv6 unique local
+    "^fc", "^fd",      # IPv6 unique local
+    "^fe80:"            # IPv6 link-local
   )
   any(vapply(private_patterns, function(p) grepl(p, ip), logical(1)))
+}
+
+#' Detect syntactically valid IP addresses
+#'
+#' @param ip Character.
+#' @return Logical.
+#' @noRd
+.is_valid_ip <- function(ip) {
+  if (is.null(ip) || length(ip) == 0) {
+    return(FALSE)
+  }
+
+  ip <- trimws(as.character(ip[[1]]))
+
+  ipv4 <- grepl(
+    "^((25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})\\.){3}(25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})$",
+    ip
+  )
+
+  ipv6 <- grepl("^[0-9a-fA-F:]+$", ip) && grepl(":", ip, fixed = TRUE)
+
+  ipv4 || ipv6
 }
