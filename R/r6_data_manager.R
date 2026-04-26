@@ -74,6 +74,20 @@ DataManager <- R6::R6Class(
     #' R6 logger object
     logger = NULL, #
 
+    ## 1-6. Tarot card fields ####
+    #' @field current_cards
+    #' The card(s) drawn currently by the user
+    current_cards = NULL,
+    #' @field card_meanings
+    #' The meaning of card(s), it should be some keywords
+    card_meanings = NULL,
+    #' @field card_files
+    #' Path to the jpg of card(s),
+    card_files=NULL,
+    #' @field card_reverse
+    #' Boolean. If the card should be reversed
+    card_reverse=NULL,
+
     #' @description
     #' Initialize manager. If user_id is provided, connect to DB and load profile.
     #' If not, default to Guest/Transit mode.
@@ -372,7 +386,7 @@ DataManager <- R6::R6Class(
     # 4. Methods: Calculation ------------------------------------
 
     #' @description
-    #' update horoscope. Calculate planetary positions, draw chart
+    #' update horoscope. Calculate planetary positions, draw chart.
     #'
     update_chart = function() {
       tryCatch(
@@ -448,9 +462,11 @@ DataManager <- R6::R6Class(
       city    <- self$horoscope_city
       country <- self$horoscope_country
       planets <- self$selected_planets
+      safe_lat <- if (is.finite(latitude)) latitude else 25.0330
+      safe_lng <- if (is.finite(longitude)) longitude else 121.5654
 
       future::future({
-        planet_pos <- calculate_planet_position(dt, timezone, longitude, latitude)
+        planet_pos <- calculate_planet_position(dt, timezone, safe_lng, safe_lat)
         data_df    <- planet_pos$planetary_position
         data_df    <- data_df[(row.names(data_df) %in% planets), ]
         aspect     <- calculate_aspect(data_df)
@@ -463,8 +479,8 @@ DataManager <- R6::R6Class(
           aspect_table    = aspect,
           chart           = chart,
           timezone        = timezone,
-          latitude        = latitude,
-          longitude       = longitude
+          latitude        = safe_lat,
+          longitude       = safe_lng
         )
       }, packages = "astrocalculation", seed = NULL)
     },
@@ -507,10 +523,40 @@ DataManager <- R6::R6Class(
     #' Fetch bilingual city list for a specific country
     #' Returns named vector
     #' @param country_name English name of the country
-    get_city_options = function(country_name) get_city_options(country_name)
+    get_city_options = function(country_name) get_city_options(country_name),
+
+    # 6. Draw Tarot Cards ---------------------------------------
+    #' @description
+    #' Draw one tarot card for daily inspiration
+    draw_one_tarot_card = function(){
+
+      current_deck <- shuffle_deck()
+      card_drawn <- draw_cards(n = 1, deck = current_deck)
+
+      con <- connect_tarot_db()
+      on.exit(DBI::dbDisconnect(con))
+
+      id <- card_drawn$id - 1
+      is_reversed <- card_drawn$is_reversed
+
+      card <- DBI::dbGetQuery(con, glue::glue("select name_zh, file
+                                               from tarot_cards where id = {id}"))
+      card_name <- card$name_zh
+      if (isTRUE(is_reversed)) card_name <- paste0(card_name, "逆位")
+
+      card_meanings <- DBI::dbGetQuery(con, glue::glue("select meaning_zh from tarot_card_meanings
+                                      where id = {id} and is_reversed = {is_reversed}" )) |> unlist()
+
+      self$card_files <- system.file("tarot_cards", paste0(card$file, ".jpg"),
+                                    package = "astrocalculation", mustWork = TRUE)
+      self$card_reverse <- is_reversed
+      self$current_cards <- card_name
+      self$card_meanings <- card_meanings
+
+    }
   ),
 
-  # 6. Private Methods -----------------------------------------
+  # 7. Private Methods -----------------------------------------
   private = list(
     finalize = function() {
       if (!is.null(self$pool)) close_postgres_db(self$pool)

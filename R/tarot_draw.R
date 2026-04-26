@@ -6,8 +6,8 @@
 #' @export
 shuffle_deck <- function(number_of_cards = 78, has_reverse = TRUE) {
 
-  # Generate a sequence from 1 to number_of_cards and shuffle it
-  shuffled_ids <- sample(1:number_of_cards, size = number_of_cards, replace = FALSE)
+  # Generate a sequence from 0 to number_of_cards-1 and shuffle it
+  shuffled_ids <- sample(1:(number_of_cards), size = number_of_cards, replace = FALSE)
 
   # Generate reversed status for the entire deck
   if (has_reverse) {
