@@ -186,68 +186,112 @@ test_that("get_tarot_interpretation falls back on non-200 status", {
 # ── DataManager: draw_status & shuffle_and_prepare ───────────────────────────
 
 test_that("DataManager initialises with draw_status = 'idle'", {
+  ns <- asNamespace("astrocalculation")
+  mock_names <- c("connect_postgres_db", "Logger", "lookup_city_data",
+                  "calculate_planet_position", "calculate_aspect", "draw_whole_sign_chart")
+  originals <- setNames(lapply(mock_names, function(nm) get(nm, envir = ns)), mock_names)
+  on.exit({
+    for (nm in mock_names) {
+      if (bindingIsLocked(nm, ns)) unlockBinding(nm, ns)
+      assign(nm, originals[[nm]], envir = ns)
+    }
+  }, add = TRUE)
+
+  unlockBinding("connect_postgres_db", ns)
+  assign("connect_postgres_db", function() list(conn = TRUE), envir = ns)
+  unlockBinding("Logger", ns)
+  assign("Logger",
+    list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
+    envir = ns)
+  unlockBinding("lookup_city_data", ns)
+  assign("lookup_city_data",
+    function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
+    envir = ns)
+  unlockBinding("calculate_planet_position", ns)
+  assign("calculate_planet_position",
+    function(...) list(planetary_position = data.frame(dummy = 1)),
+    envir = ns)
+  unlockBinding("calculate_aspect", ns)
+  assign("calculate_aspect", function(data) data.frame(), envir = ns)
+  unlockBinding("draw_whole_sign_chart", ns)
+  assign("draw_whole_sign_chart", function(...) list(), envir = ns)
+
   with_mocked_bindings(
     {
-      with_mocked_bindings(
-        {
-          r6 <- suppressMessages(DataManager$new())
-          on.exit({ r6$pool <- NULL }, add = TRUE)
-          expect_equal(r6$draw_status, "idle")
-          expect_null(r6$llm_interpretation)
-        },
-        poolWithTransaction = function(pool, code) code(NULL),
-        .env = asNamespace("pool")
-      )
+      r6 <- suppressMessages(DataManager$new())
+      on.exit({ r6$pool <- NULL }, add = TRUE)
+      expect_equal(r6$draw_status, "idle")
+      expect_null(r6$llm_interpretation)
     },
-    connect_postgres_db     = function() list(conn = TRUE),
-    Logger                  = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
-    lookup_city_data        = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
-    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
-    calculate_aspect        = function(data) data.frame(),
-    draw_whole_sign_chart   = function(...) list(),
-    .env = asNamespace("astrocalculation")
+    poolWithTransaction = function(pool, code) code(NULL),
+    .env = asNamespace("pool")
   )
 })
 
 test_that("shuffle_and_prepare draws a card and returns a future", {
+  ns <- asNamespace("astrocalculation")
+  mock_names <- c("connect_postgres_db", "Logger", "lookup_city_data",
+                  "calculate_planet_position", "calculate_aspect", "draw_whole_sign_chart",
+                  "connect_tarot_db", "shuffle_deck", "draw_cards", "get_tarot_interpretation")
+  originals <- setNames(lapply(mock_names, function(nm) get(nm, envir = ns)), mock_names)
+  on.exit({
+    for (nm in mock_names) {
+      if (bindingIsLocked(nm, ns)) unlockBinding(nm, ns)
+      assign(nm, originals[[nm]], envir = ns)
+    }
+  }, add = TRUE)
+
+  unlockBinding("connect_postgres_db", ns)
+  assign("connect_postgres_db", function() list(conn = TRUE), envir = ns)
+  unlockBinding("Logger", ns)
+  assign("Logger",
+    list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
+    envir = ns)
+  unlockBinding("lookup_city_data", ns)
+  assign("lookup_city_data",
+    function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
+    envir = ns)
+  unlockBinding("calculate_planet_position", ns)
+  assign("calculate_planet_position",
+    function(...) list(planetary_position = data.frame(dummy = 1)),
+    envir = ns)
+  unlockBinding("calculate_aspect", ns)
+  assign("calculate_aspect", function(data) data.frame(), envir = ns)
+  unlockBinding("draw_whole_sign_chart", ns)
+  assign("draw_whole_sign_chart", function(...) list(), envir = ns)
+  unlockBinding("connect_tarot_db", ns)
+  assign("connect_tarot_db", function() {
+    con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+    DBI::dbExecute(con, "CREATE TABLE tarot_cards (id INTEGER, name_zh TEXT, file TEXT)")
+    DBI::dbExecute(con, "INSERT INTO tarot_cards VALUES (1, '\u611a\u8005', 'c01')")
+    DBI::dbExecute(con, "CREATE TABLE tarot_card_meanings (id INTEGER, is_reversed INTEGER, meaning_zh TEXT)")
+    DBI::dbExecute(con, "INSERT INTO tarot_card_meanings VALUES (1, 0, '\u81ea\u7531\u51d2\u96aa')")
+    con
+  }, envir = ns)
+  unlockBinding("shuffle_deck", ns)
+  assign("shuffle_deck", function(...) data.frame(id = 2L, is_reversed = FALSE), envir = ns)
+  unlockBinding("draw_cards", ns)
+  assign("draw_cards", function(n, deck) deck[1, , drop = FALSE], envir = ns)
+  unlockBinding("get_tarot_interpretation", ns)
+  assign("get_tarot_interpretation",
+    function(...) list(title = "T", body = "B", wisdom_tag = "W"),
+    envir = ns)
+
   with_mocked_bindings(
     {
-      with_mocked_bindings(
-        {
-          r6 <- suppressMessages(DataManager$new())
-          on.exit({ r6$pool <- NULL }, add = TRUE)
+      r6 <- suppressMessages(DataManager$new())
+      on.exit({ r6$pool <- NULL }, add = TRUE)
 
-          fut <- r6$shuffle_and_prepare()
+      fut <- r6$shuffle_and_prepare()
 
-          # Card fields must be populated synchronously
-          expect_false(is.null(r6$current_cards))
-          expect_false(is.null(r6$card_files))
+      # Card fields must be populated synchronously
+      expect_false(is.null(r6$current_cards))
+      expect_false(is.null(r6$card_files))
 
-          # Return value must be a future (has class "Future")
-          expect_true(inherits(fut, "Future"))
-        },
-        poolWithTransaction = function(pool, code) code(NULL),
-        .env = asNamespace("pool")
-      )
+      # Return value must be a future (has class "Future")
+      expect_true(inherits(fut, "Future"))
     },
-    connect_postgres_db   = function() list(conn = TRUE),
-    Logger                = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
-    lookup_city_data      = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
-    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
-    calculate_aspect      = function(data) data.frame(),
-    draw_whole_sign_chart = function(...) list(),
-    # Use "c01" so system.file finds the real inst/tarot_cards/c01.jpg
-    connect_tarot_db      = function() {
-      con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-      DBI::dbExecute(con, "CREATE TABLE tarot_cards (id INTEGER, name_zh TEXT, file TEXT)")
-      DBI::dbExecute(con, "INSERT INTO tarot_cards VALUES (1, '愚者', 'c01')")
-      DBI::dbExecute(con, "CREATE TABLE tarot_card_meanings (id INTEGER, is_reversed INTEGER, meaning_zh TEXT)")
-      DBI::dbExecute(con, "INSERT INTO tarot_card_meanings VALUES (1, 0, '自由冒險')")
-      con
-    },
-    shuffle_deck  = function(...) data.frame(id = 2L, is_reversed = FALSE),
-    draw_cards    = function(n, deck) deck[1, , drop = FALSE],
-    get_tarot_interpretation = function(...) list(title = "T", body = "B", wisdom_tag = "W"),
-    .env = asNamespace("astrocalculation")
+    poolWithTransaction = function(pool, code) code(NULL),
+    .env = asNamespace("pool")
   )
 })

@@ -453,7 +453,7 @@ DataManager <- R6::R6Class(
 
     #' @description
     #' Async variant of update_chart for non-blocking guest IP-geo chart rendering.
-    #' Runs the heavy computation in a future worker — bypasses city lookup, using
+    #' Runs the heavy computation in a future worker; bypasses city lookup, using
     #' caller-supplied timezone / coordinates from IP geolocation instead.
     #' @param timezone Character. IANA timezone string from IP lookup.
     #' @param latitude Numeric. Latitude from IP lookup.
@@ -549,7 +549,7 @@ DataManager <- R6::R6Class(
     #' @return A \code{future::Future} that resolves to a named list with
     #'   \code{title}, \code{body}, and \code{wisdom_tag}.
     shuffle_and_prepare = function() {
-      # Synchronously draw the card (fast — just DB + RNG)
+      # Synchronously draw the card (fast \u2014 just DB + RNG)
       self$draw_one_tarot_card()
 
       # Capture card state as plain values before entering async worker
@@ -558,7 +558,7 @@ DataManager <- R6::R6Class(
       api_key      <- Sys.getenv("GROQ_API_KEY", unset = "")
       if (nchar(api_key) == 0) api_key <- NULL
 
-      # Fire LLM call in background — caller chains the result
+      # Fire LLM call in background \u2014 caller chains the result
       future::future({
         get_tarot_interpretation(card_name, card_meanings, api_key = api_key)
       }, packages = "astrocalculation", seed = NULL)
@@ -580,7 +580,7 @@ DataManager <- R6::R6Class(
       card <- DBI::dbGetQuery(con, glue::glue("select name_zh, file
                                                from tarot_cards where id = {id}"))
       card_name <- card$name_zh
-      if (isTRUE(is_reversed)) card_name <- paste0(card_name, "逆位")
+      if (isTRUE(is_reversed)) card_name <- paste0(card_name, "\u9006\u4f4d")
 
       card_meanings <- DBI::dbGetQuery(con, glue::glue("select meaning_zh from tarot_card_meanings
                                       where id = {id} and is_reversed = {is_reversed}" )) |> unlist()
