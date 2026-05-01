@@ -50,6 +50,19 @@ name of the chart}
 \item{\code{user_library}}{The data frame of the user's saved charts}
 
 \item{\code{logger}}{R6 logger object}
+
+\item{\code{current_cards}}{The card(s) drawn currently by the user}
+
+\item{\code{card_meanings}}{The meaning of card(s), it should be some keywords}
+
+\item{\code{card_files}}{Path to the jpg of card(s),}
+
+\item{\code{card_reverse}}{Boolean. If the card should be reversed}
+
+\item{\code{draw_status}}{State machine status for the tarot draw flow.
+One of: "idle", "shuffling", "ready", "revealed".}
+
+\item{\code{llm_interpretation}}{Named list with \code{title}, \code{body}, \code{wisdom_tag} from the LLM (or fallback).}
 }
 \if{html}{\out{</div>}}
 }
@@ -72,9 +85,12 @@ name of the chart}
 \item \href{#method-DataManager-load_chart_to_view}{\code{DataManager$load_chart_to_view()}}
 \item \href{#method-DataManager-delete_chart_from_library}{\code{DataManager$delete_chart_from_library()}}
 \item \href{#method-DataManager-update_chart}{\code{DataManager$update_chart()}}
+\item \href{#method-DataManager-update_chart_async}{\code{DataManager$update_chart_async()}}
 \item \href{#method-DataManager-adjust_time}{\code{DataManager$adjust_time()}}
 \item \href{#method-DataManager-get_country_options}{\code{DataManager$get_country_options()}}
 \item \href{#method-DataManager-get_city_options}{\code{DataManager$get_city_options()}}
+\item \href{#method-DataManager-shuffle_and_prepare}{\code{DataManager$shuffle_and_prepare()}}
+\item \href{#method-DataManager-draw_one_tarot_card}{\code{DataManager$draw_one_tarot_card()}}
 \item \href{#method-DataManager-clone}{\code{DataManager$clone()}}
 }
 }
@@ -357,11 +373,39 @@ Delete a chart from library
 \if{html}{\out{<a id="method-DataManager-update_chart"></a>}}
 \if{latex}{\out{\hypertarget{method-DataManager-update_chart}{}}}
 \subsection{Method \code{update_chart()}}{
-update horoscope. Calculate planetary positions, draw chart
+update horoscope. Calculate planetary positions, draw chart.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{DataManager$update_chart()}\if{html}{\out{</div>}}
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-update_chart_async"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-update_chart_async}{}}}
+\subsection{Method \code{update_chart_async()}}{
+Async variant of update_chart for non-blocking guest IP-geo chart rendering.
+Runs the heavy computation in a future worker; bypasses city lookup, using
+caller-supplied timezone / coordinates from IP geolocation instead.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$update_chart_async(timezone, latitude, longitude)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{timezone}}{Character. IANA timezone string from IP lookup.}
+
+\item{\code{latitude}}{Numeric. Latitude from IP lookup.}
+
+\item{\code{longitude}}{Numeric. Longitude from IP lookup.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A \code{future::Future} that resolves to a named list with keys
+\code{planet_position}, \code{aspect_table}, \code{chart},
+\code{timezone}, \code{latitude}, \code{longitude}.
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DataManager-adjust_time"></a>}}
@@ -412,6 +456,41 @@ Returns named vector
 }
 \if{html}{\out{</div>}}
 }
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-shuffle_and_prepare"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-shuffle_and_prepare}{}}}
+\subsection{Method \code{shuffle_and_prepare()}}{
+Shuffle the deck, draw a card synchronously, and fire an async LLM
+interpretation request in the background.
+
+The caller (module server) is responsible for:
+\enumerate{
+\item Updating \code{draw_status} to \code{"shuffling"} before calling
+this method.
+\item Chaining a 5-second delay promise and then setting
+\code{draw_status = "ready"} + triggering the gargoyle event there.
+\item Storing the resolved \code{llm_interpretation} from the returned
+promise.
+}
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$shuffle_and_prepare()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A \code{future::Future} that resolves to a named list with
+\code{title}, \code{body}, and \code{wisdom_tag}.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-draw_one_tarot_card"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-draw_one_tarot_card}{}}}
+\subsection{Method \code{draw_one_tarot_card()}}{
+Draw one tarot card for daily inspiration
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$draw_one_tarot_card()}\if{html}{\out{</div>}}
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DataManager-clone"></a>}}
