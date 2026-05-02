@@ -1,3 +1,6 @@
+# astrocalculation 0.1.17 -- 2026-4-26
+* Draw tarot card and LLM integration
+
 # astrocalculation 0.1.16 -- 2026-4-7
 * Update DB schema spec
 * Fix bugs in auth_handler for Google login

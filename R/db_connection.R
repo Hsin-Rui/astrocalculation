@@ -14,10 +14,9 @@
 #' DBI::dbDisconnect(con)
 #' }
 connect_cities_db <- function() {
-  # Locate the database file within the installed package
+
   path <- system.file("extdata", "cities.sqlite", package = "astrocalculation", mustWork = TRUE)
 
-  # Establish and return the connection
   con <- DBI::dbConnect(RSQLite::SQLite(), dbname = path)
 
   return(con)
@@ -26,31 +25,23 @@ connect_cities_db <- function() {
 #' Connect to the Database
 #'
 #' Establishes a connection pool to the PostgreSQL database using environment
-#' variables. It automatically handles SSL settings for Azure vs Local.
+#' variables. It automatically handles SSL settings.
 #'
 #' @return A `pool` object
 #'
 connect_postgres_db <- function() {
 
-  # 1. Read Credentials
   db_host <- Sys.getenv("PGHOST")
   db_port <- Sys.getenv("DB_PORT")
   db_name <- Sys.getenv("PGDATABASE")
-  #db_user <- Sys.getenv("DB_USER")
   db_user <- Sys.getenv("PGUSER")
-  #db_pass <- Sys.getenv("DB_PASSWORD")
   db_pass <- Sys.getenv("PGPASSWORD")
-  # ssl_mode <- Sys.getenv("DB_SSL_MODE", "require")
   ssl_mode <- Sys.getenv("PGSSLMODE", "require")
 
-  # 2. Check for missing config
   if (db_host == "") {
     stop("DB_HOST is missing. Did you load your .Renviron?")
   }
 
-  # 3. Create Pool
-  # We use 'pool' because Shiny apps are multi-threaded/async.
-  # A single connection would bottleneck.
   pool <- pool::dbPool(
     drv = RPostgres::Postgres(),
     dbname = db_name,
@@ -206,3 +197,40 @@ connect_tarot_db <- function() {
 
   return(con)
 }
+
+
+#' Connect to the Database For IP Geocoding Data
+#'
+#' Establishes a connection pool to the PostgreSQL database using environment
+#' variables. It automatically handles SSL settings for Azure vs Local.
+#'
+#' @return A `pool` object
+#'
+connect_postgres_ipgeo_db <- function() {
+
+  db_host <- Sys.getenv("PGHOST")
+  db_port <- Sys.getenv("DB_PORT")
+  db_name <- Sys.getenv("PGDATABASE")
+  db_user <- Sys.getenv("PGUSER")
+  db_pass <- Sys.getenv("PGPASSWORD")
+  ssl_mode <- Sys.getenv("PGSSLMODE", "require")
+
+  if (db_host == "") {
+    stop("DB_HOST is missing. Did you load your .Renviron?")
+  }
+
+  pool <- pool::dbPool(
+    drv = RPostgres::Postgres(),
+    dbname = db_name,
+    host = db_host,
+    port = db_port,
+    user = db_user,
+    password = db_pass,
+    sslmode = ssl_mode,
+    options = paste0("-c search_path=", "ipgeo")
+  )
+
+  return(pool)
+}
+
+

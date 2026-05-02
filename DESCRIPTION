@@ -1,6 +1,6 @@
 Package: astrocalculation
 Title: Astrology Calculations
-Version: 0.1.16
+Version: 0.1.17
 Authors@R: 
     person("Hsin-Rui", "Lin", , "hsinrui.lin@gmail.com", role = c("aut", "cre"))
 Description: This package calculates astrological information according to different doctrines. In the current version, it supports drawing chart using whole sign house system. Further functionalities will follow.
@@ -32,11 +32,15 @@ Imports:
     sodium,
     jsonlite,
     emayili,
-    rlang
+    rlang,
+    future,
+    httr2,
+    jsonvalidate
 Date: 2025-07-27
 Suggests: 
     dbplyr,
     testthat,
     utils,
-    tibble
+    tibble,
+    mockery
 Config/testthat/edition: 3

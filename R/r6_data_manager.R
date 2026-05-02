@@ -74,6 +74,27 @@ DataManager <- R6::R6Class(
     #' R6 logger object
     logger = NULL, #
 
+    ## 1-6. Tarot card fields ####
+    #' @field current_cards
+    #' The card(s) drawn currently by the user
+    current_cards = NULL,
+    #' @field card_meanings
+    #' The meaning of card(s), it should be some keywords
+    card_meanings = NULL,
+    #' @field card_files
+    #' Path to the jpg of card(s),
+    card_files=NULL,
+    #' @field card_reverse
+    #' Boolean. If the card should be reversed
+    card_reverse=NULL,
+    #' @field draw_status
+    #' State machine status for the tarot draw flow.
+    #' One of: "idle", "shuffling", "ready", "revealed".
+    draw_status = "idle",
+    #' @field llm_interpretation
+    #' Named list with `title`, `body`, `wisdom_tag` from the LLM (or fallback).
+    llm_interpretation = NULL,
+
     #' @description
     #' Initialize manager. If user_id is provided, connect to DB and load profile.
     #' If not, default to Guest/Transit mode.
@@ -372,7 +393,7 @@ DataManager <- R6::R6Class(
     # 4. Methods: Calculation ------------------------------------
 
     #' @description
-    #' update horoscope. Calculate planetary positions, draw chart
+    #' update horoscope. Calculate planetary positions, draw chart.
     #'
     update_chart = function() {
       tryCatch(
@@ -429,6 +450,48 @@ DataManager <- R6::R6Class(
         }
       )
     },
+
+    #' @description
+    #' Async variant of update_chart for non-blocking guest IP-geo chart rendering.
+    #' Runs the heavy computation in a future worker; bypasses city lookup, using
+    #' caller-supplied timezone / coordinates from IP geolocation instead.
+    #' @param timezone Character. IANA timezone string from IP lookup.
+    #' @param latitude Numeric. Latitude from IP lookup.
+    #' @param longitude Numeric. Longitude from IP lookup.
+    #' @return A \code{future::Future} that resolves to a named list with keys
+    #'   \code{planet_position}, \code{aspect_table}, \code{chart},
+    #'   \code{timezone}, \code{latitude}, \code{longitude}.
+    #' @importFrom future future
+    update_chart_async = function(timezone, latitude, longitude) {
+      # Capture all needed state as plain values before entering the future worker
+      dt      <- self$horoscope_datetime
+      name    <- self$chart_name
+      city    <- self$horoscope_city
+      country <- self$horoscope_country
+      planets <- self$selected_planets
+      safe_lat <- if (is.finite(latitude)) latitude else 25.0330
+      safe_lng <- if (is.finite(longitude)) longitude else 121.5654
+
+      future::future({
+        planet_pos <- calculate_planet_position(dt, timezone, safe_lng, safe_lat)
+        data_df    <- planet_pos$planetary_position
+        data_df    <- data_df[(row.names(data_df) %in% planets), ]
+        aspect     <- calculate_aspect(data_df)
+        planet_pos$planetary_position <- data_df
+        chart      <- draw_whole_sign_chart(
+          data_df, name, dt, city, country, timezone, aspect
+        )
+        list(
+          planet_position = planet_pos,
+          aspect_table    = aspect,
+          chart           = chart,
+          timezone        = timezone,
+          latitude        = safe_lat,
+          longitude       = safe_lng
+        )
+      }, packages = "astrocalculation", seed = NULL)
+    },
+
     #' @description
     #' Add or minus datetime according for a certain value and unit, then plot the chart
     #' @param operation add or minus (interact with an action button)
@@ -467,10 +530,78 @@ DataManager <- R6::R6Class(
     #' Fetch bilingual city list for a specific country
     #' Returns named vector
     #' @param country_name English name of the country
-    get_city_options = function(country_name) get_city_options(country_name)
+    get_city_options = function(country_name) get_city_options(country_name),
+
+    # 6. Draw Tarot Cards ---------------------------------------
+    #' @description
+    #' Shuffle the deck, draw a card synchronously, and fire an async LLM
+    #' interpretation request in the background.
+    #'
+    #' The caller (module server) is responsible for:
+    #' \enumerate{
+    #'   \item Updating \code{draw_status} to \code{"shuffling"} before calling
+    #'     this method.
+    #'   \item Chaining a 5-second delay promise and then setting
+    #'     \code{draw_status = "ready"} + triggering the gargoyle event there.
+    #'   \item Storing the resolved \code{llm_interpretation} from the returned
+    #'     promise.
+    #' }
+    #' @return A \code{future::Future} that resolves to a named list with
+    #'   \code{title}, \code{body}, and \code{wisdom_tag}.
+    shuffle_and_prepare = function() {
+      # Synchronously draw the card (fast \u2014 just DB + RNG)
+      self$draw_one_tarot_card()
+
+      # Capture card state as plain values before entering async worker
+      card_name    <- self$current_cards
+      card_meanings <- self$card_meanings
+      api_key      <- Sys.getenv("GROQ_API_KEY", unset = "")
+      if (nchar(api_key) == 0) api_key <- NULL
+
+      # Fire LLM call in background \u2014 caller chains the result
+      future::future({
+        get_tarot_interpretation(card_name, card_meanings, api_key = api_key)
+      }, packages = "astrocalculation", seed = NULL)
+    },
+
+    #' @description
+    #' Draw one tarot card for daily inspiration
+    draw_one_tarot_card = function(){
+
+      current_deck <- shuffle_deck()
+      card_drawn <- draw_cards(n = 1, deck = current_deck)
+
+      con <- connect_tarot_db()
+      on.exit(DBI::dbDisconnect(con))
+
+      id <- card_drawn$id - 1
+      is_reversed <- card_drawn$is_reversed
+
+      card <- DBI::dbGetQuery(
+        con,
+        "select name_zh, file from tarot_cards where id = ?1",
+        params = list(id)
+      )
+
+      card_name <- card$name_zh
+      if (isTRUE(is_reversed)) card_name <- paste0(card_name, "\u9006\u4f4d")
+
+      card_meanings <- DBI::dbGetQuery(
+        con,
+        "select meaning_zh from tarot_card_meanings where id = ?1 and is_reversed = ?2",
+        params = list(id, as.integer(is_reversed))
+      ) |> unlist()
+
+      self$card_files <- system.file("tarot_cards", paste0(card$file, ".jpg"),
+                                    package = "astrocalculation", mustWork = TRUE)
+      self$card_reverse <- is_reversed
+      self$current_cards <- card_name
+      self$card_meanings <- card_meanings
+
+    }
   ),
 
-  # 6. Private Methods -----------------------------------------
+  # 7. Private Methods -----------------------------------------
   private = list(
     finalize = function() {
       if (!is.null(self$pool)) close_postgres_db(self$pool)
