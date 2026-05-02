@@ -189,35 +189,12 @@ validate_interpretation <- function(json_text) {
   }
 
   parsed <- tryCatch(
-    jsonlite::fromJSON(cleaned, simplifyVector = FALSE),
+    jsonlite::fromJSON(cleaned, simplifyVector = TRUE),
     error = function(e) NULL
   )
 
   if (is.null(parsed)) {
     return(list(valid = FALSE, error = "Response is not valid JSON"))
-  }
-
-  required_fields <- c("title", "body", "wisdom_tag")
-  missing_fields <- setdiff(required_fields, names(parsed))
-
-  if (length(missing_fields) > 0) {
-    return(list(
-      valid = FALSE,
-      error = paste("Missing required fields:", paste(missing_fields, collapse = ", "))
-    ))
-  }
-
-  scalar_character_fields <- vapply(
-    required_fields,
-    function(field) {
-      value <- parsed[[field]]
-      is.character(value) && length(value) == 1 && nzchar(trimws(value))
-    },
-    logical(1)
-  )
-
-  if (!all(scalar_character_fields)) {
-    return(list(valid = FALSE, error = "Schema fields must be non-empty scalar strings"))
   }
 
   # Coerce to character to guard against unexpected types

@@ -577,13 +577,20 @@ DataManager <- R6::R6Class(
       id <- card_drawn$id - 1
       is_reversed <- card_drawn$is_reversed
 
-      card <- DBI::dbGetQuery(con, glue::glue("select name_zh, file
-                                               from tarot_cards where id = {id}"))
+      card <- DBI::dbGetQuery(
+        con,
+        "select name_zh, file from tarot_cards where id = ?1",
+        params = list(id)
+      )
+
       card_name <- card$name_zh
       if (isTRUE(is_reversed)) card_name <- paste0(card_name, "\u9006\u4f4d")
 
-      card_meanings <- DBI::dbGetQuery(con, glue::glue("select meaning_zh from tarot_card_meanings
-                                      where id = {id} and is_reversed = {is_reversed}" )) |> unlist()
+      card_meanings <- DBI::dbGetQuery(
+        con,
+        "select meaning_zh from tarot_card_meanings where id = ?1 and is_reversed = ?2",
+        params = list(id, as.integer(is_reversed))
+      ) |> unlist()
 
       self$card_files <- system.file("tarot_cards", paste0(card$file, ".jpg"),
                                     package = "astrocalculation", mustWork = TRUE)
