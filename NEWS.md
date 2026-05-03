@@ -1,3 +1,6 @@
+# astrocalculation 0.1.19 -- 2026-5-4
+* Bug fix in LLM fallback message
+
 # astrocalculation 0.1.18 -- 2026-5-3
 * Using yaml spec to handle the LLM prompts.
 
