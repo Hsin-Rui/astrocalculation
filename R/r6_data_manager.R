@@ -186,12 +186,12 @@ DataManager <- R6::R6Class(
     #' @return Invisibly TRUE on success, FALSE when no draw was available.
     promote_guest_draw = function(new_user_id) {
       if (is.null(self$current_cards) || is.null(self$llm_interpretation)) {
-        warning("promote_guest_draw: no guest draw in session — skipping promotion.")
+        warning("promote_guest_draw: no guest draw in session \u2014 skipping promotion.")
         return(invisible(FALSE))
       }
 
       if (is.null(self$pool)) {
-        warning("promote_guest_draw: database offline — cannot save draw.")
+        warning("promote_guest_draw: database offline \u2014 cannot save draw.")
         return(invisible(FALSE))
       }
 

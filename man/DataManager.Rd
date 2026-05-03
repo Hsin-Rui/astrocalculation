@@ -62,7 +62,8 @@ name of the chart}
 \item{\code{draw_status}}{State machine status for the tarot draw flow.
 One of: "idle", "shuffling", "ready", "revealed".}
 
-\item{\code{llm_interpretation}}{Named list with \code{title}, \code{body}, \code{wisdom_tag} from the LLM (or fallback).}
+\item{\code{llm_interpretation}}{Named list with \code{title}, \code{body}, \code{general}, \code{work}, \code{health},
+\code{relationships} from the LLM (or fallback). All fields in Traditional Chinese.}
 }
 \if{html}{\out{</div>}}
 }
@@ -71,6 +72,7 @@ One of: "idle", "shuffling", "ready", "revealed".}
 \itemize{
 \item \href{#method-DataManager-new}{\code{DataManager$new()}}
 \item \href{#method-DataManager-register}{\code{DataManager$register()}}
+\item \href{#method-DataManager-promote_guest_draw}{\code{DataManager$promote_guest_draw()}}
 \item \href{#method-DataManager-validate_session}{\code{DataManager$validate_session()}}
 \item \href{#method-DataManager-login}{\code{DataManager$login()}}
 \item \href{#method-DataManager-login_with_google}{\code{DataManager$login_with_google()}}
@@ -118,7 +120,14 @@ If not, default to Guest/Transit mode.
 \subsection{Method \code{register()}}{
 Register a new user
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataManager$register(user_id, email, password, display_name)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$register(
+  user_id,
+  email,
+  password,
+  display_name,
+  terms_accepted = FALSE,
+  oracle_voice_preference = "Living Spark"
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -131,11 +140,39 @@ Register a new user
 \item{\code{password}}{user password}
 
 \item{\code{display_name}}{User name to be displayed in chart}
+
+\item{\code{terms_accepted}}{Logical. Must be TRUE; hard-fails registration otherwise.}
+
+\item{\code{oracle_voice_preference}}{Character. "Living Spark" or "Ancient Echo". Defaults to "Living Spark".}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
 The new user_id if successful, throws error otherwise
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-promote_guest_draw"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-promote_guest_draw}{}}}
+\subsection{Method \code{promote_guest_draw()}}{
+Promote the current guest draw to the first Tarot Journal entry.
+
+Should be called immediately after a successful \code{register()} call so
+that the guest session's draw is persisted under the new user account.
+No-ops (with a warning) when there is no guest draw to promote.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$promote_guest_draw(new_user_id)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{new_user_id}}{Character. The user_entity_id returned by \code{register()}.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisibly TRUE on success, FALSE when no draw was available.
 }
 }
 \if{html}{\out{<hr>}}
@@ -474,12 +511,23 @@ this method.
 promise.
 }
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataManager$shuffle_and_prepare()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$shuffle_and_prepare(skip_llm = FALSE)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{skip_llm}}{Logical. When \code{TRUE} the LLM call is skipped and the
+returned future resolves immediately to a fallback built from
+\code{card_meanings}.  Pass \code{TRUE} for second+ same-day draws to
+enforce the no-LLM contract.}
+}
+\if{html}{\out{</div>}}
+}
 \subsection{Returns}{
 A \code{future::Future} that resolves to a named list with
-\code{title}, \code{body}, and \code{wisdom_tag}.
+\code{title}, \code{body}, \code{general}, \code{work}, \code{health},
+and \code{relationships} (all in Traditional Chinese where LLM is used).
 }
 }
 \if{html}{\out{<hr>}}

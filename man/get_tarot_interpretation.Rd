@@ -32,18 +32,22 @@ future stories.}
 \code{"llama-3.1-8b-instant"}.}
 }
 \value{
-A named list with three character fields:
+A named list with six character fields (all in Traditional Chinese):
 \describe{
-\item{title}{Short title for the interpretation (≤ 20 chars).}
-\item{body}{Full interpretation prose.}
-\item{wisdom_tag}{A single short wisdom phrase.}
+\item{title}{Short 3-7 character headline.}
+\item{body}{Full interpretation prose (2-3 sentences).}
+\item{general}{One-sentence general life insight.}
+\item{work}{One-sentence career / work insight.}
+\item{health}{One-sentence health / vitality insight.}
+\item{relationships}{One-sentence relationship insight.}
 }
 On fallback the fields are derived from \code{card_meanings}.
 }
 \description{
 Calls the Groq free-tier API (llama-3.1-8b-instant model) to generate an
-archetypal interpretation for the drawn tarot card.  Falls back to the
-database card meaning when the API is unavailable or returns invalid JSON.
+archetypal interpretation for the drawn tarot card in Traditional Chinese.
+Falls back to the database card meaning when the API is unavailable or
+returns invalid JSON.
 }
 \details{
 The function is intentionally structured so that the API endpoint, model,
