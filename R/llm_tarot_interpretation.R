@@ -199,6 +199,9 @@ tarot_prompts <- function() {
 
 
 #' Internal helper — build fallback list (plain list, no future wrapping).
+#' @param card_name card name parsed into LLM
+#' @param card_meanings keywords related to the card
+#'
 build_tarot_fallback <- function(card_name, card_meanings){
 
   meaning_vec  <- if (is.null(card_meanings)) character(0) else as.character(card_meanings)

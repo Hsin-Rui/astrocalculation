@@ -300,3 +300,139 @@ test_that("login_with_google logs auth_method=google and email in context", {
     .env = asNamespace("astrocalculation")
   )
 })
+
+# ---------------------------------------------------------------------------
+# Story 1.2 - Integration tests: DataManager$register() and promote_guest_draw()
+# ---------------------------------------------------------------------------
+
+# Helper — shared mock bindings for DataManager construction
+make_dm_base_bindings <- function(extra = list()) {
+  c(
+    list(
+      connect_postgres_db = function() list(conn = TRUE),
+      Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
+      lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
+      calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+      calculate_aspect = function(data) data.frame(),
+      draw_whole_sign_chart = function(...) list(),
+      db_get_profile = function(pool, uid) NULL,
+      db_get_library = function(pool, uid) data.frame()
+    ),
+    extra
+  )
+}
+
+test_that("DataManager$register passes terms_accepted and oracle_voice_preference to auth_register_user", {
+  calls <- list()
+
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(r6$pool <- NULL, add = TRUE)
+
+      result <- r6$register(
+        user_id               = "uid-1",
+        email                 = "a@b.com",
+        password              = "Abcd123!",
+        display_name          = "Alice",
+        terms_accepted        = TRUE,
+        oracle_voice_preference = "Ancient Echo"
+      )
+
+      expect_equal(calls$terms_accepted, TRUE)
+      expect_equal(calls$voice, "Ancient Echo")
+      expect_equal(result$user_id, "uid-1")
+    },
+    auth_register_user = function(pool, user_id, email, password, display_name,
+                                  terms_accepted = FALSE, oracle_voice_preference = "Living Spark") {
+      calls$terms_accepted <<- terms_accepted
+      calls$voice          <<- oracle_voice_preference
+      list(user_id = user_id, verification_token = "tok")
+    },
+    connect_postgres_db = function() list(conn = TRUE),
+    Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
+    lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
+    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_aspect   = function(data) data.frame(),
+    draw_whole_sign_chart = function(...) list(),
+    db_get_profile = function(pool, uid) NULL,
+    db_get_library = function(pool, uid) data.frame(),
+    .env = asNamespace("astrocalculation")
+  )
+})
+
+test_that("DataManager$promote_guest_draw persists current_cards + llm_interpretation and sets draw_status to 'saved'", {
+  calls <- list()
+
+  # poolWithTransaction requires a real pool object; stub it to pass the pool
+  # straight through to the inner function (mirrors the pattern in test-auth-logic-unit.R)
+  ns_pool <- asNamespace("pool")
+  old_tx <- get("poolWithTransaction", envir = ns_pool)
+  unlockBinding("poolWithTransaction", ns_pool)
+  assign("poolWithTransaction", function(pool_obj, code) code(pool_obj), envir = ns_pool)
+  on.exit({
+    assign("poolWithTransaction", old_tx, envir = ns_pool)
+    lockBinding("poolWithTransaction", ns_pool)
+  }, add = TRUE)
+
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(r6$pool <- NULL, add = TRUE)
+
+      # Seed in-memory guest draw state (as Story 1.1 would leave it)
+      r6$current_cards     <- "愚者"
+      r6$llm_interpretation <- list(title = "旅程", body = "開始新旅程")
+
+      result <- r6$promote_guest_draw("uid-new")
+
+      expect_true(result)
+      expect_equal(r6$draw_status, "saved")
+      expect_equal(calls$save$user_id, "uid-new")
+      expect_equal(calls$save$card_id, "愚者")
+      expect_true(calls$save$is_free_tier)
+    },
+    save_tarot_draw = function(pool, user_id, card_id, interpretation_text, is_free_tier) {
+      calls$save <<- list(user_id = user_id, card_id = card_id,
+                          interpretation_text = interpretation_text,
+                          is_free_tier = is_free_tier)
+      1L
+    },
+    record_llm_credit_used = function(pool, user_id) invisible(TRUE),
+    connect_postgres_db = function() list(conn = TRUE),
+    Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
+    lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
+    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_aspect   = function(data) data.frame(),
+    draw_whole_sign_chart = function(...) list(),
+    db_get_profile = function(pool, uid) NULL,
+    db_get_library = function(pool, uid) data.frame(),
+    .env = asNamespace("astrocalculation")
+  )
+})
+
+test_that("DataManager$promote_guest_draw is a no-op (returns FALSE) when no guest draw exists", {
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(r6$pool <- NULL, add = TRUE)
+
+      # No guest draw set — should warn and return FALSE
+      expect_warning(
+        r6$promote_guest_draw("uid-new"),
+        "no guest draw"
+      )
+      expect_equal(r6$draw_status, "idle") # unchanged
+    },
+    connect_postgres_db = function() list(conn = TRUE),
+    Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
+    lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
+    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_aspect   = function(data) data.frame(),
+    draw_whole_sign_chart = function(...) list(),
+    db_get_profile = function(pool, uid) NULL,
+    db_get_library = function(pool, uid) data.frame(),
+    .env = asNamespace("astrocalculation")
+  )
+})
+

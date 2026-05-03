@@ -44,7 +44,8 @@ test_that("Story 2: Profile Fetching (Join Logic)", {
   cleanup_logic() # Clean Start
 
   # --- FIX: Use Strong Password & Extract ID ---
-  reg_res <- auth_register_user(pool, "prof_test", test_email, test_pass, "ProfileTester")
+  reg_res <- auth_register_user(pool, "prof_test", test_email, test_pass, "ProfileTester",
+                                terms_accepted = TRUE)
   user_oid <- reg_res$user_id
 
   # 2. Get Profile (Verify Email JOIN)

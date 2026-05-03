@@ -12,6 +12,8 @@ so it doesn't crash the main app.
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
 \item{\code{pool}}{database connection}
+
+\item{\code{app_logs_table_available}}{boolean}
 }
 \if{html}{\out{</div>}}
 }

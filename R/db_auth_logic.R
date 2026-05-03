@@ -6,6 +6,9 @@
 #' @param email User email
 #' @param password Cleartext password
 #' @param display_name User's public name
+#' @param terms_accepted Logical. Must be TRUE; registration is hard-blocked otherwise.
+#' @param oracle_voice_preference Character. "Living Spark" (AI) or "Ancient Echo" (Static).
+#'   Defaults to "Living Spark".
 #'
 #' @importFrom sodium password_store password_verify
 #' @importFrom DBI dbGetQuery dbExecute sqlInterpolate
@@ -13,8 +16,15 @@
 #' @return list(user_id, verification_token) if successful
 #'
 
-auth_register_user <- function(pool, user_id, email, password, display_name) {
-  # 1. Validation
+auth_register_user <- function(pool, user_id, email, password, display_name,
+                               terms_accepted = FALSE,
+                               oracle_voice_preference = "Living Spark") {
+  # 1. Consent gate — hard fail before any DB work
+  if (!isTRUE(terms_accepted)) {
+    stop("Registration requires acceptance of the Terms of Use.")
+  }
+
+  # 2. Field validation
   if (is.null(user_id) || user_id == "") stop("User ID is required")
 
   if (!validate_email(email)) {
@@ -23,7 +33,13 @@ auth_register_user <- function(pool, user_id, email, password, display_name) {
 
   validate_password(password)
 
-  # 2. Check Uniqueness (ID and Email)
+  # Validate voice preference value
+  valid_voices <- c("Living Spark", "Ancient Echo")
+  if (!oracle_voice_preference %in% valid_voices) {
+    stop(paste("oracle_voice_preference must be one of:", paste(valid_voices, collapse = ", ")))
+  }
+
+  # 3. Check Uniqueness (ID and Email)
   id_check <- DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool,
     "SELECT 1 FROM auth_credentials WHERE user_entity_id = ?id",
     id = user_id
@@ -36,32 +52,34 @@ auth_register_user <- function(pool, user_id, email, password, display_name) {
   ))
   if (nrow(email_check) > 0) stop("This Email is already registered.")
 
-  # C. Preparation
+  # 4. Preparation
   hashed_pw <- sodium::password_store(password)
   # Generate a random verification token
   verif_token <- uuid::UUIDgenerate()
 
-  # 4. Transaction: Insert Account -> Then Profile
+  # 5. Transaction: Insert Account -> Then Profile
   pool::poolWithTransaction(pool, function(con) {
-    # Insert Credential (is_verified = FALSE)
+    # Insert Credential with terms_accepted_at (is_verified = FALSE)
     DBI::dbExecute(con, DBI::sqlInterpolate(con, "
       INSERT INTO auth_credentials (
         user_entity_id, email, password_hash,
-        is_verified, verification_token, verification_token_expires_at, created_at
+        is_verified, verification_token, verification_token_expires_at,
+        terms_accepted_at, created_at
       ) VALUES (
         ?id, ?email, ?hash,
-        FALSE, ?token, NOW() + INTERVAL '24 hours', NOW()
+        FALSE, ?token, NOW() + INTERVAL '24 hours',
+        NOW(), NOW()
       )
     ", id = user_id, email = email, hash = hashed_pw, token = verif_token))
 
-    # Insert Profile
+    # Insert Profile with oracle_voice_preference
     DBI::dbExecute(con, DBI::sqlInterpolate(con, "
       INSERT INTO user_profiles (
-        user_entity_id, display_name, valid_from
+        user_entity_id, display_name, oracle_voice_preference, valid_from
       ) VALUES (
-        ?id, ?name, NOW()
+        ?id, ?name, ?voice, NOW()
       )
-    ", id = user_id, name = display_name))
+    ", id = user_id, name = display_name, voice = oracle_voice_preference))
   })
 
   app_url <- Sys.getenv("APP_BASE_URL", "http://127.0.0.1:3000")

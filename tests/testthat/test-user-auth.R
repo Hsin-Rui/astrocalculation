@@ -66,14 +66,16 @@ test_that("Epic 3.1: Secure Registration & Email Verification", {
 
   # A1. Invalid Email
   expect_error(
-    auth_register_user(pool, test_id, "not-an-email", test_pass_strong, test_name),
+    auth_register_user(pool, test_id, "not-an-email", test_pass_strong, test_name,
+                       terms_accepted = TRUE),
     "Invalid email format",
     info = "Should reject bad email regex"
   )
 
   # A2. Weak Password (Too short / missing chars)
   expect_error(
-    auth_register_user(pool, test_id, test_email, "weakpass", test_name),
+    auth_register_user(pool, test_id, test_email, "weakpass", test_name,
+                       terms_accepted = TRUE),
     "Password must be at least 8 characters",
     info = "Should reject weak passwords"
   )
@@ -82,7 +84,8 @@ test_that("Epic 3.1: Secure Registration & Email Verification", {
 
   # Register with valid credentials
   # Result is now a LIST: list(user_id = ..., verification_token = ...)
-  res <- auth_register_user(pool, test_id, test_email, test_pass_strong, test_name)
+  res <- auth_register_user(pool, test_id, test_email, test_pass_strong, test_name,
+                            terms_accepted = TRUE)
 
   expect_true(is.list(res))
   expect_equal(res$user_id, test_id)

@@ -9,6 +9,22 @@ test_that("Story 3: Personal Library (Save, Load, Delete)", {
 
   skip_if(is.null(pool), "Postgres connection could not be established; skipping test.")
 
+  # Story 1.2: Apply migration idempotently so the test works against databases
+  # that may not have been upgraded yet.
+  tryCatch(
+    {
+      migration_script <- system.file("migrations/001_tarot_draws_and_consent.R",
+                                      package = "astrocalculation")
+      if (nzchar(migration_script)) {
+        local({
+          source(migration_script, local = TRUE)
+          run_migration_001(pool)
+        })
+      }
+    },
+    error = function(e) warning("Migration 001 could not be applied: ", e$message)
+  )
+
   test_email <- "lib@test.com"
 
   # Use a Strong Password
@@ -34,7 +50,8 @@ test_that("Story 3: Personal Library (Save, Load, Delete)", {
 
   # --- FIX: Use Strong Password & Extract ID ---
   # auth_register_user now returns a list(user_id, verification_token)
-  reg_res <- auth_register_user(pool, "test_lib_user", test_email, test_pass, "LibUser")
+  reg_res <- auth_register_user(pool, "test_lib_user", test_email, test_pass, "LibUser",
+                                terms_accepted = TRUE)
   user_oid <- reg_res$user_id
 
   # 2. Save a Chart

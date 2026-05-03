@@ -4,7 +4,15 @@
 \alias{auth_register_user}
 \title{Authentication Service Functions}
 \usage{
-auth_register_user(pool, user_id, email, password, display_name)
+auth_register_user(
+  pool,
+  user_id,
+  email,
+  password,
+  display_name,
+  terms_accepted = FALSE,
+  oracle_voice_preference = "Living Spark"
+)
 }
 \arguments{
 \item{pool}{The DB connection pool}
@@ -16,6 +24,11 @@ auth_register_user(pool, user_id, email, password, display_name)
 \item{password}{Cleartext password}
 
 \item{display_name}{User's public name}
+
+\item{terms_accepted}{Logical. Must be TRUE; registration is hard-blocked otherwise.}
+
+\item{oracle_voice_preference}{Character. "Living Spark" (AI) or "Ancient Echo" (Static).
+Defaults to "Living Spark".}
 }
 \value{
 list(user_id, verification_token) if successful

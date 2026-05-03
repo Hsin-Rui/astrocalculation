@@ -13,14 +13,16 @@ validate_interpretation(json_text)
 A named list:
 \describe{
 \item{valid}{Logical. \code{TRUE} if the JSON is valid and complete.}
-\item{data}{Named list with \code{title}, \code{body}, \code{wisdom_tag}
+\item{data}{Named list with \code{title}, \code{body}, \code{general},
+\code{work}, \code{health}, \code{relationships}
 (only present when \code{valid = TRUE}).}
 \item{error}{Character error description (only present when
 \code{valid = FALSE}).}
 }
 }
 \description{
-Checks that the provided JSON text is parseable and contains the three
-required fields: \code{title}, \code{body}, and \code{wisdom_tag}.
+Checks that the provided JSON text is parseable and contains the six
+required fields: \code{title}, \code{body}, \code{general}, \code{work},
+\code{health}, and \code{relationships}.
 Uses \code{jsonlite} which is already a dependency of this package.
 }
