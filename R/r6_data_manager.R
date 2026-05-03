@@ -203,16 +203,18 @@ DataManager <- R6::R6Class(
 
       tryCatch(
         {
-          save_tarot_draw(
-            pool                = self$pool,
-            user_id             = new_user_id,
-            card_id             = self$current_cards,
-            interpretation_text = interp_text,
-            is_free_tier        = TRUE
-          )
+          pool::poolWithTransaction(self$pool, function(con) {
+            save_tarot_draw(
+              pool                = con,
+              user_id             = new_user_id,
+              card_id             = self$current_cards,
+              interpretation_text = interp_text,
+              is_free_tier        = TRUE
+            )
 
-          # Record LLM credit consumption (AC: 7)
-          record_llm_credit_used(self$pool, new_user_id)
+            # Record LLM credit consumption (AC: 7)
+            record_llm_credit_used(con, new_user_id)
+          })
 
           if (!is.null(self$logger)) {
             self$logger$log_info(

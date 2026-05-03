@@ -6,6 +6,11 @@
 \usage{
 build_tarot_fallback(card_name, card_meanings)
 }
+\arguments{
+\item{card_name}{card name parsed into LLM}
+
+\item{card_meanings}{keywords related to the card}
+}
 \description{
 Internal helper — build fallback list (plain list, no future wrapping).
 }

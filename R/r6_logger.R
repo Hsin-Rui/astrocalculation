@@ -11,9 +11,10 @@
 #'
 Logger <- R6::R6Class(
   "Logger",
-  #' @field pool database connection
   public = list(
+    #' @field pool database connection
     pool = NULL,
+    #' @field app_logs_table_available boolean
     app_logs_table_available = NULL,
 
     #' @description Initialize with a DB pool

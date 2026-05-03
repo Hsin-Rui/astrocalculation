@@ -364,6 +364,17 @@ test_that("DataManager$register passes terms_accepted and oracle_voice_preferenc
 test_that("DataManager$promote_guest_draw persists current_cards + llm_interpretation and sets draw_status to 'saved'", {
   calls <- list()
 
+  # poolWithTransaction requires a real pool object; stub it to pass the pool
+  # straight through to the inner function (mirrors the pattern in test-auth-logic-unit.R)
+  ns_pool <- asNamespace("pool")
+  old_tx <- get("poolWithTransaction", envir = ns_pool)
+  unlockBinding("poolWithTransaction", ns_pool)
+  assign("poolWithTransaction", function(pool_obj, code) code(pool_obj), envir = ns_pool)
+  on.exit({
+    assign("poolWithTransaction", old_tx, envir = ns_pool)
+    lockBinding("poolWithTransaction", ns_pool)
+  }, add = TRUE)
+
   with_mocked_bindings(
     {
       r6 <- suppressMessages(DataManager$new())

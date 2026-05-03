@@ -2,7 +2,7 @@
 % Please edit documentation in R/db_user_data.R
 \name{save_tarot_draw}
 \alias{save_tarot_draw}
-\title{Tarot Draw Data Service Functions}
+\title{Save a Tarot Draw to the Journal}
 \usage{
 save_tarot_draw(
   pool,
@@ -27,5 +27,7 @@ save_tarot_draw(
 Invisibly, the number of rows inserted (always 1 on success).
 }
 \description{
-Functions for persisting and retrieving tarot draw Journal entries.
+Inserts a new row into \code{tarot_draws}, linking the draw to the authenticated
+user and recording the LLM (or static) interpretation.  Uses a parameterized
+query to prevent SQL injection (project standard).
 }

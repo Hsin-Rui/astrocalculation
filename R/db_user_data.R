@@ -1,9 +1,3 @@
-#' @title Tarot Draw Data Service Functions
-#' @description Functions for persisting and retrieving tarot draw Journal entries.
-#'
-#' @importFrom DBI dbExecute sqlInterpolate
-#'
-
 #' Save a Tarot Draw to the Journal
 #'
 #' Inserts a new row into `tarot_draws`, linking the draw to the authenticated
