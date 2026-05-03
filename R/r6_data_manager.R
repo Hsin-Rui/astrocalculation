@@ -92,7 +92,8 @@ DataManager <- R6::R6Class(
     #' One of: "idle", "shuffling", "ready", "revealed".
     draw_status = "idle",
     #' @field llm_interpretation
-    #' Named list with `title`, `body`, `wisdom_tag` from the LLM (or fallback).
+    #' Named list with `title`, `body`, `general`, `work`, `health`,
+    #' `relationships` from the LLM (or fallback). All fields in Traditional Chinese.
     llm_interpretation = NULL,
 
     #' @description
@@ -546,15 +547,27 @@ DataManager <- R6::R6Class(
     #'   \item Storing the resolved \code{llm_interpretation} from the returned
     #'     promise.
     #' }
+    #' @param skip_llm Logical. When \code{TRUE} the LLM call is skipped and the
+    #'   returned future resolves immediately to a fallback built from
+    #'   \code{card_meanings}.  Pass \code{TRUE} for second+ same-day draws to
+    #'   enforce the no-LLM contract.
     #' @return A \code{future::Future} that resolves to a named list with
-    #'   \code{title}, \code{body}, and \code{wisdom_tag}.
-    shuffle_and_prepare = function() {
+    #'   \code{title}, \code{body}, \code{general}, \code{work}, \code{health},
+    #'   and \code{relationships} (all in Traditional Chinese where LLM is used).
+    shuffle_and_prepare = function(skip_llm = FALSE) {
       # Synchronously draw the card (fast \u2014 just DB + RNG)
       self$draw_one_tarot_card()
 
       # Capture card state as plain values before entering async worker
       card_name    <- self$current_cards
       card_meanings <- self$card_meanings
+
+      # Guard: skip LLM for second+ same-day draws (AC 26)
+      if (isTRUE(skip_llm)) {
+        fallback <- build_tarot_fallback(card_name, card_meanings)
+        return(future::future({ fallback }, packages = "astrocalculation", seed = NULL))
+      }
+
       api_key      <- Sys.getenv("GROQ_API_KEY", unset = "")
       if (nchar(api_key) == 0) api_key <- NULL
 
@@ -584,7 +597,7 @@ DataManager <- R6::R6Class(
       )
 
       card_name <- card$name_zh
-      if (isTRUE(is_reversed)) card_name <- paste0(card_name, "\u9006\u4f4d")
+      if (isTRUE(is_reversed)) card_name <- paste0(card_name, tarot_prompts()$reversed_suffix)
 
       card_meanings <- DBI::dbGetQuery(
         con,

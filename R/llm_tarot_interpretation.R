@@ -1,8 +1,9 @@
 #' Get a Tarot card interpretation from a Free LLM API
 #'
 #' Calls the Groq free-tier API (llama-3.1-8b-instant model) to generate an
-#' archetypal interpretation for the drawn tarot card.  Falls back to the
-#' database card meaning when the API is unavailable or returns invalid JSON.
+#' archetypal interpretation for the drawn tarot card in Traditional Chinese.
+#' Falls back to the database card meaning when the API is unavailable or
+#' returns invalid JSON.
 #'
 #' The function is intentionally structured so that the API endpoint, model,
 #' and auth header can be swapped to Gemini / Vertex AI for registered /
@@ -22,11 +23,14 @@
 #' @param model Character.  Model identifier.  Defaults to
 #'   \code{"llama-3.1-8b-instant"}.
 #'
-#' @return A named list with three character fields:
+#' @return A named list with six character fields (all in Traditional Chinese):
 #'   \describe{
-#'     \item{title}{Short title for the interpretation (≤ 20 chars).}
-#'     \item{body}{Full interpretation prose.}
-#'     \item{wisdom_tag}{A single short wisdom phrase.}
+#'     \item{title}{Short 3-7 character headline.}
+#'     \item{body}{Full interpretation prose (2-3 sentences).}
+#'     \item{general}{One-sentence general life insight.}
+#'     \item{work}{One-sentence career / work insight.}
+#'     \item{health}{One-sentence health / vitality insight.}
+#'     \item{relationships}{One-sentence relationship insight.}
 #'   }
 #'   On fallback the fields are derived from \code{card_meanings}.
 #'
@@ -34,6 +38,7 @@
 #'   req_timeout req_perform resp_body_string
 #' @importFrom jsonlite fromJSON toJSON
 #' @export
+
 get_tarot_interpretation <- function(
     card_name,
     card_meanings,
@@ -41,53 +46,19 @@ get_tarot_interpretation <- function(
     base_url = "https://api.groq.com/openai/v1/chat/completions",
     model    = "llama-3.1-8b-instant"
 ) {
-  # --- Fallback builder -------------------------------------------------
-  build_fallback <- function() {
-    meaning_vec <- if (is.null(card_meanings)) character(0) else as.character(card_meanings)
-    meaning_vec <- meaning_vec[!is.na(meaning_vec) & nzchar(trimws(meaning_vec))]
-    meaning_text <- if (length(meaning_vec) > 0) {
-      paste(meaning_vec, collapse = "; ")
-    } else {
-      "No interpretation available."
-    }
-    wisdom_text <- if (length(meaning_vec) > 0) {
-      meaning_vec[[1]]
-    } else {
-      "Take one grounded step today."
-    }
-    title_text <- if (!is.null(card_name) && nzchar(trimws(as.character(card_name)))) {
-      as.character(card_name)
-    } else {
-      "Daily Tarot"
-    }
-
-    list(
-      title      = title_text,
-      body       = meaning_text,
-      wisdom_tag = wisdom_text
-    )
-  }
 
   # Skip API call when no key is configured
   if (is.null(api_key) || nchar(trimws(api_key)) == 0) {
-    return(build_fallback())
+    return(build_tarot_fallback(card_name, card_meanings))
   }
 
   # --- Build structured prompt ------------------------------------------
-  system_prompt <- paste0(
-    "You are an archetypal analyst who provides insightful tarot interpretations. ",
-    "Your tone is calm, academic, and avoids mystical or occult language. ",
-    "Respond ONLY with a JSON object containing these exact keys: ",
-    "\"title\" (a short 3-7 word headline), ",
-    "\"body\" (2-3 sentences of archetypal interpretation), ",
-    "\"wisdom_tag\" (one short actionable insight). ",
-    "Do NOT include any text outside the JSON object."
-  )
-
-  user_prompt <- paste0(
-    "Card drawn: ", card_name, "\n",
-    "Core meanings: ", paste(card_meanings, collapse = ", "), "\n",
-    "Provide the JSON interpretation now."
+  prompts       <- tarot_prompts()
+  system_prompt <- paste0(prompts$llm_system_prompt, collapse = "")
+  user_prompt   <- paste0(
+    prompts$llm_user_prompt$card_label,     card_name, "\n",
+    prompts$llm_user_prompt$meanings_label, paste(card_meanings, collapse = ", "), "\n",
+    prompts$llm_user_prompt$request
   )
 
   # --- HTTP request with retry ------------------------------------------
@@ -119,7 +90,7 @@ get_tarot_interpretation <- function(
     resp <- httr2::req_perform(req)
 
     if (httr2::resp_status(resp) != 200L) {
-      return(build_fallback())
+      return(build_tarot_fallback(card_name, card_meanings))
     }
 
     body <- httr2::resp_body_string(resp)
@@ -131,12 +102,12 @@ get_tarot_interpretation <- function(
     NULL
   })
 
-  if (is.null(response_text)) return(build_fallback())
+  if (is.null(response_text)) return(build_tarot_fallback(card_name, card_meanings))
 
   # --- Parse and validate JSON from model output ------------------------
   validation <- validate_interpretation(response_text)
   if (!isTRUE(validation$valid)) {
-    return(build_fallback())
+    return(build_tarot_fallback(card_name, card_meanings))
   }
 
   validation$data
@@ -145,8 +116,9 @@ get_tarot_interpretation <- function(
 
 #' Validate a tarot interpretation JSON string
 #'
-#' Checks that the provided JSON text is parseable and contains the three
-#' required fields: \code{title}, \code{body}, and \code{wisdom_tag}.
+#' Checks that the provided JSON text is parseable and contains the six
+#' required fields: \code{title}, \code{body}, \code{general}, \code{work},
+#' \code{health}, and \code{relationships}.
 #' Uses \code{jsonlite} which is already a dependency of this package.
 #'
 #' @param json_text Character. Raw JSON string returned by the LLM.
@@ -154,7 +126,8 @@ get_tarot_interpretation <- function(
 #' @return A named list:
 #'   \describe{
 #'     \item{valid}{Logical. \code{TRUE} if the JSON is valid and complete.}
-#'     \item{data}{Named list with \code{title}, \code{body}, \code{wisdom_tag}
+#'     \item{data}{Named list with \code{title}, \code{body}, \code{general},
+#'       \code{work}, \code{health}, \code{relationships}
 #'       (only present when \code{valid = TRUE}).}
 #'     \item{error}{Character error description (only present when
 #'       \code{valid = FALSE}).}
@@ -169,11 +142,14 @@ validate_interpretation <- function(json_text) {
   schema <- paste0(
     '{',
     '"type":"object",',
-    '"required":["title","body","wisdom_tag"],',
+    '"required":["title","body","general","work","health","relationships"],',
     '"properties":{',
     '"title":{"type":"string","minLength":1},',
     '"body":{"type":"string","minLength":1},',
-    '"wisdom_tag":{"type":"string","minLength":1}',
+    '"general":{"type":"string","minLength":1},',
+    '"work":{"type":"string","minLength":1},',
+    '"health":{"type":"string","minLength":1},',
+    '"relationships":{"type":"string","minLength":1}',
     '},',
     '"additionalProperties":false',
     '}'
@@ -201,9 +177,42 @@ validate_interpretation <- function(json_text) {
   list(
     valid = TRUE,
     data  = list(
-      title      = as.character(parsed$title),
-      body       = as.character(parsed$body),
-      wisdom_tag = as.character(parsed$wisdom_tag)
+      title         = as.character(parsed$title),
+      body          = as.character(parsed$body),
+      general       = as.character(parsed$general),
+      work          = as.character(parsed$work),
+      health        = as.character(parsed$health),
+      relationships = as.character(parsed$relationships)
     )
   )
 }
+
+
+#' Internal helper — loads inst/extdata/tarot_prompts.yaml into a list.
+#' Used by get_tarot_interpretation() and r6_data_manager.R.
+tarot_prompts <- function() {
+  yaml::read_yaml(
+    system.file("extdata", "tarot_prompts.yaml",
+                package = "astrocalculation", mustWork = TRUE)
+  )
+}
+
+
+#' Internal helper — build fallback list (plain list, no future wrapping).
+build_tarot_fallback <- function(card_name, card_meanings){
+
+  meaning_vec  <- if (is.null(card_meanings)) character(0) else as.character(card_meanings)
+  meaning_vec  <- meaning_vec[!is.na(meaning_vec) & nzchar(trimws(meaning_vec))]
+  meaning_text <- if (length(meaning_vec) > 0) paste(meaning_vec, collapse = "; ") else "No interpretation available."
+  title_text   <- if (!is.null(card_name) && nzchar(trimws(as.character(card_name)))) card_name else "Daily Tarot"
+  list(
+    title         = title_text,
+    body          = meaning_text,
+    general       = meaning_text,
+    work          = meaning_text,
+    health        = meaning_text,
+    relationships = meaning_text
+  )
+}
+
+

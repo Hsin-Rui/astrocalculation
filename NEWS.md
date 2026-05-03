@@ -1,3 +1,6 @@
+# astrocalculation 0.1.18 -- 2026-5-3
+* Using yaml spec to handle the LLM prompts.
+
 # astrocalculation 0.1.17 -- 2026-4-26
 * Draw tarot card and LLM integration
 

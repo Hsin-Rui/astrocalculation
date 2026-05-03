@@ -1,0 +1,42 @@
+# Test fixtures for tarot LLM interpretation tests.
+# All Chinese text used in test-llm_tarot_interpretation.R lives here,
+# keeping the R test file free of hard-to-read unicode escapes.
+
+# ── valid_json_6 ─────────────────────────────────────────────────────────────
+# A well-formed 6-field interpretation used to exercise validate_interpretation().
+valid_json_6:
+  title:         "愚者"
+  body:          "永遠勇敢踏出第一步。"
+  general:       "綜合前景光明。"
+  work:          "事業正在萌芽。"
+  health:        "健康狀況穩定。"
+  relationships: "感情需要耐心滋養。"
+
+# ── mock_llm_response ────────────────────────────────────────────────────────
+# Simulated LLM JSON response used in the HTTP-mock test.
+mock_llm_response:
+  title:         "星星"
+  body:          "希望永存。"
+  general:       "前途可期。"
+  work:          "穩中求進。"
+  health:        "身心均衡。"
+  relationships: "感情溫馨。"
+
+# ── card_names ───────────────────────────────────────────────────────────────
+card_names:
+  fool:  "愚者"
+  star:  "星星"
+  moon:  "月亮"
+
+# ── card_meanings ─────────────────────────────────────────────────────────────
+card_meanings:
+  fool: ["自由", "冒險"]
+  star: ["希望"]
+  moon: ["直覺"]
+
+# ── db_mock ───────────────────────────────────────────────────────────────────
+# Values inserted into the in-memory SQLite DB in DataManager integration tests.
+db_mock:
+  fool_name:              "愚者"
+  fool_meaning:           "自由冒險"
+  fool_meaning_skip_llm:  "自由"
