@@ -1,31 +1,29 @@
 library(testthat)
 
+# ── Load Chinese test fixtures from YAML ─────────────────────────────────────
+# All Chinese text lives in fixtures/tarot_test_fixtures.yaml so this file
+# contains only ASCII and fixture references.
+fix <- yaml::read_yaml(testthat::test_path("fixtures", "tarot_test_fixtures.yaml"))
+
 # ── validate_interpretation ───────────────────────────────────────────────────
 
-VALID_JSON_6 <- paste0(
-  '{"title":"\u611a\u8005",',
-  '"body":"\u6c38\u9060\u52c7\u6562\u8e0f\u51fa\u7b2c\u4e00\u6b65\u3002",',
-  '"general":"\u7d9c\u5408\u524d\u666f\u5149\u660e\u3002",',
-  '"work":"\u4e8b\u696d\u6b63\u5728\u840c\u82bd\u3002",',
-  '"health":"\u5065\u5eb7\u72c0\u6cc1\u7a69\u5b9a\u3002",',
-  '"relationships":"\u611f\u60c5\u9700\u8981\u8010\u5fc3\u6ecb\u990a\u3002"}'
-)
+VALID_JSON_6 <- jsonlite::toJSON(fix$valid_json_6, auto_unbox = TRUE)
 
 test_that("validate_interpretation returns valid=TRUE for well-formed 6-field JSON", {
   result <- validate_interpretation(VALID_JSON_6)
   expect_true(result$valid)
-  expect_equal(result$data$title,         "\u611a\u8005")
-  expect_equal(result$data$general,       "\u7d9c\u5408\u524d\u666f\u5149\u660e\u3002")
-  expect_equal(result$data$work,          "\u4e8b\u696d\u6b63\u5728\u840c\u82bd\u3002")
-  expect_equal(result$data$health,        "\u5065\u5eb7\u72c0\u6cc1\u7a69\u5b9a\u3002")
-  expect_equal(result$data$relationships, "\u611f\u60c5\u9700\u8981\u8010\u5fc3\u6ecb\u990a\u3002")
+  expect_equal(result$data$title,         fix$valid_json_6$title)
+  expect_equal(result$data$general,       fix$valid_json_6$general)
+  expect_equal(result$data$work,          fix$valid_json_6$work)
+  expect_equal(result$data$health,        fix$valid_json_6$health)
+  expect_equal(result$data$relationships, fix$valid_json_6$relationships)
 })
 
 test_that("validate_interpretation strips markdown code fences", {
   json <- paste0("```json\n", VALID_JSON_6, "\n```")
   result <- validate_interpretation(json)
   expect_true(result$valid)
-  expect_equal(result$data$title, "\u611a\u8005")
+  expect_equal(result$data$title, fix$valid_json_6$title)
 })
 
 test_that("validate_interpretation returns valid=FALSE for non-JSON input", {
@@ -81,34 +79,34 @@ test_that("validate_interpretation rejects numeric field values", {
 
 test_that("get_tarot_interpretation returns 6-field fallback when api_key is NULL", {
   result <- get_tarot_interpretation(
-    card_name    = "\u611a\u8005",
-    card_meanings = c("\u81ea\u7531", "\u5192\u96aa"),
+    card_name    = fix$card_names$fool,
+    card_meanings = fix$card_meanings$fool,
     api_key      = NULL
   )
   expect_type(result, "list")
   expect_named(result, c("title", "body", "general", "work", "health", "relationships"))
-  expect_equal(result$title, "\u611a\u8005")
-  expect_match(result$body, "\u81ea\u7531")
-  expect_match(result$general, "\u81ea\u7531")
+  expect_equal(result$title, fix$card_names$fool)
+  expect_match(result$body,    fix$card_meanings$fool[[1]])
+  expect_match(result$general, fix$card_meanings$fool[[1]])
 })
 
 test_that("get_tarot_interpretation returns fallback when api_key is empty string", {
   result <- get_tarot_interpretation(
-    card_name    = "\u661f\u661f",
-    card_meanings = c("\u5e0c\u671b"),
+    card_name    = fix$card_names$star,
+    card_meanings = fix$card_meanings$star,
     api_key      = ""
   )
-  expect_equal(result$title, "\u661f\u661f")
+  expect_equal(result$title, fix$card_names$star)
   expect_named(result, c("title", "body", "general", "work", "health", "relationships"))
 })
 
 test_that("get_tarot_interpretation returns fallback when api_key is whitespace", {
   result <- get_tarot_interpretation(
-    card_name    = "\u6708\u4eae",
-    card_meanings = c("\u76f4\u89ba"),
+    card_name    = fix$card_names$moon,
+    card_meanings = fix$card_meanings$moon,
     api_key      = "   "
   )
-  expect_equal(result$title, "\u6708\u4eae")
+  expect_equal(result$title, fix$card_names$moon)
 })
 
 test_that("get_tarot_interpretation empty meanings fallback is safe", {
@@ -127,15 +125,8 @@ test_that("get_tarot_interpretation empty meanings fallback is safe", {
 # ── get_tarot_interpretation: mocked HTTP success ────────────────────────────
 
 test_that("get_tarot_interpretation parses valid 6-field LLM response", {
-  llm_content <- paste0(
-    '{"title":"\u661f\u661f",',
-    '"body":"\u5e0c\u671b\u6c38\u5b58\u3002",',
-    '"general":"\u524d\u9014\u53ef\u671f\u3002",',
-    '"work":"\u7a69\u4e2d\u6c42\u9032\u3002",',
-    '"health":"\u8eab\u5fc3\u5747\u8861\u3002",',
-    '"relationships":"\u611f\u60c5\u6eab\u99a8\u3002"}'
-  )
-  api_body <- jsonlite::toJSON(list(
+  llm_content <- jsonlite::toJSON(fix$mock_llm_response, auto_unbox = TRUE)
+  api_body    <- jsonlite::toJSON(list(
     choices = list(list(message = list(content = llm_content)))
   ), auto_unbox = TRUE)
 
@@ -153,17 +144,17 @@ test_that("get_tarot_interpretation parses valid 6-field LLM response", {
   mockery::stub(get_tarot_interpretation, "httr2::resp_body_string", function(...) api_body)
 
   result <- get_tarot_interpretation(
-    card_name     = "\u661f\u661f",
-    card_meanings  = c("\u5e0c\u671b"),
+    card_name     = fix$card_names$star,
+    card_meanings  = fix$card_meanings$star,
     api_key       = "test-key-abc"
   )
 
-  expect_equal(result$title,         "\u661f\u661f")
-  expect_equal(result$body,          "\u5e0c\u671b\u6c38\u5b58\u3002")
-  expect_equal(result$general,       "\u524d\u9014\u53ef\u671f\u3002")
-  expect_equal(result$work,          "\u7a69\u4e2d\u6c42\u9032\u3002")
-  expect_equal(result$health,        "\u8eab\u5fc3\u5747\u8861\u3002")
-  expect_equal(result$relationships, "\u611f\u60c5\u6eab\u99a8\u3002")
+  expect_equal(result$title,         fix$mock_llm_response$title)
+  expect_equal(result$body,          fix$mock_llm_response$body)
+  expect_equal(result$general,       fix$mock_llm_response$general)
+  expect_equal(result$work,          fix$mock_llm_response$work)
+  expect_equal(result$health,        fix$mock_llm_response$health)
+  expect_equal(result$relationships, fix$mock_llm_response$relationships)
 })
 
 test_that("get_tarot_interpretation falls back when LLM returns invalid JSON", {
@@ -292,9 +283,9 @@ test_that("shuffle_and_prepare draws a card and returns a future", {
   assign("connect_tarot_db", function() {
     con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
     DBI::dbExecute(con, "CREATE TABLE tarot_cards (id INTEGER, name_zh TEXT, file TEXT)")
-    DBI::dbExecute(con, "INSERT INTO tarot_cards VALUES (1, '\u611a\u8005', 'c01')")
+    DBI::dbExecute(con, paste0("INSERT INTO tarot_cards VALUES (1, '", fix$db_mock$fool_name, "', 'c01')"))
     DBI::dbExecute(con, "CREATE TABLE tarot_card_meanings (id INTEGER, is_reversed INTEGER, meaning_zh TEXT)")
-    DBI::dbExecute(con, "INSERT INTO tarot_card_meanings VALUES (1, 0, '\u81ea\u7531\u51d2\u96aa')")
+    DBI::dbExecute(con, paste0("INSERT INTO tarot_card_meanings VALUES (1, 0, '", fix$db_mock$fool_meaning, "')"))
     con
   }, envir = ns)
   unlockBinding("shuffle_deck", ns)
@@ -361,9 +352,9 @@ test_that("shuffle_and_prepare skip_llm=TRUE skips get_tarot_interpretation call
   assign("connect_tarot_db", function() {
     con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
     DBI::dbExecute(con, "CREATE TABLE tarot_cards (id INTEGER, name_zh TEXT, file TEXT)")
-    DBI::dbExecute(con, "INSERT INTO tarot_cards VALUES (1, '\u611a\u8005', 'c01')")
+    DBI::dbExecute(con, paste0("INSERT INTO tarot_cards VALUES (1, '", fix$db_mock$fool_name, "', 'c01')"))
     DBI::dbExecute(con, "CREATE TABLE tarot_card_meanings (id INTEGER, is_reversed INTEGER, meaning_zh TEXT)")
-    DBI::dbExecute(con, "INSERT INTO tarot_card_meanings VALUES (1, 0, '\u81ea\u7531')")
+    DBI::dbExecute(con, paste0("INSERT INTO tarot_card_meanings VALUES (1, 0, '", fix$db_mock$fool_meaning_skip_llm, "')"))
     con
   }, envir = ns)
   unlockBinding("shuffle_deck", ns)

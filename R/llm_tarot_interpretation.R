@@ -38,6 +38,16 @@
 #'   req_timeout req_perform resp_body_string
 #' @importFrom jsonlite fromJSON toJSON
 #' @export
+
+# Internal helper — loads inst/extdata/tarot_prompts.yaml into a list.
+# Used by get_tarot_interpretation() and r6_data_manager.R.
+tarot_prompts <- function() {
+  yaml::read_yaml(
+    system.file("extdata", "tarot_prompts.yaml",
+                package = "astrocalculation", mustWork = TRUE)
+  )
+}
+
 get_tarot_interpretation <- function(
     card_name,
     card_meanings,
@@ -76,23 +86,12 @@ get_tarot_interpretation <- function(
   }
 
   # --- Build structured prompt ------------------------------------------
-  system_prompt <- paste0(
-    "\u4f60\u662f\u4e00\u4f4d\u5c08\u696d\u63d0\u4f9b\u5854\u7f85\u724c\u89e3\u8b80\u7684\u539f\u578b\u5206\u6790\u5e2b\uff0c\u4f7f\u7528\u7e41\u9ad4\u4e2d\u6587\u56de\u8986\u3002",
-    "\u60a8\u7684\u8a9e\u6c23\u5e73\u9759\u3001\u6df1\u601d\u719f\u616e\uff0c\u907f\u514d\u795e\u79d8\u6216\u8d85\u81ea\u7136\u7684\u8a9e\u8a00\u3002",
-    "\u50c5\u4ee5JSON\u683c\u5f0f\u56de\u61c9\uff0c\u5305\u542b\u4ee5\u4e0b\u6307\u5b9a\u9375\u540d\uff1a",
-    "\"title\"\uff083\u81f37\u500b\u7e41\u9ad4\u4e2d\u6587\u5b57\u7684\u6a19\u984c\uff09\uff0c",
-    "\"body\"\uff082\u81f33\u53e5\u7684\u539f\u578b\u89e3\u8b80\uff09\uff0c",
-    "\"general\"\uff08\u4e00\u53e5\u8a71\uff1a\u7db2\u5408\u4eba\u751f\u6d1e\u898b\uff09\uff0c",
-    "\"work\"\uff08\u4e00\u53e5\u8a71\uff1a\u4e8b\u696d/\u5de5\u4f5c\u6d1e\u898b\uff09\uff0c",
-    "\"health\"\uff08\u4e00\u53e5\u8a71\uff1a\u5065\u5eb7/\u6d3b\u529b\u6d1e\u898b\uff09\uff0c",
-    "\"relationships\"\uff08\u4e00\u53e5\u8a71\uff1a\u611f\u60c5/\u4eba\u969b\u95dc\u4fc2\u6d1e\u898b\uff09\u3002",
-    "\u8acb\u52ff\u5728JSON\u7269\u4ef6\u5916\u5305\u542b\u4efb\u4f55\u6587\u5b57\u3002"
-  )
-
-  user_prompt <- paste0(
-    "\u6240\u62bd\u5361\u724c\uff1a", card_name, "\n",
-    "\u6838\u5fc3\u542b\u7fa9\uff1a", paste(card_meanings, collapse = ", "), "\n",
-    "\u8acb\u73fe\u5728\u63d0\u4f9b JSON \u89e3\u8b80\u3002"
+  prompts       <- tarot_prompts()
+  system_prompt <- paste0(prompts$llm_system_prompt, collapse = "")
+  user_prompt   <- paste0(
+    prompts$llm_user_prompt$card_label,     card_name, "\n",
+    prompts$llm_user_prompt$meanings_label, paste(card_meanings, collapse = ", "), "\n",
+    prompts$llm_user_prompt$request
   )
 
   # --- HTTP request with retry ------------------------------------------

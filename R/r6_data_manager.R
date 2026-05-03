@@ -608,7 +608,7 @@ DataManager <- R6::R6Class(
       )
 
       card_name <- card$name_zh
-      if (isTRUE(is_reversed)) card_name <- paste0(card_name, "\u9006\u4f4d")
+      if (isTRUE(is_reversed)) card_name <- paste0(card_name, tarot_prompts()$reversed_suffix)
 
       card_meanings <- DBI::dbGetQuery(
         con,
