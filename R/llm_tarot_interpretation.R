@@ -1,8 +1,9 @@
 #' Get a Tarot card interpretation from a Free LLM API
 #'
 #' Calls the Groq free-tier API (llama-3.1-8b-instant model) to generate an
-#' archetypal interpretation for the drawn tarot card.  Falls back to the
-#' database card meaning when the API is unavailable or returns invalid JSON.
+#' archetypal interpretation for the drawn tarot card in Traditional Chinese.
+#' Falls back to the database card meaning when the API is unavailable or
+#' returns invalid JSON.
 #'
 #' The function is intentionally structured so that the API endpoint, model,
 #' and auth header can be swapped to Gemini / Vertex AI for registered /
@@ -22,11 +23,14 @@
 #' @param model Character.  Model identifier.  Defaults to
 #'   \code{"llama-3.1-8b-instant"}.
 #'
-#' @return A named list with three character fields:
+#' @return A named list with six character fields (all in Traditional Chinese):
 #'   \describe{
-#'     \item{title}{Short title for the interpretation (≤ 20 chars).}
-#'     \item{body}{Full interpretation prose.}
-#'     \item{wisdom_tag}{A single short wisdom phrase.}
+#'     \item{title}{Short 3-7 character headline.}
+#'     \item{body}{Full interpretation prose (2-3 sentences).}
+#'     \item{general}{One-sentence general life insight.}
+#'     \item{work}{One-sentence career / work insight.}
+#'     \item{health}{One-sentence health / vitality insight.}
+#'     \item{relationships}{One-sentence relationship insight.}
 #'   }
 #'   On fallback the fields are derived from \code{card_meanings}.
 #'
@@ -50,11 +54,6 @@ get_tarot_interpretation <- function(
     } else {
       "No interpretation available."
     }
-    wisdom_text <- if (length(meaning_vec) > 0) {
-      meaning_vec[[1]]
-    } else {
-      "Take one grounded step today."
-    }
     title_text <- if (!is.null(card_name) && nzchar(trimws(as.character(card_name)))) {
       as.character(card_name)
     } else {
@@ -62,9 +61,12 @@ get_tarot_interpretation <- function(
     }
 
     list(
-      title      = title_text,
-      body       = meaning_text,
-      wisdom_tag = wisdom_text
+      title         = title_text,
+      body          = meaning_text,
+      general       = meaning_text,
+      work          = meaning_text,
+      health        = meaning_text,
+      relationships = meaning_text
     )
   }
 
@@ -75,19 +77,22 @@ get_tarot_interpretation <- function(
 
   # --- Build structured prompt ------------------------------------------
   system_prompt <- paste0(
-    "You are an archetypal analyst who provides insightful tarot interpretations. ",
-    "Your tone is calm, academic, and avoids mystical or occult language. ",
-    "Respond ONLY with a JSON object containing these exact keys: ",
-    "\"title\" (a short 3-7 word headline), ",
-    "\"body\" (2-3 sentences of archetypal interpretation), ",
-    "\"wisdom_tag\" (one short actionable insight). ",
-    "Do NOT include any text outside the JSON object."
+    "\u4f60\u662f\u4e00\u4f4d\u5c08\u696d\u63d0\u4f9b\u5854\u7f85\u724c\u89e3\u8b80\u7684\u539f\u578b\u5206\u6790\u5e2b\uff0c\u4f7f\u7528\u7e41\u9ad4\u4e2d\u6587\u56de\u8986\u3002",
+    "\u60a8\u7684\u8a9e\u6c23\u5e73\u9759\u3001\u6df1\u601d\u719f\u616e\uff0c\u907f\u514d\u795e\u79d8\u6216\u8d85\u81ea\u7136\u7684\u8a9e\u8a00\u3002",
+    "\u50c5\u4ee5JSON\u683c\u5f0f\u56de\u61c9\uff0c\u5305\u542b\u4ee5\u4e0b\u6307\u5b9a\u9375\u540d\uff1a",
+    "\"title\"\uff083\u81f37\u500b\u7e41\u9ad4\u4e2d\u6587\u5b57\u7684\u6a19\u984c\uff09\uff0c",
+    "\"body\"\uff082\u81f33\u53e5\u7684\u539f\u578b\u89e3\u8b80\uff09\uff0c",
+    "\"general\"\uff08\u4e00\u53e5\u8a71\uff1a\u7db2\u5408\u4eba\u751f\u6d1e\u898b\uff09\uff0c",
+    "\"work\"\uff08\u4e00\u53e5\u8a71\uff1a\u4e8b\u696d/\u5de5\u4f5c\u6d1e\u898b\uff09\uff0c",
+    "\"health\"\uff08\u4e00\u53e5\u8a71\uff1a\u5065\u5eb7/\u6d3b\u529b\u6d1e\u898b\uff09\uff0c",
+    "\"relationships\"\uff08\u4e00\u53e5\u8a71\uff1a\u611f\u60c5/\u4eba\u969b\u95dc\u4fc2\u6d1e\u898b\uff09\u3002",
+    "\u8acb\u52ff\u5728JSON\u7269\u4ef6\u5916\u5305\u542b\u4efb\u4f55\u6587\u5b57\u3002"
   )
 
   user_prompt <- paste0(
-    "Card drawn: ", card_name, "\n",
-    "Core meanings: ", paste(card_meanings, collapse = ", "), "\n",
-    "Provide the JSON interpretation now."
+    "\u6240\u62bd\u5361\u724c\uff1a", card_name, "\n",
+    "\u6838\u5fc3\u542b\u7fa9\uff1a", paste(card_meanings, collapse = ", "), "\n",
+    "\u8acb\u73fe\u5728\u63d0\u4f9b JSON \u89e3\u8b80\u3002"
   )
 
   # --- HTTP request with retry ------------------------------------------
@@ -145,8 +150,9 @@ get_tarot_interpretation <- function(
 
 #' Validate a tarot interpretation JSON string
 #'
-#' Checks that the provided JSON text is parseable and contains the three
-#' required fields: \code{title}, \code{body}, and \code{wisdom_tag}.
+#' Checks that the provided JSON text is parseable and contains the six
+#' required fields: \code{title}, \code{body}, \code{general}, \code{work},
+#' \code{health}, and \code{relationships}.
 #' Uses \code{jsonlite} which is already a dependency of this package.
 #'
 #' @param json_text Character. Raw JSON string returned by the LLM.
@@ -154,7 +160,8 @@ get_tarot_interpretation <- function(
 #' @return A named list:
 #'   \describe{
 #'     \item{valid}{Logical. \code{TRUE} if the JSON is valid and complete.}
-#'     \item{data}{Named list with \code{title}, \code{body}, \code{wisdom_tag}
+#'     \item{data}{Named list with \code{title}, \code{body}, \code{general},
+#'       \code{work}, \code{health}, \code{relationships}
 #'       (only present when \code{valid = TRUE}).}
 #'     \item{error}{Character error description (only present when
 #'       \code{valid = FALSE}).}
@@ -169,11 +176,14 @@ validate_interpretation <- function(json_text) {
   schema <- paste0(
     '{',
     '"type":"object",',
-    '"required":["title","body","wisdom_tag"],',
+    '"required":["title","body","general","work","health","relationships"],',
     '"properties":{',
     '"title":{"type":"string","minLength":1},',
     '"body":{"type":"string","minLength":1},',
-    '"wisdom_tag":{"type":"string","minLength":1}',
+    '"general":{"type":"string","minLength":1},',
+    '"work":{"type":"string","minLength":1},',
+    '"health":{"type":"string","minLength":1},',
+    '"relationships":{"type":"string","minLength":1}',
     '},',
     '"additionalProperties":false',
     '}'
@@ -201,9 +211,12 @@ validate_interpretation <- function(json_text) {
   list(
     valid = TRUE,
     data  = list(
-      title      = as.character(parsed$title),
-      body       = as.character(parsed$body),
-      wisdom_tag = as.character(parsed$wisdom_tag)
+      title         = as.character(parsed$title),
+      body          = as.character(parsed$body),
+      general       = as.character(parsed$general),
+      work          = as.character(parsed$work),
+      health        = as.character(parsed$health),
+      relationships = as.character(parsed$relationships)
     )
   )
 }
