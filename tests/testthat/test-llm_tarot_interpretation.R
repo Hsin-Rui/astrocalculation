@@ -84,10 +84,11 @@ test_that("get_tarot_interpretation returns 6-field fallback when api_key is NUL
     api_key      = NULL
   )
   expect_type(result, "list")
-  expect_named(result, c("title", "body", "general", "work", "health", "relationships"))
+  expect_named(result, c("title", "body", "general", "work", "health", "relationships", "is_local_fallback"))
   expect_equal(result$title, fix$card_names$fool)
   expect_match(result$body,    fix$card_meanings$fool[[1]])
   expect_match(result$general, fix$card_meanings$fool[[1]])
+  expect_true(isTRUE(result$is_local_fallback))
 })
 
 test_that("get_tarot_interpretation returns fallback when api_key is empty string", {
@@ -97,7 +98,8 @@ test_that("get_tarot_interpretation returns fallback when api_key is empty strin
     api_key      = ""
   )
   expect_equal(result$title, fix$card_names$star)
-  expect_named(result, c("title", "body", "general", "work", "health", "relationships"))
+  expect_named(result, c("title", "body", "general", "work", "health", "relationships", "is_local_fallback"))
+  expect_true(isTRUE(result$is_local_fallback))
 })
 
 test_that("get_tarot_interpretation returns fallback when api_key is whitespace", {

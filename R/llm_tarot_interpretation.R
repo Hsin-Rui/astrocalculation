@@ -209,12 +209,13 @@ build_tarot_fallback <- function(card_name, card_meanings){
   meaning_text <- if (length(meaning_vec) > 0) paste(meaning_vec, collapse = "; ") else "No interpretation available."
   title_text   <- if (!is.null(card_name) && nzchar(trimws(as.character(card_name)))) card_name else "Daily Tarot"
   list(
-    title         = title_text,
-    body          = meaning_text,
-    general       = meaning_text,
-    work          = meaning_text,
-    health        = meaning_text,
-    relationships = meaning_text
+    title            = title_text,
+    body             = meaning_text,
+    general          = meaning_text,
+    work             = meaning_text,
+    health           = meaning_text,
+    relationships    = meaning_text,
+    is_local_fallback = TRUE
   )
 }
 
