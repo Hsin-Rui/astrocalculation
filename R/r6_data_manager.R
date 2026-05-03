@@ -564,18 +564,7 @@ DataManager <- R6::R6Class(
 
       # Guard: skip LLM for second+ same-day draws (AC 26)
       if (isTRUE(skip_llm)) {
-        meaning_vec  <- if (is.null(card_meanings)) character(0) else as.character(card_meanings)
-        meaning_vec  <- meaning_vec[!is.na(meaning_vec) & nzchar(trimws(meaning_vec))]
-        meaning_text <- if (length(meaning_vec) > 0) paste(meaning_vec, collapse = "; ") else "No interpretation available."
-        title_text   <- if (!is.null(card_name) && nzchar(trimws(as.character(card_name)))) card_name else "Daily Tarot"
-        fallback <- list(
-          title         = title_text,
-          body          = meaning_text,
-          general       = meaning_text,
-          work          = meaning_text,
-          health        = meaning_text,
-          relationships = meaning_text
-        )
+        fallback <- build_tarot_fallback(card_name, card_meanings)
         return(future::future({ fallback }, packages = "astrocalculation", seed = NULL))
       }
 

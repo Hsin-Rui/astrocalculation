@@ -39,15 +39,6 @@
 #' @importFrom jsonlite fromJSON toJSON
 #' @export
 
-# Internal helper — loads inst/extdata/tarot_prompts.yaml into a list.
-# Used by get_tarot_interpretation() and r6_data_manager.R.
-tarot_prompts <- function() {
-  yaml::read_yaml(
-    system.file("extdata", "tarot_prompts.yaml",
-                package = "astrocalculation", mustWork = TRUE)
-  )
-}
-
 get_tarot_interpretation <- function(
     card_name,
     card_meanings,
@@ -55,34 +46,10 @@ get_tarot_interpretation <- function(
     base_url = "https://api.groq.com/openai/v1/chat/completions",
     model    = "llama-3.1-8b-instant"
 ) {
-  # --- Fallback builder -------------------------------------------------
-  build_fallback <- function() {
-    meaning_vec <- if (is.null(card_meanings)) character(0) else as.character(card_meanings)
-    meaning_vec <- meaning_vec[!is.na(meaning_vec) & nzchar(trimws(meaning_vec))]
-    meaning_text <- if (length(meaning_vec) > 0) {
-      paste(meaning_vec, collapse = "; ")
-    } else {
-      "No interpretation available."
-    }
-    title_text <- if (!is.null(card_name) && nzchar(trimws(as.character(card_name)))) {
-      as.character(card_name)
-    } else {
-      "Daily Tarot"
-    }
-
-    list(
-      title         = title_text,
-      body          = meaning_text,
-      general       = meaning_text,
-      work          = meaning_text,
-      health        = meaning_text,
-      relationships = meaning_text
-    )
-  }
 
   # Skip API call when no key is configured
   if (is.null(api_key) || nchar(trimws(api_key)) == 0) {
-    return(build_fallback())
+    return(build_tarot_fallback(card_name, card_meanings))
   }
 
   # --- Build structured prompt ------------------------------------------
@@ -123,7 +90,7 @@ get_tarot_interpretation <- function(
     resp <- httr2::req_perform(req)
 
     if (httr2::resp_status(resp) != 200L) {
-      return(build_fallback())
+      return(build_tarot_fallback(card_name, card_meanings))
     }
 
     body <- httr2::resp_body_string(resp)
@@ -135,12 +102,12 @@ get_tarot_interpretation <- function(
     NULL
   })
 
-  if (is.null(response_text)) return(build_fallback())
+  if (is.null(response_text)) return(build_tarot_fallback(card_name, card_meanings))
 
   # --- Parse and validate JSON from model output ------------------------
   validation <- validate_interpretation(response_text)
   if (!isTRUE(validation$valid)) {
-    return(build_fallback())
+    return(build_tarot_fallback(card_name, card_meanings))
   }
 
   validation$data
@@ -219,3 +186,33 @@ validate_interpretation <- function(json_text) {
     )
   )
 }
+
+
+#' Internal helper — loads inst/extdata/tarot_prompts.yaml into a list.
+#' Used by get_tarot_interpretation() and r6_data_manager.R.
+tarot_prompts <- function() {
+  yaml::read_yaml(
+    system.file("extdata", "tarot_prompts.yaml",
+                package = "astrocalculation", mustWork = TRUE)
+  )
+}
+
+
+#' Internal helper — build fallback list (plain list, no future wrapping).
+build_tarot_fallback <- function(card_name, card_meanings){
+
+  meaning_vec  <- if (is.null(card_meanings)) character(0) else as.character(card_meanings)
+  meaning_vec  <- meaning_vec[!is.na(meaning_vec) & nzchar(trimws(meaning_vec))]
+  meaning_text <- if (length(meaning_vec) > 0) paste(meaning_vec, collapse = "; ") else "No interpretation available."
+  title_text   <- if (!is.null(card_name) && nzchar(trimws(as.character(card_name)))) card_name else "Daily Tarot"
+  list(
+    title         = title_text,
+    body          = meaning_text,
+    general       = meaning_text,
+    work          = meaning_text,
+    health        = meaning_text,
+    relationships = meaning_text
+  )
+}
+
+
