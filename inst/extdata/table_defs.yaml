@@ -39,6 +39,9 @@ tables:
         type: "TIMESTAMP WITH TIME ZONE"
       created_at:
         type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
+      terms_accepted_at:
+        type: "TIMESTAMP WITH TIME ZONE"
+        description: "When the user accepted the Terms of Use. NULL means not accepted."
     indices:
       - email
   user_profiles:
@@ -93,6 +96,10 @@ tables:
         type: "TEXT"
         title: "Profile Photo"
         description: "Base64 encoded image string."
+      oracle_voice_preference:
+        type: "VARCHAR(50) DEFAULT 'Living Spark'"
+        title: "Oracle Voice Preference"
+        description: "User's preferred interpretation mode: 'Living Spark' (AI) or 'Ancient Echo' (Static)."
       created_at:
         type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
         title: "Created At"
@@ -236,3 +243,36 @@ tables:
       - user_entity_id
       - event_type
       - created_at
+
+  tarot_draws:
+    title: "Tarot Draws"
+    description: "Tarot Journal entries. One row per saved draw, linked to the owning user. Cascades on user deletion."
+    columns:
+      entry_id:
+        type: "UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        description: "Unique surrogate key for this journal entry."
+      user_entity_id:
+        type: "VARCHAR(255) NOT NULL"
+        description: "Links to auth_credentials(user_entity_id)."
+      draw_date:
+        type: "DATE DEFAULT CURRENT_DATE"
+        description: "Calendar date when the card was drawn."
+      card_id:
+        type: "VARCHAR(255) NOT NULL"
+        description: "Identifier of the tarot card (name or DB id)."
+      interpretation_text:
+        type: "TEXT"
+        description: "Full LLM or static interpretation text stored at draw time."
+      is_free_tier:
+        type: "BOOLEAN DEFAULT TRUE"
+        description: "Whether the interpretation was generated under the free (1/day LLM) tier."
+      created_at:
+        type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
+        description: "Row insertion timestamp."
+    foreign_keys:
+      - column: user_entity_id
+        references: auth_credentials(user_entity_id)
+        on_delete: CASCADE
+    indices:
+      - user_entity_id
+      - draw_date

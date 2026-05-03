@@ -151,13 +151,21 @@ DataManager <- R6::R6Class(
     #' @param email user ID
     #' @param password user password
     #' @param display_name User name to be displayed in chart
+    #' @param terms_accepted Logical. Must be TRUE; hard-fails registration otherwise.
+    #' @param oracle_voice_preference Character. "Living Spark" or "Ancient Echo". Defaults to "Living Spark".
     #' @return The new user_id if successful, throws error otherwise
-    register = function(user_id, email, password, display_name) {
+    register = function(user_id, email, password, display_name,
+                        terms_accepted = FALSE,
+                        oracle_voice_preference = "Living Spark") {
       if (is.null(self$pool)) {
         return(message("Database is offline. Registration is currently unavailable."))
       }
       # Delegates to the logic function
-      new_id <- auth_register_user(self$pool, user_id, email, password, display_name)
+      new_id <- auth_register_user(
+        self$pool, user_id, email, password, display_name,
+        terms_accepted        = terms_accepted,
+        oracle_voice_preference = oracle_voice_preference
+      )
       if (!is.null(self$logger)) {
         self$logger$log_info(
           event = "REGISTER",
@@ -166,6 +174,70 @@ DataManager <- R6::R6Class(
         )
       }
       return(new_id)
+    },
+
+    #' @description Promote the current guest draw to the first Tarot Journal entry.
+    #'
+    #' Should be called immediately after a successful \code{register()} call so
+    #' that the guest session's draw is persisted under the new user account.
+    #' No-ops (with a warning) when there is no guest draw to promote.
+    #'
+    #' @param new_user_id Character. The user_entity_id returned by `register()`.
+    #' @return Invisibly TRUE on success, FALSE when no draw was available.
+    promote_guest_draw = function(new_user_id) {
+      if (is.null(self$current_cards) || is.null(self$llm_interpretation)) {
+        warning("promote_guest_draw: no guest draw in session — skipping promotion.")
+        return(invisible(FALSE))
+      }
+
+      if (is.null(self$pool)) {
+        warning("promote_guest_draw: database offline — cannot save draw.")
+        return(invisible(FALSE))
+      }
+
+      # Serialise the interpretation list to a single text blob for storage
+      interp_text <- tryCatch(
+        jsonlite::toJSON(self$llm_interpretation, auto_unbox = TRUE),
+        error = function(e) as.character(self$llm_interpretation)
+      )
+
+      tryCatch(
+        {
+          save_tarot_draw(
+            pool                = self$pool,
+            user_id             = new_user_id,
+            card_id             = self$current_cards,
+            interpretation_text = interp_text,
+            is_free_tier        = TRUE
+          )
+
+          # Record LLM credit consumption (AC: 7)
+          record_llm_credit_used(self$pool, new_user_id)
+
+          if (!is.null(self$logger)) {
+            self$logger$log_info(
+              event   = "JOURNAL_PROMOTE",
+              message = paste("Guest draw promoted to journal for user:", new_user_id),
+              user_id = new_user_id
+            )
+          }
+
+          # Mark session draw as saved to prevent duplicate inserts
+          self$draw_status <- "saved"
+        },
+        error = function(e) {
+          if (!is.null(self$logger)) {
+            self$logger$log_error(
+              event   = "JOURNAL_PROMOTE_FAIL",
+              message = e$message,
+              user_id = new_user_id
+            )
+          }
+          stop(e)
+        }
+      )
+
+      invisible(TRUE)
     },
 
     #' @description Validate Session Token

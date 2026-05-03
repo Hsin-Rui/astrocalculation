@@ -567,3 +567,98 @@ test_that("auth_reset_password still succeeds if security log insert fails", {
     expect_true(res)
     expect_equal(exec_calls$count, 1L) # UPDATE still executed
 })
+
+# ---------------------------------------------------------------------------
+# Story 1.2: auth_register_user consent gate + oracle voice preference tests
+# ---------------------------------------------------------------------------
+
+test_that("auth_register_user hard-fails when terms_accepted is FALSE", {
+    pool <- make_mock_conn()
+    expect_error(
+        auth_register_user(pool, "uid-1", "a@b.com", "Abcd123!", "Alice",
+                           terms_accepted = FALSE),
+        "Terms of Use"
+    )
+})
+
+test_that("auth_register_user hard-fails when terms_accepted is missing (default)", {
+    pool <- make_mock_conn()
+    expect_error(
+        auth_register_user(pool, "uid-1", "a@b.com", "Abcd123!", "Alice"),
+        "Terms of Use"
+    )
+})
+
+test_that("auth_register_user hard-fails with invalid oracle_voice_preference", {
+    pool <- make_mock_conn(
+        query_res = list(data.frame(), data.frame()) # id + email uniqueness checks
+    )
+    expect_error(
+        with_mocked_bindings(
+            {
+                ns_pool <- asNamespace("pool")
+                old_tx <- get("poolWithTransaction", envir = ns_pool)
+                unlockBinding("poolWithTransaction", ns_pool)
+                assign("poolWithTransaction", function(pool_obj, code) code(pool_obj), envir = ns_pool)
+                on.exit({
+                    assign("poolWithTransaction", old_tx, envir = ns_pool)
+                    lockBinding("poolWithTransaction", ns_pool)
+                }, add = TRUE)
+                auth_register_user(pool, "uid-1", "a@b.com", "Abcd123!", "Alice",
+                                   terms_accepted = TRUE,
+                                   oracle_voice_preference = "Unknown Option")
+            },
+            UUIDgenerate = function(...) "tok-1",
+            .env = asNamespace("uuid")
+        ),
+        "oracle_voice_preference must be one of"
+    )
+})
+
+test_that("auth_register_user inserts terms_accepted_at and oracle_voice_preference when consented", {
+    exec_calls <- list(count = 0)
+
+    pool <- make_mock_conn(
+        query_res = list(data.frame(), data.frame()), # uniqueness checks return empty
+        exec_side = function() exec_calls$count <<- exec_calls$count + 1
+    )
+
+    res <- {
+        # Manually unlock pool::poolWithTransaction (locked namespace requires this pattern)
+        ns_pool <- asNamespace("pool")
+        old_tx <- get("poolWithTransaction", envir = ns_pool)
+        unlockBinding("poolWithTransaction", ns_pool)
+        assign("poolWithTransaction", function(pool_obj, code) code(pool_obj), envir = ns_pool)
+        on.exit({
+            assign("poolWithTransaction", old_tx, envir = ns_pool)
+            lockBinding("poolWithTransaction", ns_pool)
+        }, add = TRUE)
+
+        # Manually unlock uuid::UUIDgenerate
+        ns_uuid <- asNamespace("uuid")
+        old_uuid <- get("UUIDgenerate", envir = ns_uuid)
+        unlockBinding("UUIDgenerate", ns_uuid)
+        assign("UUIDgenerate", function(...) "verif-tok", envir = ns_uuid)
+        on.exit({
+            assign("UUIDgenerate", old_uuid, envir = ns_uuid)
+            lockBinding("UUIDgenerate", ns_uuid)
+        }, add = TRUE)
+
+        with_mocked_bindings(
+            {
+                auth_register_user(
+                    pool, "uid-ok", "ok@b.com", "Abcd123!", "Bob",
+                    terms_accepted          = TRUE,
+                    oracle_voice_preference = "Ancient Echo"
+                )
+            },
+            password_store = function(pwd) "hashed",
+            .env = asNamespace("astrocalculation")
+        )
+    }
+
+    # Two dbExecute calls: credentials INSERT + profile INSERT
+    expect_equal(exec_calls$count, 2L)
+    expect_equal(res$user_id, "uid-ok")
+    expect_type(res$verification_token, "character")
+})

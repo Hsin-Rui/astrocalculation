@@ -14,11 +14,13 @@ Logger <- R6::R6Class(
   #' @field pool database connection
   public = list(
     pool = NULL,
+    app_logs_table_available = NULL,
 
     #' @description Initialize with a DB pool
     #' @param pool postgres sql connection
     initialize = function(pool) {
       self$pool <- pool
+      self$app_logs_table_available <- NULL
     },
 
     #' @description Log an INFO event
@@ -53,6 +55,19 @@ Logger <- R6::R6Class(
         return()
       }
 
+      # If log table is unavailable, gracefully fall back to console logging.
+      if (is.null(self$app_logs_table_available)) {
+        self$app_logs_table_available <- tryCatch(
+          DBI::dbExistsTable(self$pool, "app_logs"),
+          error = function(e) FALSE
+        )
+      }
+      if (!isTRUE(self$app_logs_table_available)) {
+        timestamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+        message(sprintf("[%s] %s | %s: %s", timestamp, level, event, message))
+        return()
+      }
+
       tryCatch({
         # 1. Prepare JSON Context
         context_json <- jsonlite::toJSON(context, auto_unbox = TRUE)
@@ -71,6 +86,10 @@ Logger <- R6::R6Class(
         DBI::dbExecute(self$pool, query)
 
       }, error = function(e) {
+        # If the table disappears mid-session, stop retrying DB writes.
+        if (grepl("relation \"app_logs\" does not exist", e$message, fixed = TRUE)) {
+          self$app_logs_table_available <- FALSE
+        }
         # Fallback to console
         message(sprintf("LOGGER FAILED: %s", e$message))
       })
