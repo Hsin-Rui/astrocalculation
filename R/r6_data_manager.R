@@ -562,9 +562,28 @@ DataManager <- R6::R6Class(
       city    <- self$horoscope_city
       country <- self$horoscope_country
       planets <- self$selected_planets
-      worker_tz <- if (!is.null(timezone) && nzchar(timezone)) timezone else self$horoscope_timezone
-      safe_lat <- if (!is.null(latitude) && is.finite(latitude)) latitude else self$horoscope_latitude
-      safe_lng <- if (!is.null(longitude) && is.finite(longitude)) longitude else self$horoscope_longitude
+
+      # If timezone is parsed into the function, then used the parsed long, lat, timezone
+      # Otherwise, lookup is performed
+      if (!is.null(timezone) && nzchar(timezone)) {
+        self$horoscope_timezone <- timezone
+        self$horoscope_latitude <- if (!is.null(latitude) && is.finite(latitude)) {
+          latitude
+        } else {
+          self$horoscope_latitude
+        }
+        self$horoscope_longitude <- if (!is.null(longitude) && is.finite(longitude)) {
+          longitude
+        } else {
+          self$horoscope_longitude
+        }
+      } else {
+        self$set_chart_location(country, city)
+      }
+
+      worker_tz <- self$horoscope_timezone
+      safe_lat <- self$horoscope_latitude
+      safe_lng <- self$horoscope_longitude
 
       future::future({
         planet_pos <- calculate_planet_position(dt, worker_tz, safe_lng, safe_lat)
