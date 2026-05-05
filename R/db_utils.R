@@ -60,17 +60,20 @@ db_save_profile <- function(pool, user_id, data) {
     # Note: We do NOT update email here. Email is immutable in auth_credentials.
     DBI::dbExecute(con, DBI::sqlInterpolate(con, "
       INSERT INTO user_profiles (
+        entry_id,
         user_entity_id, display_name,
         birth_timestamp, timezone,
         city_name, country, lat, lng, profile_photo,
         valid_from
       ) VALUES (
+        ?entry_id,
         ?id, ?name,
         ?ts, ?tz,
         ?city, ?country, ?lat, ?lng, ?photo,
         NOW()
       )
     ",
+      entry_id = uuid::UUIDgenerate(),
       id = user_id,
       name = display_name,
       ts = birth_ts,
@@ -93,7 +96,7 @@ db_get_library <- function(pool, user_id) {
   DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool, query, id = user_id))
 }
 
-#' Handles "SCD Type 2" updates (if editing) or creates new entries.
+#' Handles "SCD Type 2" updates (if editing) or creates new entries
 #'
 #' @param pool database connection (postgres pool)
 #' @param user_id username
@@ -116,10 +119,12 @@ db_save_library_entry <- function(pool, user_id, data, entity_id = NULL) {
 
   birth_ts <- normalize_local_datetime(data$birth_timestamp, final_tz)
   pool::poolWithTransaction(pool, function(con) {
+    entry_id <- uuid::UUIDgenerate()
+
     # Generate or Reuse ID
     final_entity_id <- entity_id
     if (is.null(final_entity_id)) {
-      final_entity_id <- DBI::dbGetQuery(con, "SELECT uuid_generate_v4() as id")$id
+      final_entity_id <- uuid::UUIDgenerate()
     } else {
       DBI::dbExecute(con, DBI::sqlInterpolate(con, "
         UPDATE personal_library SET valid_to = NOW()
@@ -130,6 +135,7 @@ db_save_library_entry <- function(pool, user_id, data, entity_id = NULL) {
     # Insert
     DBI::dbExecute(con, DBI::sqlInterpolate(con, "
       INSERT INTO personal_library (
+        entry_id,
         entity_id,
         user_entity_id,
         name,
@@ -141,8 +147,9 @@ db_save_library_entry <- function(pool, user_id, data, entity_id = NULL) {
         lng,
         notes,
         valid_from
-      ) VALUES (?eid, ?owner, ?name, ?ts, ?tz, ?city, ?country, ?lat, ?lng, ?notes, NOW())
+      ) VALUES (?entry_id, ?eid, ?owner, ?name, ?ts, ?tz, ?city, ?country, ?lat, ?lng, ?notes, NOW())
     ",
+      entry_id = entry_id,
       eid = final_entity_id,
       owner = user_id,
       name = chart_name,
