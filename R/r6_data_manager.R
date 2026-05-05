@@ -6,6 +6,52 @@
 #' @export
 #'
 
+#' Read and trim an environment variable
+#'
+#' @param name Character. Environment variable name.
+#' @return Character scalar or `NULL` when unset/blank.
+get_clean_env <- function(name) {
+  value <- Sys.getenv(name, unset = "")
+  value <- trimws(gsub("^[\"']+|[\"']+$", "", value))
+
+  if (!nzchar(value)) {
+    return(NULL)
+  }
+
+  value
+}
+
+#' Resolve tarot LLM provider configuration from environment
+#'
+#' @return List with `api_key`, `base_url`, and `model`.
+resolve_tarot_llm_config <- function() {
+  groq_key <- get_clean_env("GROQ_API_KEY")
+  if (!is.null(groq_key)) {
+    return(list(
+      api_key = groq_key,
+      base_url = get_clean_env("GROQ_BASE_URL") %||%
+        "https://api.groq.com/openai/v1/chat/completions",
+      model = get_clean_env("GROQ_MODEL") %||% "llama-3.1-8b-instant"
+    ))
+  }
+
+  openrouter_key <- get_clean_env("OPENROUTER_API_KEY")
+  if (!is.null(openrouter_key)) {
+    return(list(
+      api_key = openrouter_key,
+      base_url = get_clean_env("OPENROUTER_BASE_URL") %||%
+        "https://openrouter.ai/api/v1/chat/completions",
+      model = get_clean_env("OPENROUTER_MODEL") %||% "openai/gpt-4.1-mini"
+    ))
+  }
+
+  list(
+    api_key = NULL,
+    base_url = "https://api.groq.com/openai/v1/chat/completions",
+    model = "llama-3.1-8b-instant"
+  )
+}
+
 DataManager <- R6::R6Class(
   "DataManager",
   # 1. Public fields ------------------------------------------
@@ -442,11 +488,9 @@ DataManager <- R6::R6Class(
         # 2. Get the target timezone string
         target_tz <- target_row$timezone
 
-        # 3. Convert UTC -> Local Time for Display/Calculation
-        # We use lubridate::with_tz to force the display time to match the user's city
+        # 3. Convert stored instant -> local time for display/calculation.
         self$horoscope_datetime <- lubridate::with_tz(db_ts, tzone = target_tz)
 
-        self$horoscope_datetime <- target_row$birth_timestamp
         self$horoscope_timezone <- target_row$timezone
         self$horoscope_city <- target_row$city_name
         self$horoscope_country <- target_row$country
@@ -672,12 +716,17 @@ DataManager <- R6::R6Class(
         return(future::future({ fallback }, packages = "astrocalculation", seed = NULL))
       }
 
-      api_key      <- Sys.getenv("GROQ_API_KEY", unset = "")
-      if (nchar(api_key) == 0) api_key <- NULL
+      llm_config <- resolve_tarot_llm_config()
 
       # Fire LLM call in background \u2014 caller chains the result
       future::future({
-        get_tarot_interpretation(card_name, card_meanings, api_key = api_key)
+        get_tarot_interpretation(
+          card_name,
+          card_meanings,
+          api_key = llm_config$api_key,
+          base_url = llm_config$base_url,
+          model = llm_config$model
+        )
       }, packages = "astrocalculation", seed = NULL)
     },
 

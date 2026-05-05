@@ -309,6 +309,42 @@ create_smtp_server <- function() {
   )
 }
 
+#' Normalize application base URL from environment/config
+#'
+#' @param base_url Character. Raw base URL, often sourced from `APP_BASE_URL`.
+#' @return Character scalar with surrounding quotes and trailing slashes removed.
+normalize_app_base_url <- function(base_url = "http://127.0.0.1:3000") {
+  if (is.null(base_url) || length(base_url) == 0) {
+    return("http://127.0.0.1:3000")
+  }
+
+  normalized <- trimws(as.character(base_url[1]))
+  normalized <- gsub("^[\"']+|[\"']+$", "", normalized)
+  normalized <- sub("/+$", "", normalized)
+
+  if (!nzchar(normalized)) {
+    return("http://127.0.0.1:3000")
+  }
+
+  normalized
+}
+
+#' Build a query-token link for application emails
+#'
+#' @param base_url Character. Application base URL.
+#' @param query_key Character. Query parameter name, e.g. `reset`.
+#' @param token Character. Verification or reset token.
+#' @return Character URL.
+build_app_token_link <- function(base_url, query_key, token) {
+  paste0(
+    normalize_app_base_url(base_url),
+    "/?",
+    query_key,
+    "=",
+    utils::URLencode(as.character(token), reserved = TRUE)
+  )
+}
+
 #' Send Verification Email via SMTP
 #'
 #' @param to_email The recipient's email address
@@ -318,19 +354,19 @@ create_smtp_server <- function() {
 #' @importFrom emayili envelope from to subject server render
 #'
 send_verification_email <- function(to_email, token, base_url = "http://127.0.0.1:3000") {
+  verify_link <- build_app_token_link(base_url, "verify", token)
+
   if (Sys.getenv("TESTTHAT") == "true" && Sys.getenv("LIVE_EMAIL_TEST") != "true") {
-    message(sprintf(" [TEST MODE] Email suppressed. Link: %s/?verify=%s", base_url, token))
+    message(sprintf(" [TEST MODE] Email suppressed. Link: %s", verify_link))
     return(TRUE)
   }
 
   smtp <- create_smtp_server()
   if (is.null(smtp)) {
     warning("Email not sent. Printing link to console.")
-    print(paste("VERIFICATION LINK:", paste0(base_url, "/?verify=", token)))
+    print(paste("VERIFICATION LINK:", verify_link))
     return(FALSE)
   }
-
-  verify_link <- paste0(base_url, "/?verify=", token)
 
   email <- emayili::envelope() |>
     emayili::from(Sys.getenv("SMTP_USERNAME")) |>
@@ -364,8 +400,10 @@ send_verification_email <- function(to_email, token, base_url = "http://127.0.0.
 #' @importFrom emayili envelope from to subject server render
 #'
 send_reset_email <- function(to_email, token, base_url = "http://127.0.0.1:3000") {
+  reset_link <- build_app_token_link(base_url, "reset", token)
+
   if (Sys.getenv("TESTTHAT") == "true" && Sys.getenv("LIVE_EMAIL_TEST") != "true") {
-    message(sprintf(" [TEST MODE] Reset email suppressed. Link: %s/?reset=%s", base_url, token))
+    message(sprintf(" [TEST MODE] Reset email suppressed. Link: %s", reset_link))
     return(TRUE)
   }
 
@@ -374,8 +412,6 @@ send_reset_email <- function(to_email, token, base_url = "http://127.0.0.1:3000"
     warning("Reset email not sent.")
     return(FALSE)
   }
-
-  reset_link <- paste0(base_url, "/?reset=", token)
 
   email <- emayili::envelope() |>
     emayili::from(Sys.getenv("SMTP_USERNAME")) |>
