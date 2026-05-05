@@ -279,3 +279,90 @@ draw_whole_sign_chart <- function(planet_position, chart_name, date, city, count
 
     )
 }
+
+#' Render a natal chart ggplot to a temporary JPEG file
+#'
+#' Convenience function for async workers: writes the chart to a temporary JPEG
+#' and returns only the absolute file path. No ggplot object is returned,
+#' preventing large objects from crossing \code{future} process boundaries.
+#'
+#' @param planet_position Data frame of planetary positions (rows = bodies,
+#'   as returned by \code{calculate_planet_position()$planetary_position}).
+#' @param chart_name Character. Name shown on the chart.
+#' @param date POSIXct. Datetime of the chart.
+#' @param city Character. City name.
+#' @param country Character. Country name.
+#' @param timezone Character. IANA timezone string.
+#' @param aspect_table Data frame of aspects from \code{calculate_aspect()}.
+#' @param width Integer. JPEG width in pixels. Default 600.
+#' @param height Integer. JPEG height in pixels. Default 600.
+#' @param pointsize Integer. Base font size. Default 24.
+#' @param res Integer. Resolution in ppi. Default 96.
+#'
+#' @return Absolute path (character) to the generated JPEG tempfile.
+#'
+#' @importFrom grDevices jpeg dev.off
+render_natal_chart_to_file <- function(
+    planet_position, chart_name, date, city, country, timezone, aspect_table,
+    width = 600, height = 600, pointsize = 24, res = 96) {
+
+  outfile <- tempfile(fileext = ".jpg")
+  grDevices::jpeg(outfile, width = width, height = height,
+                  pointsize = pointsize, res = res, bg = "white")
+  on.exit(grDevices::dev.off())
+  print(
+    draw_whole_sign_chart(
+      planet_position, chart_name, date, city, country, timezone, aspect_table
+    )
+  )
+  outfile
+}
+
+#' Calculate planetary positions and render a natal chart to a temporary JPEG file
+#'
+#' Full async-safe pipeline: city/timezone lookup, planet position calculation,
+#' aspect computation, and JPEG rendering — all in one call. Designed to be
+#' invoked inside a \code{future_promise()} worker so the main Shiny thread
+#' never blocks. Only plain R objects are returned; no ggplot or R6 objects
+#' cross the \code{future} process boundary.
+#'
+#' @param country Character. Full country name (e.g., \code{"Taiwan"}).
+#' @param city Character. City name (e.g., \code{"Taipei"}).
+#' @param datetime POSIXct. Target datetime for the chart.
+#' @param chart_name Character. Display name rendered on the chart.
+#' @param selected_planets Character vector. Body names to include (e.g.,
+#'   \code{c("sun", "moon", "asc")}).
+#' @param width Integer. JPEG width in pixels. Default 600.
+#' @param height Integer. JPEG height in pixels. Default 600.
+#' @param pointsize Integer. Base font size. Default 24.
+#' @param res Integer. Resolution in ppi. Default 96.
+#'
+#' @return Absolute path (character) to the generated JPEG tempfile.
+#' @export
+#'
+calculate_and_render_natal_chart <- function(
+    country, city, datetime, chart_name, selected_planets,
+    width = 600, height = 600, pointsize = 24, res = 96) {
+
+  # 1. Resolve city coordinates and timezone
+  loc <- lookup_city_data(country, city)
+
+  # 2. Calculate planetary positions
+  planet_pos <- calculate_planet_position(
+    datetime, loc$timezone, loc$lng, loc$lat
+  )
+
+  # 3. Filter to selected planets and compute aspects
+  data_df  <- planet_pos$planetary_position
+  data_df  <- data_df[row.names(data_df) %in% selected_planets, , drop = FALSE]
+  aspects  <- calculate_aspect(data_df)
+  planet_pos$planetary_position <- data_df
+
+  # 4. Render to file — no ggplot object is returned from this function
+  file_path <- render_natal_chart_to_file(
+    data_df, chart_name, datetime, city, country, loc$timezone, aspects,
+    width = width, height = height, pointsize = pointsize, res = res
+  )
+
+  file_path
+}
