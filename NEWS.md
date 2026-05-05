@@ -1,3 +1,6 @@
+# astrocalculation 0.1.20 -- 2026-5-5
+* Enable async chart calculation
+
 # astrocalculation 0.1.19 -- 2026-5-4
 * Bug fix in LLM fallback message
 
