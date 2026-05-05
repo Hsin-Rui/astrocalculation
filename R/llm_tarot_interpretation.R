@@ -9,10 +9,9 @@
 #' and auth header can be swapped to Gemini / Vertex AI for registered /
 #' paid users in Story 1.3 without changing callers.
 #'
-#' @param card_name   Character. Localised name of the drawn card
-#'   (e.g., \code{"愚者逆位"}).
+#' @param card_name   Character. Localised name of the drawn card.
 #' @param card_meanings Character vector.  Keywords / description from the
-#'   tarot DB — used as prompt context and as the hard fallback, so must not
+#'   tarot DB, used as prompt context and as the hard fallback, so must not
 #'   be \code{NULL}.
 #' @param api_key Character or \code{NULL}.  Groq API key.  When \code{NULL}
 #'   or empty the function returns the structured fallback immediately without
@@ -193,7 +192,7 @@ validate_interpretation <- function(json_text) {
 }
 
 
-#' Internal helper — loads inst/extdata/tarot_prompts.yaml into a list.
+#' Internal helper that loads inst/extdata/tarot_prompts.yaml into a list
 #' Used by get_tarot_interpretation() and r6_data_manager.R.
 tarot_prompts <- function() {
   yaml::read_yaml(
@@ -203,7 +202,7 @@ tarot_prompts <- function() {
 }
 
 
-#' Internal helper — build fallback list (plain list, no future wrapping).
+#' Internal helper that builds a fallback list
 #' @param card_name card name parsed into LLM
 #' @param card_meanings keywords related to the card
 #'
@@ -223,4 +222,3 @@ build_tarot_fallback <- function(card_name, card_meanings){
     is_local_fallback = TRUE
   )
 }
-

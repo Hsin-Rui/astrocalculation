@@ -2,12 +2,12 @@
 % Please edit documentation in R/llm_tarot_interpretation.R
 \name{tarot_prompts}
 \alias{tarot_prompts}
-\title{Internal helper — loads inst/extdata/tarot_prompts.yaml into a list.
+\title{Internal helper that loads inst/extdata/tarot_prompts.yaml into a list
 Used by get_tarot_interpretation() and r6_data_manager.R.}
 \usage{
 tarot_prompts()
 }
 \description{
-Internal helper — loads inst/extdata/tarot_prompts.yaml into a list.
+Internal helper that loads inst/extdata/tarot_prompts.yaml into a list
 Used by get_tarot_interpretation() and r6_data_manager.R.
 }

@@ -96,7 +96,7 @@ db_get_library <- function(pool, user_id) {
   DBI::dbGetQuery(pool, DBI::sqlInterpolate(pool, query, id = user_id))
 }
 
-#' Handles "SCD Type 2" updates (if editing) or creates new entries.
+#' Handles "SCD Type 2" updates (if editing) or creates new entries
 #'
 #' @param pool database connection (postgres pool)
 #' @param user_id username

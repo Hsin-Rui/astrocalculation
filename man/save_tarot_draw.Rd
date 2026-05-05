@@ -9,7 +9,13 @@ save_tarot_draw(
   user_id,
   card_id,
   interpretation_text = NULL,
-  is_free_tier = TRUE
+  is_free_tier = TRUE,
+  interpretation_payload = NULL,
+  is_local_fallback = NULL,
+  llm_provider = NULL,
+  llm_model = NULL,
+  card_file = NULL,
+  is_reversed = NULL
 )
 }
 \arguments{
@@ -22,6 +28,18 @@ save_tarot_draw(
 \item{interpretation_text}{Full interpretation text to persist (may be NULL).}
 
 \item{is_free_tier}{Logical; TRUE = LLM credit consumed from the free 1/day quota.}
+
+\item{interpretation_payload}{JSON/string payload returned by the interpretation layer.}
+
+\item{is_local_fallback}{Logical; TRUE when the local fallback was used instead of an LLM.}
+
+\item{llm_provider}{Character provider label, e.g. \code{groq}, \code{openrouter}, \code{local_fallback}.}
+
+\item{llm_model}{Character model identifier.}
+
+\item{card_file}{Character path/name for the drawn card image.}
+
+\item{is_reversed}{Logical; whether the card was drawn reversed.}
 }
 \value{
 Invisibly, the number of rows inserted (always 1 on success).
