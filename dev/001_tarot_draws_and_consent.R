@@ -26,13 +26,19 @@ run_migration_001 <- function(con) {
   DBI::dbExecute(
     con,
     "CREATE TABLE IF NOT EXISTS tarot_draws (
-      entry_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      entry_id         UUID PRIMARY KEY,
       user_entity_id   VARCHAR(255) NOT NULL
                          REFERENCES auth_credentials(user_entity_id) ON DELETE CASCADE,
       draw_date        DATE DEFAULT CURRENT_DATE,
       card_id          VARCHAR(255) NOT NULL,
       interpretation_text TEXT,
       is_free_tier     BOOLEAN DEFAULT TRUE,
+      interpretation_payload TEXT,
+      is_local_fallback BOOLEAN,
+      llm_provider     VARCHAR(64),
+      llm_model        VARCHAR(255),
+      card_file        VARCHAR(255),
+      is_reversed      BOOLEAN,
       created_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     )"
   )

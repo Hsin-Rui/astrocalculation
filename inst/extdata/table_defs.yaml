@@ -49,7 +49,7 @@ tables:
     description: "Versioning of user details (Name, Birth Data, Photo)."
     columns:
       entry_id:
-        type: "UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        type: "UUID PRIMARY KEY"
         title: "Entry ID"
         description: "Unique surrogate key for this version."
       user_entity_id:
@@ -132,7 +132,7 @@ tables:
     description: "A collection of saved charts owned by a user."
     columns:
       entry_id:
-        type: "UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        type: "UUID PRIMARY KEY"
         title: "Entry ID"
         description: "Unique surrogate key."
       entity_id:
@@ -199,7 +199,7 @@ tables:
     description: "Structured logs for debugging and errors."
     columns:
       log_id:
-        type: "UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        type: "UUID PRIMARY KEY"
       timestamp:
         type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
       level:
@@ -224,7 +224,7 @@ tables:
     description: "Immutable log of security events: lockouts and password resets. Never deleted, used for threat detection."
     columns:
       log_id:
-        type: "UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        type: "UUID PRIMARY KEY"
       user_entity_id:
         type: "VARCHAR(255) NOT NULL"
         description: "The affected account."
@@ -249,7 +249,7 @@ tables:
     description: "Tarot Journal entries. One row per saved draw, linked to the owning user. Cascades on user deletion."
     columns:
       entry_id:
-        type: "UUID PRIMARY KEY DEFAULT gen_random_uuid()"
+        type: "UUID PRIMARY KEY"
         description: "Unique surrogate key for this journal entry."
       user_entity_id:
         type: "VARCHAR(255) NOT NULL"
@@ -266,6 +266,24 @@ tables:
       is_free_tier:
         type: "BOOLEAN DEFAULT TRUE"
         description: "Whether the interpretation was generated under the free (1/day LLM) tier."
+      interpretation_payload:
+        type: "TEXT"
+        description: "Serialized interpretation payload returned by the interpretation layer."
+      is_local_fallback:
+        type: "BOOLEAN"
+        description: "Whether the displayed interpretation was generated locally instead of by the LLM provider."
+      llm_provider:
+        type: "VARCHAR(64)"
+        description: "Provider used for the interpretation request, e.g. groq or openrouter."
+      llm_model:
+        type: "VARCHAR(255)"
+        description: "Model identifier used for the interpretation request."
+      card_file:
+        type: "VARCHAR(255)"
+        description: "Card image file path/name captured at draw time."
+      is_reversed:
+        type: "BOOLEAN"
+        description: "Whether the drawn card was reversed."
       created_at:
         type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
         description: "Row insertion timestamp."

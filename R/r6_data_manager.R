@@ -28,6 +28,7 @@ resolve_tarot_llm_config <- function() {
   groq_key <- get_clean_env("GROQ_API_KEY")
   if (!is.null(groq_key)) {
     return(list(
+      provider = "groq",
       api_key = groq_key,
       base_url = get_clean_env("GROQ_BASE_URL") %||%
         "https://api.groq.com/openai/v1/chat/completions",
@@ -38,6 +39,7 @@ resolve_tarot_llm_config <- function() {
   openrouter_key <- get_clean_env("OPENROUTER_API_KEY")
   if (!is.null(openrouter_key)) {
     return(list(
+      provider = "openrouter",
       api_key = openrouter_key,
       base_url = get_clean_env("OPENROUTER_BASE_URL") %||%
         "https://openrouter.ai/api/v1/chat/completions",
@@ -46,6 +48,7 @@ resolve_tarot_llm_config <- function() {
   }
 
   list(
+    provider = "local_fallback",
     api_key = NULL,
     base_url = "https://api.groq.com/openai/v1/chat/completions",
     model = "llama-3.1-8b-instant"
@@ -145,6 +148,9 @@ DataManager <- R6::R6Class(
     #' Named list with `title`, `body`, `general`, `work`, `health`,
     #' `relationships` from the LLM (or fallback). All fields in Traditional Chinese.
     llm_interpretation = NULL,
+    #' @field last_tarot_draw_saved
+    #' Logical flag to prevent duplicate persistence for the current draw.
+    last_tarot_draw_saved = FALSE,
 
     #' @description
     #' Initialize manager. If user_id is provided, connect to DB and load profile.
@@ -245,21 +251,14 @@ DataManager <- R6::R6Class(
         return(invisible(FALSE))
       }
 
-      # Serialise the interpretation list to a single text blob for storage
-      interp_text <- tryCatch(
-        jsonlite::toJSON(self$llm_interpretation, auto_unbox = TRUE),
-        error = function(e) as.character(self$llm_interpretation)
-      )
-
       tryCatch(
         {
           pool::poolWithTransaction(self$pool, function(con) {
-            save_tarot_draw(
-              pool                = con,
-              user_id             = new_user_id,
-              card_id             = self$current_cards,
-              interpretation_text = interp_text,
-              is_free_tier        = TRUE
+            self$save_current_tarot_draw(
+              user_id = new_user_id,
+              interpretation = self$llm_interpretation,
+              is_free_tier = TRUE,
+              pool_override = con
             )
 
             # Record LLM credit consumption (AC: 7)
@@ -289,6 +288,74 @@ DataManager <- R6::R6Class(
         }
       )
 
+      invisible(TRUE)
+    },
+
+    #' @description Persist the current tarot draw and interpretation for audit/debug review.
+    #' @param user_id Optional user ID override; defaults to current authenticated user.
+    #' @param interpretation Optional interpretation list/string; defaults to current state.
+    #' @param is_free_tier Logical. Whether the draw consumed the free tier.
+    #' @param pool_override Optional transaction connection.
+    #' @return Invisibly TRUE when saved, FALSE when skipped.
+    save_current_tarot_draw = function(user_id = self$user_id,
+                                       interpretation = self$llm_interpretation,
+                                       is_free_tier = TRUE,
+                                       pool_override = NULL) {
+      if (is.null(user_id) || !nzchar(as.character(user_id))) {
+        return(invisible(FALSE))
+      }
+      if (is.null(self$current_cards) || !nzchar(as.character(self$current_cards))) {
+        return(invisible(FALSE))
+      }
+      if (isTRUE(self$last_tarot_draw_saved) && is.null(pool_override)) {
+        return(invisible(FALSE))
+      }
+
+      pool_to_use <- pool_override %||% self$pool
+      if (is.null(pool_to_use)) {
+        return(invisible(FALSE))
+      }
+
+      interpretation_payload <- tryCatch(
+        jsonlite::toJSON(interpretation, auto_unbox = TRUE, null = "null"),
+        error = function(e) as.character(interpretation)
+      )
+      interpretation_text <- if (is.list(interpretation)) {
+        paste(
+          c(
+            interpretation$title,
+            interpretation$body,
+            interpretation$general,
+            interpretation$work,
+            interpretation$health,
+            interpretation$relationships
+          ),
+          collapse = "\n"
+        )
+      } else {
+        as.character(interpretation)
+      }
+
+      llm_config <- resolve_tarot_llm_config()
+      is_fallback <- is.list(interpretation) && isTRUE(interpretation$is_local_fallback)
+      provider <- if (is_fallback) "local_fallback" else llm_config$provider
+      model <- if (is_fallback) NA_character_ else llm_config$model
+
+      save_tarot_draw(
+        pool = pool_to_use,
+        user_id = as.character(user_id),
+        card_id = as.character(self$current_cards),
+        interpretation_text = interpretation_text,
+        is_free_tier = isTRUE(is_free_tier),
+        interpretation_payload = interpretation_payload,
+        is_local_fallback = is_fallback,
+        llm_provider = provider,
+        llm_model = model,
+        card_file = self$card_files,
+        is_reversed = self$card_reverse
+      )
+
+      self$last_tarot_draw_saved <- TRUE
       invisible(TRUE)
     },
 
@@ -705,6 +772,7 @@ DataManager <- R6::R6Class(
     shuffle_and_prepare = function(skip_llm = FALSE) {
       # Synchronously draw the card (fast \u2014 just DB + RNG)
       self$draw_one_tarot_card()
+      self$last_tarot_draw_saved <- FALSE
 
       # Capture card state as plain values before entering async worker
       card_name    <- self$current_cards

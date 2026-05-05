@@ -431,7 +431,7 @@ test_that("DataManager$promote_guest_draw persists current_cards + llm_interpret
       expect_equal(calls$save$card_id, "愚者")
       expect_true(calls$save$is_free_tier)
     },
-    save_tarot_draw = function(pool, user_id, card_id, interpretation_text, is_free_tier) {
+    save_tarot_draw = function(pool, user_id, card_id, interpretation_text, is_free_tier, ...) {
       calls$save <<- list(user_id = user_id, card_id = card_id,
                           interpretation_text = interpretation_text,
                           is_free_tier = is_free_tier)
