@@ -1,3 +1,17 @@
+test_that("required save fields reject blank values", {
+  expect_error(require_non_empty("", "Chart name"), "Chart name is required")
+  expect_error(require_non_empty("   ", "City"), "City is required")
+  expect_equal(require_non_empty(" Taipei ", "City"), "Taipei")
+})
+
+test_that("normalize_local_datetime preserves selected city wall time", {
+  entered <- as.POSIXct("1986-02-13 20:30:00", tz = "UTC")
+  stored <- normalize_local_datetime(entered, "Asia/Taipei")
+
+  expect_equal(format(stored, "%Y-%m-%d %H:%M:%S", tz = "Asia/Taipei"), "1986-02-13 20:30:00")
+  expect_equal(format(stored, "%Y-%m-%d %H:%M:%S", tz = "UTC"), "1986-02-13 12:30:00")
+})
+
 test_that("Story 3: Personal Library (Save, Load, Delete)", {
 
   # 1. Setup: Create a User

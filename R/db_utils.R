@@ -28,8 +28,12 @@ db_get_profile <- function(pool, user_id) {
 
 #'
 db_save_profile <- function(pool, user_id, data) {
+  display_name <- require_non_empty(data$display_name, "Display name")
+  country <- require_non_empty(data$country, "Country")
+  city_name <- require_non_empty(data$city_name, "City")
+
   # 1. PERFORM LOOKUP
-  loc_data <- lookup_city_data(data$country, data$city_name)
+  loc_data <- lookup_city_data(country, city_name)
 
   # 2. RESOLVE TIMEZONE (Defensive)
   final_tz <- loc_data$timezone
@@ -37,19 +41,12 @@ db_save_profile <- function(pool, user_id, data) {
     final_tz <- "UTC"
   }
 
-  # 3. PREPARE TIMESTAMP (The Fix from Reprex)
-  birth_ts <- data$birth_timestamp
-  if (is.null(birth_ts)) {
-    birth_ts <- Sys.time()
-  }
-
-  # Apply the timezone strictly to the timestamp object
-  # This ensures 'birth_ts' is a valid POSIXct with the correct TZ attribute
-  birth_ts <- lubridate::force_tz(birth_ts, tzone = final_tz)
+  # 3. PREPARE TIMESTAMP
+  birth_ts <- normalize_local_datetime(data$birth_timestamp, final_tz)
 
   message(sprintf(
     "Saving Profile for %s in %s (TZ: %s)",
-    user_id, data$city_name, final_tz
+    user_id, city_name, final_tz
   ))
 
   pool::poolWithTransaction(pool, function(con) {
@@ -75,11 +72,11 @@ db_save_profile <- function(pool, user_id, data) {
       )
     ",
       id = user_id,
-      name = data$display_name,
+      name = display_name,
       ts = birth_ts,
       tz = final_tz,
-      city = data$city_name,
-      country = data$country,
+      city = city_name,
+      country = country,
       lat = loc_data$lat,
       lng = loc_data$lng,
       photo = if (is.null(data$profile_photo)) NA_character_ else data$profile_photo
@@ -104,13 +101,13 @@ db_get_library <- function(pool, user_id) {
 #' @param entity_id uuid of the chart
 #'
 db_save_library_entry <- function(pool, user_id, data, entity_id = NULL) {
-  if (is.null(data$birth_timestamp)) stop("Birth timestamp is required")
-  if (is.null(data$country)) stop("Country is required")
-  if (is.null(data$city_name)) stop("City is required")
-  if (is.null(data$name)) stop("Chart name is required")
+  chart_name <- require_non_empty(data$name, "Chart name")
+  country <- require_non_empty(data$country, "Country")
+  city_name <- require_non_empty(data$city_name, "City")
+  if (is.null(data$birth_timestamp)) stop("Birth timestamp is required", call. = FALSE)
 
   # Lookup Location
-  loc_data <- lookup_city_data(data$country, data$city_name)
+  loc_data <- lookup_city_data(country, city_name)
 
   # Resolve Timezone
   final_tz <- loc_data$timezone
@@ -118,12 +115,7 @@ db_save_library_entry <- function(pool, user_id, data, entity_id = NULL) {
     final_tz <- "UTC"
   }
 
-  # Prepare Timestamp
-  birth_ts <- data$birth_timestamp
-  if (is.null(birth_ts)) birth_ts <- Sys.time()
-
-  # Force Timezone
-  birth_ts <- lubridate::force_tz(birth_ts, tzone = final_tz)
+  birth_ts <- normalize_local_datetime(data$birth_timestamp, final_tz)
   pool::poolWithTransaction(pool, function(con) {
     # Generate or Reuse ID
     final_entity_id <- entity_id
@@ -154,11 +146,11 @@ db_save_library_entry <- function(pool, user_id, data, entity_id = NULL) {
     ",
       eid = final_entity_id,
       owner = user_id,
-      name = data$name,
+      name = chart_name,
       ts = birth_ts,
       tz = final_tz,
-      city = data$city_name,
-      country = data$country,
+      city = city_name,
+      country = country,
       lat = loc_data$lat,
       lng = loc_data$lng,
       notes = data$notes %||% ""
@@ -176,6 +168,42 @@ db_delete_library_entry <- function(pool, entry_id) {
 
 # Helper for NULL checks
 `%||%` <- function(a, b) if (!is.null(a)) a else b
+
+#' Require a non-empty scalar value
+#'
+#' @param value Value to validate.
+#' @param label Human-readable field name for error messages.
+#' @return Trimmed character scalar.
+require_non_empty <- function(value, label) {
+  if (is.null(value) || length(value) == 0 || is.na(value[1]) ||
+      !nzchar(trimws(as.character(value[1])))) {
+    stop(paste(label, "is required"), call. = FALSE)
+  }
+
+  trimws(as.character(value[1]))
+}
+
+#' Interpret a UI datetime as local wall time for a location timezone
+#'
+#' @param value POSIXt or parseable datetime from Shiny.
+#' @param timezone IANA timezone for the selected city.
+#' @return POSIXct timestamp whose wall-clock components are in `timezone`.
+normalize_local_datetime <- function(value, timezone) {
+  if (is.null(value) || length(value) == 0 || is.na(value[1])) {
+    stop("Birth timestamp is required", call. = FALSE)
+  }
+
+  if (inherits(value, "POSIXt")) {
+    return(lubridate::force_tz(value[1], tzone = timezone))
+  }
+
+  parsed <- lubridate::as_datetime(as.character(value[1]), tz = timezone)
+  if (is.na(parsed)) {
+    stop("Birth timestamp is invalid", call. = FALSE)
+  }
+
+  parsed
+}
 
 #' Lookup City Coordinates and Timezone
 #'

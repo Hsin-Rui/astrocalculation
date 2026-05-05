@@ -63,20 +63,25 @@ get_tarot_interpretation <- function(
 
   # --- HTTP request with retry ------------------------------------------
   response_text <- tryCatch({
+    request_body <- list(
+      messages    = list(
+        list(role = "system", content = system_prompt),
+        list(role = "user",   content = user_prompt)
+      ),
+      max_tokens  = 512L,
+      temperature = 0.7,
+      response_format = list(type = "json_object")
+    )
+    if (!is.null(model) && nchar(trimws(model)) > 0) {
+      request_body$model <- model
+    }
+
     req <- httr2::request(base_url) |>
       httr2::req_headers(
         "Authorization" = paste("Bearer", api_key),
         "Content-Type"  = "application/json"
       ) |>
-      httr2::req_body_json(list(
-        model       = model,
-        messages    = list(
-          list(role = "system", content = system_prompt),
-          list(role = "user",   content = user_prompt)
-        ),
-        max_tokens  = 256L,
-        temperature = 0.7
-      )) |>
+      httr2::req_body_json(request_body) |>
       httr2::req_timeout(seconds = 10) |>
       httr2::req_retry(
         max_tries = 3,
@@ -218,5 +223,4 @@ build_tarot_fallback <- function(card_name, card_meanings){
     is_local_fallback = TRUE
   )
 }
-
 

@@ -156,6 +156,45 @@ test_that("reset_password delegates to auth logic", {
   )
 })
 
+test_that("load_chart_to_view keeps local wall time after DB UTC round trip", {
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(
+        {
+          r6$pool <- NULL
+        },
+        add = TRUE
+      )
+
+      r6$user_profile <- data.frame(
+        display_name = "Taipei Chart",
+        birth_timestamp = as.POSIXct("1986-02-13 12:30:00", tz = "UTC"),
+        timezone = "Asia/Taipei",
+        city_name = "Taipei",
+        country = "Taiwan",
+        lat = 25.03,
+        lng = 121.56
+      )
+
+      r6$load_chart_to_view(source = "profile")
+
+      expect_equal(
+        format(r6$horoscope_datetime, "%Y-%m-%d %H:%M:%S", tz = "Asia/Taipei"),
+        "1986-02-13 20:30:00"
+      )
+    },
+    connect_postgres_db = function() list(conn = TRUE),
+    Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
+    lookup_city_data = function(country, city) list(lat = 25.03, lng = 121.56, timezone = "Asia/Taipei"),
+    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_aspect = function(data) data.frame(),
+    draw_whole_sign_chart = function(...) list(),
+    poolWithTransaction = function(pool, code) code(NULL),
+    .env = asNamespace("astrocalculation")
+  )
+})
+
 test_that("adjust_time delegates to add/minus helpers and refreshes chart", {
   calls <- list()
 
@@ -435,4 +474,3 @@ test_that("DataManager$promote_guest_draw is a no-op (returns FALSE) when no gue
     .env = asNamespace("astrocalculation")
   )
 })
-
