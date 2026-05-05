@@ -445,21 +445,26 @@ update horoscope. Calculate planetary positions, draw chart.
 \if{html}{\out{<a id="method-DataManager-update_chart_async"></a>}}
 \if{latex}{\out{\hypertarget{method-DataManager-update_chart_async}{}}}
 \subsection{Method \code{update_chart_async()}}{
-Async variant of update_chart for non-blocking guest IP-geo chart rendering.
-Runs the heavy computation in a future worker; bypasses city lookup, using
-caller-supplied timezone / coordinates from IP geolocation instead.
+Async variant of update_chart for non-blocking chart rendering.
+Runs the heavy computation in a future worker using the current
+DataManager chart state. Optional caller-supplied coordinates support the
+guest IP-geolocation path.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataManager$update_chart_async(timezone, latitude, longitude)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$update_chart_async(
+  timezone = NULL,
+  latitude = NULL,
+  longitude = NULL
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{timezone}}{Character. IANA timezone string from IP lookup.}
+\item{\code{timezone}}{Optional character. IANA timezone string from IP lookup.}
 
-\item{\code{latitude}}{Numeric. Latitude from IP lookup.}
+\item{\code{latitude}}{Optional numeric. Latitude from IP lookup.}
 
-\item{\code{longitude}}{Numeric. Longitude from IP lookup.}
+\item{\code{longitude}}{Optional numeric. Longitude from IP lookup.}
 }
 \if{html}{\out{</div>}}
 }

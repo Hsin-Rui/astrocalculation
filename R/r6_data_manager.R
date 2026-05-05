@@ -546,32 +546,34 @@ DataManager <- R6::R6Class(
     },
 
     #' @description
-    #' Async variant of update_chart for non-blocking guest IP-geo chart rendering.
-    #' Runs the heavy computation in a future worker; bypasses city lookup, using
-    #' caller-supplied timezone / coordinates from IP geolocation instead.
-    #' @param timezone Character. IANA timezone string from IP lookup.
-    #' @param latitude Numeric. Latitude from IP lookup.
-    #' @param longitude Numeric. Longitude from IP lookup.
+    #' Async variant of update_chart for non-blocking chart rendering.
+    #' Runs the heavy computation in a future worker using the current
+    #' DataManager chart state. Optional caller-supplied coordinates support the
+    #' guest IP-geolocation path.
+    #' @param timezone Optional character. IANA timezone string from IP lookup.
+    #' @param latitude Optional numeric. Latitude from IP lookup.
+    #' @param longitude Optional numeric. Longitude from IP lookup.
     #' @return A \code{future::Future} that resolves to the generated JPEG path.
     #' @importFrom future future
-    update_chart_async = function(timezone, latitude, longitude) {
+    update_chart_async = function(timezone = NULL, latitude = NULL, longitude = NULL) {
       # Capture all needed state as plain values before entering the future worker
       dt      <- self$horoscope_datetime
       name    <- self$chart_name
       city    <- self$horoscope_city
       country <- self$horoscope_country
       planets <- self$selected_planets
-      safe_lat <- if (is.finite(latitude)) latitude else 25.0330
-      safe_lng <- if (is.finite(longitude)) longitude else 121.5654
+      worker_tz <- if (!is.null(timezone) && nzchar(timezone)) timezone else self$horoscope_timezone
+      safe_lat <- if (!is.null(latitude) && is.finite(latitude)) latitude else self$horoscope_latitude
+      safe_lng <- if (!is.null(longitude) && is.finite(longitude)) longitude else self$horoscope_longitude
 
       future::future({
-        planet_pos <- calculate_planet_position(dt, timezone, safe_lng, safe_lat)
+        planet_pos <- calculate_planet_position(dt, worker_tz, safe_lng, safe_lat)
         data_df    <- planet_pos$planetary_position
         data_df    <- data_df[(row.names(data_df) %in% planets), ]
         aspect     <- calculate_aspect(data_df)
         planet_pos$planetary_position <- data_df
         render_natal_chart_to_file(
-          data_df, name, dt, city, country, timezone, aspect
+          data_df, name, dt, city, country, worker_tz, aspect
         )
       }, packages = "astrocalculation", seed = NULL)
     },
