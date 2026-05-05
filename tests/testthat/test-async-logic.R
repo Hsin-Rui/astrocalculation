@@ -200,6 +200,43 @@ test_that("DataManager$update_chart_async respects selected_planets filter", {
   expect_false("moon"   %in% row.names(captured_data))
 })
 
+test_that("DataManager$update_chart_async refreshes location metadata like update_chart", {
+  tmp_jpeg <- tempfile(fileext = ".jpg")
+  writeLines("stub", tmp_jpeg)
+  on.exit(unlink(tmp_jpeg, force = TRUE), add = TRUE)
+
+  with_namespace_bindings(
+    list(
+      connect_postgres_db = function() list(conn = TRUE),
+      Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
+      lookup_city_data = function(country, city) {
+        if (identical(country, "Japan") && identical(city, "Tokyo")) {
+          return(list(lat = 35.6895, lng = 139.6917, timezone = "Asia/Tokyo"))
+        }
+
+        list(lat = 25.03, lng = 121.56, timezone = "Asia/Taipei")
+      },
+      calculate_planet_position = function(...) list(planetary_position = make_mock_planet_df()),
+      calculate_aspect = function(data) make_mock_aspect_df(),
+      draw_whole_sign_chart = function(...) ggplot2::ggplot(),
+      render_natal_chart_to_file = function(...) tmp_jpeg
+    ),
+    with_sequential_future({
+          r6 <- suppressMessages(DataManager$new())
+          on.exit(r6$pool <- NULL, add = TRUE)
+          r6$horoscope_country <- "Japan"
+          r6$horoscope_city <- "Tokyo"
+
+          result <- future::value(r6$update_chart_async())
+
+          expect_equal(result, tmp_jpeg)
+          expect_equal(r6$horoscope_timezone, "Asia/Tokyo")
+          expect_equal(r6$horoscope_latitude, 35.6895)
+          expect_equal(r6$horoscope_longitude, 139.6917)
+    })
+  )
+})
+
 test_that("DataManager$update_chart_async uses optional IP-geolocation coordinates", {
   tmp_jpeg <- tempfile(fileext = ".jpg")
   writeLines("stub", tmp_jpeg)
