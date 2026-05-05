@@ -82,7 +82,7 @@ auth_register_user <- function(pool, user_id, email, password, display_name,
     ", id = user_id, name = display_name, voice = oracle_voice_preference))
   })
 
-  app_url <- normalize_app_base_url(Sys.getenv("APP_BASE_URL", "http://127.0.0.1:3000"))
+  app_url <- Sys.getenv("APP_BASE_URL", "http://127.0.0.1:3000")
 
   tryCatch(
     {
@@ -217,7 +217,7 @@ auth_trigger_password_reset <- function(pool, email, ttl_minutes = 30) {
     token = token, exp = expires_at, id = user_row$user_entity_id[1]
   ))
 
-  app_url <- normalize_app_base_url(Sys.getenv("APP_BASE_URL", "http://127.0.0.1:3000"))
+  app_url <- Sys.getenv("APP_BASE_URL", "http://127.0.0.1:3000")
 
   tryCatch(
     {

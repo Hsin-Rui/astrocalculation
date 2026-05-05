@@ -104,7 +104,6 @@ db_save_library_entry <- function(pool, user_id, data, entity_id = NULL) {
   chart_name <- require_non_empty(data$name, "Chart name")
   country <- require_non_empty(data$country, "Country")
   city_name <- require_non_empty(data$city_name, "City")
-  if (is.null(data$birth_timestamp)) stop("Birth timestamp is required", call. = FALSE)
 
   # Lookup Location
   loc_data <- lookup_city_data(country, city_name)
