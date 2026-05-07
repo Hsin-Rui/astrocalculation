@@ -161,19 +161,16 @@ DataManager <- R6::R6Class(
     #' @param password user password
     #' @param display_name User name to be displayed in chart
     #' @param terms_accepted Logical. Must be TRUE; hard-fails registration otherwise.
-    #' @param oracle_voice_preference Character. "Living Spark" or "Ancient Echo". Defaults to "Living Spark".
     #' @return The new user_id if successful, throws error otherwise
     register = function(user_id, email, password, display_name,
-                        terms_accepted = FALSE,
-                        oracle_voice_preference = "Living Spark") {
+                        terms_accepted = FALSE) {
       if (is.null(self$pool)) {
         return(message("Database is offline. Registration is currently unavailable."))
       }
       # Delegates to the logic function
       new_id <- auth_register_user(
         self$pool, user_id, email, password, display_name,
-        terms_accepted        = terms_accepted,
-        oracle_voice_preference = oracle_voice_preference
+        terms_accepted        = terms_accepted
       )
       if (!is.null(self$logger)) {
         self$logger$log_info(

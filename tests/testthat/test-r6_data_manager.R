@@ -407,45 +407,6 @@ make_dm_base_bindings <- function(extra = list()) {
   )
 }
 
-test_that("DataManager$register passes terms_accepted and oracle_voice_preference to auth_register_user", {
-  calls <- list()
-
-  with_mocked_bindings(
-    {
-      r6 <- suppressMessages(DataManager$new())
-      on.exit(r6$pool <- NULL, add = TRUE)
-
-      result <- r6$register(
-        user_id               = "uid-1",
-        email                 = "a@b.com",
-        password              = "Abcd123!",
-        display_name          = "Alice",
-        terms_accepted        = TRUE,
-        oracle_voice_preference = "Ancient Echo"
-      )
-
-      expect_equal(calls$terms_accepted, TRUE)
-      expect_equal(calls$voice, "Ancient Echo")
-      expect_equal(result$user_id, "uid-1")
-    },
-    auth_register_user = function(pool, user_id, email, password, display_name,
-                                  terms_accepted = FALSE, oracle_voice_preference = "Living Spark") {
-      calls$terms_accepted <<- terms_accepted
-      calls$voice          <<- oracle_voice_preference
-      list(user_id = user_id, verification_token = "tok")
-    },
-    connect_postgres_db = function() list(conn = TRUE),
-    Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
-    lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
-    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
-    calculate_aspect   = function(data) data.frame(),
-    draw_natal_chart = mock_ggplot_chart,
-    db_get_profile = function(pool, uid) NULL,
-    db_get_library = function(pool, uid) data.frame(),
-    .env = asNamespace("astrocalculation")
-  )
-})
-
 test_that("DataManager$promote_guest_draw persists current_cards + llm_interpretation and sets draw_status to 'saved'", {
   calls <- list()
 
