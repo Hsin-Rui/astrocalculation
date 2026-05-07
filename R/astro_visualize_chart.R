@@ -1,6 +1,6 @@
 #' Draw chart template using ggplot
 #'
-#' @param style chart style (whole sign, chris brennan, others)
+#' @param style chart style (whole sign, chris brennan, quadrant)
 #'
 #' @importFrom showtext showtext_auto
 #' @importFrom stringr str_extract
@@ -9,7 +9,7 @@
 #' @return ggplot object (three possible empty chart templates for further plotting)
 #'
 
-draw_chart_template <- function(style="whole_sign"){
+draw_chart_template <- function(style=c("whole_sign", "chris_brennan", "quadrant")){
 
   ## 1. define x,y for for circles
 
@@ -38,14 +38,7 @@ draw_chart_template <- function(style="whole_sign"){
   cusps_x <- inner_circle2$x [equal_division]
   cusps_y <- inner_circle2$y [equal_division]
 
-  ## 4. define x, y of house number for whole sign chart
-
-  house_position <- get_circle_coords(r=0.45, length.out=360)
-  house_x <- house_position$x[seq(from=15, by=30, length.out=12)]
-  house_y <- house_position$y[seq(from=15, by=30, length.out=12)]
-  house_number <- as.character(1:12)
-
-  ## 5. draw chris brennan style chart template
+  ## 4. draw chris brennan style chart template
 
   if(style=="chris_brennan") {
 
@@ -64,7 +57,7 @@ draw_chart_template <- function(style="whole_sign"){
 
   }
 
-  ## 6. draw common parts of the template
+  ## 5. draw common parts of the template
 
   p_common <-
     ggplot()+
@@ -81,9 +74,16 @@ draw_chart_template <- function(style="whole_sign"){
     # make coordinates x & y equally long
     coord_equal()
 
-  ## 7. draw whole sign chart template
+  ## 6. draw whole sign chart template
 
   if(style=="whole_sign") {
+
+    ## define x, y of house number for whole sign chart
+    house_position <- get_circle_coords(r=0.45, length.out=360)
+    house_x <- house_position$x[seq(from=15, by=30, length.out=12)]
+    house_y <- house_position$y[seq(from=15, by=30, length.out=12)]
+    house_number <- as.character(1:12)
+
 
     p_whole_sign <-
       p_common +
@@ -97,15 +97,16 @@ draw_chart_template <- function(style="whole_sign"){
 
   }
 
-  ## 8. draw template for whole sign house chart
+  ## 7. draw template for whole sign house chart
 
-  if(style=="others"){
+  if(style=="quadrant"){
 
     p_quadrant <-
       p_common+
-      geom_segment(aes(x=cusps_x[c(1,7)], y=cusps_y[c(1,7)], xend=c(1.08, -1.08), yend=sign_y[c(1,7)]),
-                   color="black", linewidth=0.4,
-                   arrow = arrow(length = unit(0.15, "inches")))
+      geom_segment(aes(x=cusps_x[c(1,7)], y=cusps_y[c(1,7)], xend=c(0.9, -0.9), yend=sign_y[c(1,7)]),
+                   color="black", linewidth=0.4) +
+      geom_segment(aes(x=c(1,-1), y=0, xend=c(1.05, -1.05), yend=0),
+                   color="black", linewidth=0.4)
 
     return(p_quadrant)
 
@@ -149,13 +150,13 @@ draw_whole_sign_chart <- function(planet_position, chart_name, date, city, count
   p <- draw_chart_template(style = "whole_sign")
 
   selected_elements <- row.names(planet_position)
+
   # 1. put on zodiac sign
   ## determine sign order
-
   asc_sign <- find_sign(planet_position$deg [selected_elements %in% "asc"])
   sign_order <- define_sign_order(asc_sign)
 
-  ## get coordinates of x and x
+  ## get coordinates of x and y
 
   circle <- get_circle_coords(r=0.95, length.out=156)
 
@@ -278,6 +279,253 @@ draw_whole_sign_chart <- function(planet_position, chart_name, date, city, count
       geom_segment(data = aspect_table, aes(x=x, xend=x_end, y=y, yend=y_end), color=aspect_table$color)
 
     )
+}
+
+#' Draw quadrant chart
+#'
+
+draw_quadrant_chart <- function(planet_position,
+                                  house_cusps,
+                                  house_system=c("placidus", "koch", "regiomontanus"),
+                                  chart_name,
+                                  date,
+                                  city,
+                                  country,
+                                  timezone,
+                                  aspect_table){
+
+  p <- draw_chart_template(style = "quadrant")
+
+  # 1. put on zodiac sign
+  ## determine sign order
+
+  asc_sign <- find_sign(planet_position$deg [selected_elements %in% "asc"])
+  sign_order <- define_sign_order(asc_sign)
+
+  # calculate difference of AC - DC axis and sign border
+  quadrant_start <- house_cusps$placidus[1]
+  whole_sign_start <- house_cusps$whole_sign[1]
+  ic <- house_cusps$placidus[4]
+  degree_difference <- quadrant_start - whole_sign_start
+  first_line <- as.integer((30 - degree_difference) * 3)
+
+  ## get coordinates of x and y for sign borders
+  outer_circle <- get_circle_coords(length.out=1080)
+  outer_circle2 <- get_circle_coords(r=0.9, length.out=1080)
+  outer_circle3 <- get_circle_coords(r=1.05, length.out=1080)
+  inner_circle2 <- get_circle_coords(r=0.4, length.out=1080)
+
+  sign_x_end <- outer_circle$x[seq(from=first_line, by=90, length.out=12)]
+  sign_x_start <- outer_circle2$x[seq(from=first_line, by=90, length.out=12)]
+  sign_y_end <- outer_circle$y[seq(from=first_line, by=90, length.out=12)]
+  sign_y_start <- outer_circle2$y[seq(from=first_line, by=90, length.out=12)]
+
+  ## get IC-MC axis
+  ac_ic_difference <- ic - quadrant_start
+  if (ac_ic_difference < 0) ac_ic_difference <- ac_ic_difference + 360
+
+  ic_point <- 541 + (ac_ic_difference)*3
+  mc_point <- (ac_ic_difference)*3
+
+  axix_x_start <- inner_circle2$x[c(ic_point, mc_point)]
+  axix_x_end <- outer_circle2$x[c(ic_point, mc_point)]
+  axix_y_start <- inner_circle2$y[c(ic_point, mc_point)]
+  axix_y_end <- outer_circle2$y[c(ic_point, mc_point)]
+
+  ## get MC & IC marker
+  marker_x_start <- outer_circle$x[c(ic_point, mc_point)]
+  marker_x_end <- outer_circle3$x[c(ic_point, mc_point)]
+  marker_y_start <- outer_circle$y[c(ic_point, mc_point)]
+  marker_y_end <- outer_circle3$y[c(ic_point, mc_point)]
+
+  ## get sign symbols position
+  first_symbol_position <- (first_line - 45)
+  symbol_position <- seq(first_symbol_position, by = 90, length.out=12)
+  symbol_position <- dplyr::if_else(symbol_position > 1080, symbol_position - 1080, symbol_position)
+  symbol_position <- dplyr::if_else(symbol_position < 0, symbol_position + 1080, symbol_position)
+
+  circle <- get_circle_coords(r=0.95, length.out=1080)
+
+  sign_x <- circle$x[symbol_position] ## the seventh value is near by x = -1
+  sign_y <- circle$y[symbol_position]
+
+  sign_x <- sign_x [define_sign_order(7)]
+  sign_y <- sign_y [define_sign_order(7)]
+
+  ## get house borders
+  quadrant_house_cusps <- house_cusps[house_system] |> unlist()
+  quadrant_house_cusps <- quadrant_house_cusps - quadrant_start
+  quadrant_house_cusps <- dplyr::if_else(quadrant_house_cusps < 0, quadrant_house_cusps + 360, quadrant_house_cusps)
+
+  quadrant_house_cusps_position <- as.integer((quadrant_house_cusps[c(2,3,5,6,8,9,11,12)])*3)
+
+  cusps_x_start <- inner_circle2$x [quadrant_house_cusps_position]
+  cusps_x_end <- outer_circle2$x [quadrant_house_cusps_position]
+  cusps_y_start <- inner_circle2$y [quadrant_house_cusps_position]
+  cusps_y_end <-outer_circle2$y [quadrant_house_cusps_position]
+
+
+  # get house number position
+  position <-
+    tibble::as_tibble(quadrant_house_cusps) |>
+    dplyr::mutate(next_cusp = dplyr::coalesce(dplyr::lead(value), 360)) |>
+    dplyr::mutate(diff = next_cusp - value) |>
+    dplyr::mutate(positon = as.integer((value + (diff / 2))*3)) |>
+    dplyr::select(positon) |>
+    dplyr::pull()
+
+  house_number_circle <- get_circle_coords(r=0.45, length.out=1080)
+  house_number_x <- house_number_circle$x[position]
+  house_number_y <- house_number_circle$y[position]
+
+  p <-
+    p +
+    ## draw sign border
+    ggplot2::geom_segment(ggplot2::aes(x=sign_x_start, y=sign_y_start, xend=sign_x_end, yend=sign_y_end),
+                 color="black", linewidth=0.4) +
+    ## draw IC MC axis
+    ggplot2::geom_segment(ggplot2::aes(x=axix_x_start, y=axix_y_start, xend=axix_x_end, yend=axix_y_end),
+                 color="black", linewidth=0.4) +
+    ## draw IC MC marker
+    ggplot2::geom_segment(ggplot2::aes(x=marker_x_start, y=marker_y_start, xend=marker_x_end, yend=marker_y_end),
+                 color="black", linewidth=0.4) +
+    ## draw sign symbols
+    ggplot2::geom_text(ggplot2::aes(x=sign_x, y=sign_y, label=zodiac_sign[sign_order]),
+                       family="HamburgSymbols", size=6, color=zodiac_sign_color[sign_order]) +
+    ## draw house borders
+    ggplot2::geom_segment(ggplot2::aes(x=cusps_x_start, y=cusps_y_start, xend=cusps_x_end, yend=cusps_y_end),
+                        color="grey", linewidth=0.4) +
+    ## draw house numbers
+    ggplot2::geom_text(ggplot2::aes(x=house_number_x, y=house_number_y, label=c(7:12, 1:6)), size=3.5)
+
+  ## 2. put on planets etc.
+
+  ## find starting point (desc as starting point)
+  starting_deg <- quadrant_start - 180
+  starting_deg <- dplyr::if_else(starting_deg < 0, starting_deg + 360, starting_deg)
+
+  coords_planet_points <- get_circle_coords(r=0.9, length.out=36000)
+  coords_planet_glyphs <- get_circle_coords(r=0.82, length.out=36000)
+  coords_lines <- get_circle_coords(r=0.87, length.out=36000)
+
+  ## For quadrant chart, ASC and MC are placed outside of the circle, therefore handled separately
+
+  axis_position <- planet_position[row.names(planet_position) %in% c("asc", "mc"),]
+  planet_position <-  planet_position[!row.names(planet_position) %in% c("asc", "mc"),]
+
+  selected_elements <- row.names(planet_position)
+  ## x and y of geom_point for exact planetary position (r = 0.9)
+  planet_position$planet_theta <- convert_degree_to_theta(planet_position$deg, starting_deg)
+  planet_x_on_circle <- coords_planet_points$x [planet_position$planet_theta]
+  planet_y_on_circle <- coords_planet_points$y [planet_position$planet_theta]
+
+  ## determine the position of planet glyphs
+  new_theta <- optmize_planet_position(planet_position$planet_theta, planets = selected_elements)
+  planet_position$planet <- row.names(planet_position)
+  planet_position <- planet_position |> left_join(data.frame(planet_glyphs=names(new_theta), new_theta), by="planet_glyphs")
+
+  planet_x_glyphs <- coords_planet_glyphs$x [planet_position$new_theta]
+  planet_y_glyphs <- coords_planet_glyphs$y [planet_position$new_theta]
+
+  replaced <- planet_position$planet_theta != planet_position$new_theta # check which elements have been moved for better plotting
+
+  ## draw lines only for those being manipulated
+  lines_end_x <- coords_lines$x [planet_position$new_theta] [replaced]
+  lines_end_y <- coords_lines$y [planet_position$new_theta] [replaced]
+  lines_x <- coords_planet_points$x [planet_position$planet_theta] [replaced]
+  lines_y <- coords_planet_points$y [planet_position$planet_theta] [replaced]
+
+  ## sign glyphs to indicate position
+  planet_sign_coord <- get_circle_coords(r=0.66, length.out=36000)
+  planet_sign_x <- planet_sign_coord$x [planet_position$new_theta]
+  planet_sign_y <- planet_sign_coord$y [planet_position$new_theta]
+
+  ## degree
+  deg <- paste(planet_position$deg_in_sign, "\u00b0", sep="")
+  deg_coord <- get_circle_coords(r=0.73, length.out=36000)
+  deg_x <- deg_coord$x [planet_position$new_theta]
+  deg_y <- deg_coord$y [planet_position$new_theta]
+
+  ## minutes
+  minute <- paste(planet_position$min_in_sign, "'", sep="")
+  min_coord <- get_circle_coords(r=0.6, length.out=36000)
+  min_x <- min_coord$x [planet_position$new_theta]
+  min_y <- min_coord$y [planet_position$new_theta]
+
+  ## retrograde planets
+  degree_color <- dplyr::case_when(planet_position$speed < 0 ~ "darkred", TRUE ~ "black")
+  retrograde_coord <- get_circle_coords(r=0.56, length.out=36000)
+  retrograde_x <- retrograde_coord$x [planet_position$new_theta] [planet_position$speed < 0]
+  retrograde_y <- retrograde_coord$y [planet_position$new_theta] [planet_position$speed < 0]
+
+  ## format date
+  formatted_date <- format(date, "%Y/%m/%d, %A")
+  time <- paste(format(date, "%T"), timezone)
+
+  ## ASC MC position
+  asc_mc_circle <- get_circle_coords(length.out=1080, r=1.1)
+  mc_x <- asc_mc_circle$x[mc_point]
+  mc_y <- asc_mc_circle$y[mc_point]
+
+  asc_mc_deg_x <- asc_mc_circle$x[c(555, mc_point - 25)]
+  asc_mc_deg_y <- asc_mc_circle$y[c(555, mc_point - 25)]
+  asc_mc_deg <- paste0(axis_position$deg_in_sign, "\u00b0", " ", axis_position$min_in_sign, "'", sep="")
+  ## 3. aspect lines
+
+  aspect_table <-
+    aspect_table |>
+    dplyr::filter(aspect != "conjunction")
+
+  aspect_table$theta_p1 <- convert_degree_to_theta(aspect_table$deg_p1, starting_deg)
+  aspect_table$theta_p2 <- convert_degree_to_theta(aspect_table$deg_p2, starting_deg)
+
+  coords_aspect_lines <- get_circle_coords(0.4, length.out=36000)
+  aspect_table$x <- coords_aspect_lines$x [aspect_table$theta_p1]
+  aspect_table$y <- coords_aspect_lines$y [aspect_table$theta_p1]
+  aspect_table$x_end <- coords_aspect_lines$x [aspect_table$theta_p2]
+  aspect_table$y_end <- coords_aspect_lines$y [aspect_table$theta_p2]
+  aspect_table$color <- dplyr::recode(aspect_table$aspect,
+                                      "sextile"="deepskyblue2",
+                                      "square"="brown1",
+                                      "trine"="deepskyblue4",
+                                      "opposition"="darkred")
+
+  suppressMessages(
+
+    p +
+      ## put on zodiac signs
+      geom_point(aes(x=planet_x_on_circle, y=planet_y_on_circle), color=planet_position$planet_color)+
+      ## put on planetary glyphs
+      geom_text(aes(x=planet_x_glyphs, y=planet_y_glyphs, label=planet_position$planet_glyphs), family=planet_position$font_gpyphs, size=planet_position$font_size)+
+      ## draw lines to clearly indicate planetary position
+      geom_segment(aes(x=lines_x, xend=lines_end_x, y=lines_y, yend=lines_end_y), color="grey65") +
+      ## planet symbols
+      geom_text(aes(x=planet_sign_x, y=planet_sign_y, label=zodiac_sign[planet_position$sign]), family="HamburgSymbols", color=planet_position$planet_color)+
+      ## degrees
+      geom_text(aes(x=deg_x, y=deg_y, label=deg), size=3.1, color=degree_color) +
+      ## minutes
+      geom_text(aes(x=min_x, y=min_y, label=minute), size=2.9, color=degree_color) +
+      ## mark retrograde planets
+      geom_text(aes(x=retrograde_x, y=retrograde_y, label="R"), size=2.4, color="darkred")+
+
+      xlim(c(-1.12, 1.05))+
+      ylim(c(-1.06, 1.32))+
+
+      ## chart name
+      geom_text(aes(x=-0.99), y=1.31, label=chart_name, vjust="inward", hjust="inward", size=4, fontface= "bold")+
+
+      ## chart information
+      geom_text(aes(x=c(-0.99, -0.99, -0.99, -0.99), y=c(1.23, 1.16, 1.09, 1.02),label=c(formatted_date, time, city, country)),
+                vjust="inward", hjust="inward", size=3.5)+
+      ## aspect lines
+      geom_segment(data = aspect_table, aes(x=x, xend=x_end, y=y, yend=y_end), color=aspect_table$color) +
+
+      ## place AC & MC on the chart
+      geom_text(aes(x=c(-1.10, mc_x), y=c(0, mc_y), label=c("P", "Q")), family="AstroDotBasic", size = 6.5) +
+      geom_text(aes(x=asc_mc_deg_x, y=asc_mc_deg_y, label=asc_mc_deg), size=3.1, color="black")
+
+  )
+
 }
 
 #' Render a natal chart ggplot to a temporary JPEG file
