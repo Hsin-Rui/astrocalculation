@@ -13,6 +13,8 @@
 draw_chart_template <- function(style=c("whole_sign", "chris_brennan", "quadrant"),
                                 include_limits = TRUE){
 
+  style <- match.arg(style)
+
   ## 1. define x,y for for circles
 
   outer_circle <- get_circle_coords(length.out=1080)
