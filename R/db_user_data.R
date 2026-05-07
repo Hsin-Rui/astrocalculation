@@ -23,9 +23,10 @@ save_tarot_draw <- function(pool, user_id, card_id, interpretation_text = NULL,
     DBI::sqlInterpolate(
       pool,
       "INSERT INTO tarot_draws
-         (user_entity_id, card_id, interpretation_text, is_free_tier)
+         (entry_id, user_entity_id, card_id, interpretation_text, is_free_tier)
        VALUES
-         (?uid, ?card, ?interp, ?free_tier)",
+         (?entry_id, ?uid, ?card, ?interp, ?free_tier)",
+      entry_id  = uuid::UUIDgenerate(),
       uid       = user_id,
       card      = card_id,
       interp    = if (is.null(interpretation_text)) NA_character_ else interpretation_text,

@@ -56,6 +56,7 @@ auth_register_user <- function(pool, user_id, email, password, display_name,
   hashed_pw <- sodium::password_store(password)
   # Generate a random verification token
   verif_token <- uuid::UUIDgenerate()
+  profile_entry_id <- uuid::UUIDgenerate()
 
   # 5. Transaction: Insert Account -> Then Profile
   pool::poolWithTransaction(pool, function(con) {
@@ -75,11 +76,11 @@ auth_register_user <- function(pool, user_id, email, password, display_name,
     # Insert Profile with oracle_voice_preference
     DBI::dbExecute(con, DBI::sqlInterpolate(con, "
       INSERT INTO user_profiles (
-        user_entity_id, display_name, oracle_voice_preference, valid_from
+        entry_id, user_entity_id, display_name, oracle_voice_preference, valid_from
       ) VALUES (
-        ?id, ?name, ?voice, NOW()
+        ?entry_id, ?id, ?name, ?voice, NOW()
       )
-    ", id = user_id, name = display_name, voice = oracle_voice_preference))
+    ", entry_id = profile_entry_id, id = user_id, name = display_name, voice = oracle_voice_preference))
   })
 
   app_url <- Sys.getenv("APP_BASE_URL", "http://127.0.0.1:3000")
@@ -173,9 +174,9 @@ auth_verify_user <- function(pool, login_id, password) {
       # Log the lockout event for security tracking
       tryCatch(DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
         "INSERT INTO auth_security_log
-           (user_entity_id, event_type, failed_attempts_at_event, was_locked)
-         VALUES (?uid, 'account_locked', ?attempts, FALSE)",
-        uid = res$user_entity_id, attempts = new_attempts
+           (log_id, user_entity_id, event_type, failed_attempts_at_event, was_locked)
+         VALUES (?log_id, ?uid, 'account_locked', ?attempts, FALSE)",
+        log_id = uuid::UUIDgenerate(), uid = res$user_entity_id, attempts = new_attempts
       )), error = function(e) warning("Security log insert failed: ", e$message))
     } else {
       # Just increment the counter
@@ -266,8 +267,9 @@ auth_reset_password <- function(pool, token, new_password) {
   # Log the password reset event (immutable record) before making any changes
   tryCatch(DBI::dbExecute(pool, DBI::sqlInterpolate(pool,
     "INSERT INTO auth_security_log
-       (user_entity_id, event_type, failed_attempts_at_event, was_locked)
-     VALUES (?uid, 'password_reset', ?attempts, ?locked)",
+       (log_id, user_entity_id, event_type, failed_attempts_at_event, was_locked)
+     VALUES (?log_id, ?uid, 'password_reset', ?attempts, ?locked)",
+    log_id = uuid::UUIDgenerate(),
     uid = res$user_entity_id[1],
     attempts = current_state$failed_attempts[1],
     locked = was_locked
@@ -486,6 +488,7 @@ auth_handle_oauth_user <- function(pool, email, google_id, name) {
     # We use the email prefix as a default username (user can change later if we build that feature)
     # or generate a UUID. Let's use a UUID for safety to avoid collisions.
     new_uid <- uuid::UUIDgenerate()
+    profile_entry_id <- uuid::UUIDgenerate()
 
     pool::poolWithTransaction(pool, function(con) {
       # Create Credentials (No password hash needed for OAuth-only)
@@ -501,9 +504,9 @@ auth_handle_oauth_user <- function(pool, email, google_id, name) {
 
       # Create Profile
       DBI::dbExecute(con, DBI::sqlInterpolate(con, "
-        INSERT INTO user_profiles (user_entity_id, display_name, valid_from)
-        VALUES (?uid, ?name, NOW())
-      ", uid = new_uid, name = name))
+        INSERT INTO user_profiles (entry_id, user_entity_id, display_name, valid_from)
+        VALUES (?entry_id, ?uid, ?name, NOW())
+      ", entry_id = profile_entry_id, uid = new_uid, name = name))
     })
 
     return(new_uid)

@@ -56,6 +56,9 @@ DataManager <- R6::R6Class(
       "sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto",
       "chiron", "mean_node", "asc", "mc", "vertex"
     ),
+    #' @field house_system (`character()`)\cr
+    #' can be "whole_sign", "placidus", "koch" or "regiomontanus". Default at whole sign.
+    house_system = "whole_sign",
 
     ## 1-4. User auth fileds ####
 
@@ -516,15 +519,30 @@ DataManager <- R6::R6Class(
 
           # 4. Generate Visualization
           self$planet_position$planetary_position <- data
-          self$chart <- draw_whole_sign_chart(
-            data,
-            self$chart_name,
-            self$horoscope_datetime,
-            self$horoscope_city,
-            self$horoscope_country,
-            self$horoscope_timezone,
-            self$aspect_table
+          house_system <- self$house_system
+          if (is.null(house_system) || length(house_system) == 0) {
+            house_system <- "whole_sign"
+          }
+          house_system <- match.arg(
+            house_system,
+            c("whole_sign", "placidus", "koch", "regiomontanus")
           )
+
+          chart <- draw_natal_chart(
+            planet_position = data,
+            chart_name = self$chart_name,
+            date = self$horoscope_datetime,
+            city = self$horoscope_city,
+            country = self$horoscope_country,
+            timezone = self$horoscope_timezone,
+            aspect_table = self$aspect_table,
+            house_cusps = self$planet_position$house_cusps,
+            house_system = house_system
+          )
+          if (!inherits(chart, "ggplot") && !inherits(chart, "ggplot2::ggplot")) {
+            stop("draw_natal_chart did not return a ggplot object")
+          }
+          self$chart <- chart
         },
         error = function(e) {
           # 2. LOG THE CRASH
@@ -536,7 +554,8 @@ DataManager <- R6::R6Class(
               time = as.character(self$horoscope_datetime),
               city = self$horoscope_city,
               country = self$horoscope_country,
-              tz = self$horoscope_timezone
+              tz = self$horoscope_timezone,
+              house_system = self$house_system
             )
           )
           # Re-throw so UI knows something broke
@@ -562,6 +581,14 @@ DataManager <- R6::R6Class(
       city    <- self$horoscope_city
       country <- self$horoscope_country
       planets <- self$selected_planets
+      house_system <- self$house_system
+      if (is.null(house_system) || length(house_system) == 0) {
+        house_system <- "whole_sign"
+      }
+      house_system <- match.arg(
+        house_system,
+        c("whole_sign", "placidus", "koch", "regiomontanus")
+      )
 
       # If timezone is parsed into the function, then used the parsed long, lat, timezone
       # Otherwise, lookup is performed
@@ -592,7 +619,9 @@ DataManager <- R6::R6Class(
         aspect     <- calculate_aspect(data_df)
         planet_pos$planetary_position <- data_df
         render_natal_chart_to_file(
-          data_df, name, dt, city, country, worker_tz, aspect
+          data_df, name, dt, city, country, worker_tz, aspect,
+          house_cusps = planet_pos$house_cusps,
+          house_system = house_system
         )
       }, packages = "astrocalculation", seed = NULL)
     },

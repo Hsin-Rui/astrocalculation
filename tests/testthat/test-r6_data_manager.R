@@ -1,5 +1,7 @@
 library(testthat)
 
+mock_ggplot_chart <- function(...) ggplot2::ggplot()
+
 test_that("login_with_google sets user state and returns session token", {
   calls <- list()
 
@@ -33,7 +35,7 @@ test_that("login_with_google sets user state and returns session token", {
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
     calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
     calculate_aspect = function(data) data.frame(),
-    draw_whole_sign_chart = function(...) list(),
+    draw_natal_chart = mock_ggplot_chart,
     auth_handle_oauth_user = function(pool, email, google_id, name) {
       calls$oauth <<- list(email = email, google_id = google_id, name = name)
       "uid-123"
@@ -77,7 +79,7 @@ test_that("validate_session updates user_id and refreshes data", {
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
     calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
     calculate_aspect = function(data) data.frame(),
-    draw_whole_sign_chart = function(...) list(),
+    draw_natal_chart = mock_ggplot_chart,
     auth_validate_session = function(pool, token) "uid-validated",
     db_get_profile = function(pool, uid) data.frame(display_name = "Display", birth_timestamp = as.POSIXct("2020-01-01", tz = "UTC"), timezone = "UTC", city_name = "City", country = "Country", lat = 0, lng = 0),
     db_get_library = function(pool, uid) data.frame(entity_id = "lib1", name = "Lib", birth_timestamp = as.POSIXct("2020-01-01", tz = "UTC"), timezone = "UTC", city_name = "City", country = "Country", lat = 0, lng = 0),
@@ -108,7 +110,7 @@ test_that("trigger_password_reset delegates to auth logic", {
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
     calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
     calculate_aspect = function(data) data.frame(),
-    draw_whole_sign_chart = function(...) list(),
+    draw_natal_chart = mock_ggplot_chart,
     auth_trigger_password_reset = function(pool, email, ttl_minutes = 30) {
       calls$count <<- calls$count + 1
       TRUE
@@ -143,7 +145,7 @@ test_that("reset_password delegates to auth logic", {
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
     calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
     calculate_aspect = function(data) data.frame(),
-    draw_whole_sign_chart = function(...) list(),
+    draw_natal_chart = mock_ggplot_chart,
     auth_reset_password = function(pool, token, new_password) {
       calls$token <<- token
       calls$pwd <<- new_password
@@ -188,7 +190,7 @@ test_that("adjust_time delegates to add/minus helpers and refreshes chart", {
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
     calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
     calculate_aspect = function(data) data.frame(),
-    draw_whole_sign_chart = function(...) list(),
+    draw_natal_chart = mock_ggplot_chart,
     add_datetime = function(time, unit, value) {
       calls$add <<- list(time = time, unit = unit, value = value)
       time + 1
@@ -196,6 +198,50 @@ test_that("adjust_time delegates to add/minus helpers and refreshes chart", {
     minus_datetime = function(time, unit, value) {
       calls$minus <<- list(time = time, unit = unit, value = value)
       time - 1
+    },
+    db_get_profile = function(pool, uid) data.frame(display_name = "Display", birth_timestamp = as.POSIXct("2020-01-01", tz = "UTC"), timezone = "UTC", city_name = "City", country = "Country", lat = 0, lng = 0),
+    db_get_library = function(pool, uid) data.frame(entity_id = "lib1", name = "Lib", birth_timestamp = as.POSIXct("2020-01-01", tz = "UTC"), timezone = "UTC", city_name = "City", country = "Country", lat = 0, lng = 0),
+    poolWithTransaction = function(pool, code) code(NULL),
+    .env = asNamespace("astrocalculation")
+  )
+})
+
+test_that("update_chart passes house_system and house cusps to draw_natal_chart", {
+  calls <- list()
+  house_cusps <- data.frame(
+    whole_sign = seq(0, 330, by = 30),
+    placidus = seq(1, 331, by = 30),
+    koch = seq(2, 332, by = 30),
+    regiomontanus = seq(3, 333, by = 30)
+  )
+
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(
+        {
+          r6$pool <- NULL
+        },
+        add = TRUE
+      )
+
+      r6$house_system <- "placidus"
+      r6$update_chart()
+
+      expect_true(inherits(r6$chart, "ggplot") || inherits(r6$chart, "ggplot2::ggplot"))
+      expect_equal(calls$chart$house_system, "placidus")
+      expect_identical(calls$chart$house_cusps, house_cusps)
+    },
+    connect_postgres_db = function() list(conn = TRUE),
+    Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
+    lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
+    calculate_planet_position = function(...) {
+      list(planetary_position = data.frame(dummy = 1), house_cusps = house_cusps)
+    },
+    calculate_aspect = function(data) data.frame(),
+    draw_natal_chart = function(...) {
+      calls$chart <<- list(...)
+      ggplot2::ggplot()
     },
     db_get_profile = function(pool, uid) data.frame(display_name = "Display", birth_timestamp = as.POSIXct("2020-01-01", tz = "UTC"), timezone = "UTC", city_name = "City", country = "Country", lat = 0, lng = 0),
     db_get_library = function(pool, uid) data.frame(entity_id = "lib1", name = "Lib", birth_timestamp = as.POSIXct("2020-01-01", tz = "UTC"), timezone = "UTC", city_name = "City", country = "Country", lat = 0, lng = 0),
@@ -248,7 +294,7 @@ test_that("login logs auth_method=password and login_id in context", {
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
     calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
     calculate_aspect = function(data) data.frame(),
-    draw_whole_sign_chart = function(...) list(),
+    draw_natal_chart = mock_ggplot_chart,
     auth_verify_user = function(pool, login_id, password) list(id = "uid-pw", verified = TRUE),
     auth_create_session = function(pool, uid) "session-token",
     db_get_profile = function(pool, uid) data.frame(display_name = "Display", birth_timestamp = as.POSIXct("2020-01-01", tz = "UTC"), timezone = "UTC", city_name = "City", country = "Country", lat = 0, lng = 0),
@@ -290,7 +336,7 @@ test_that("login_with_google logs auth_method=google and email in context", {
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
     calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
     calculate_aspect = function(data) data.frame(),
-    draw_whole_sign_chart = function(...) list(),
+    draw_natal_chart = mock_ggplot_chart,
     auth_handle_oauth_user = function(pool, email, google_id, name) "uid-goog",
     auth_create_session = function(pool, uid) "session-token",
     db_get_profile = function(pool, uid) data.frame(display_name = "GUser", birth_timestamp = as.POSIXct("2020-01-01", tz = "UTC"), timezone = "UTC", city_name = "City", country = "Country", lat = 0, lng = 0),
@@ -314,7 +360,7 @@ make_dm_base_bindings <- function(extra = list()) {
       lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
       calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
       calculate_aspect = function(data) data.frame(),
-      draw_whole_sign_chart = function(...) list(),
+      draw_natal_chart = mock_ggplot_chart,
       db_get_profile = function(pool, uid) NULL,
       db_get_library = function(pool, uid) data.frame()
     ),
@@ -354,7 +400,7 @@ test_that("DataManager$register passes terms_accepted and oracle_voice_preferenc
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
     calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
     calculate_aspect   = function(data) data.frame(),
-    draw_whole_sign_chart = function(...) list(),
+    draw_natal_chart = mock_ggplot_chart,
     db_get_profile = function(pool, uid) NULL,
     db_get_library = function(pool, uid) data.frame(),
     .env = asNamespace("astrocalculation")
@@ -404,7 +450,7 @@ test_that("DataManager$promote_guest_draw persists current_cards + llm_interpret
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
     calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
     calculate_aspect   = function(data) data.frame(),
-    draw_whole_sign_chart = function(...) list(),
+    draw_natal_chart = mock_ggplot_chart,
     db_get_profile = function(pool, uid) NULL,
     db_get_library = function(pool, uid) data.frame(),
     .env = asNamespace("astrocalculation")
@@ -429,10 +475,9 @@ test_that("DataManager$promote_guest_draw is a no-op (returns FALSE) when no gue
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
     calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
     calculate_aspect   = function(data) data.frame(),
-    draw_whole_sign_chart = function(...) list(),
+    draw_natal_chart = mock_ggplot_chart,
     db_get_profile = function(pool, uid) NULL,
     db_get_library = function(pool, uid) data.frame(),
     .env = asNamespace("astrocalculation")
   )
 })
-

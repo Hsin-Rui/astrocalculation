@@ -84,7 +84,7 @@ test_that("render_natal_chart_to_file returns a valid JPEG path", {
   mock_date <- as.POSIXct("1963-12-18 06:33:00", tz = "America/Chicago")
 
   result_path <- with_namespace_bindings(
-    list(draw_whole_sign_chart = function(...) ggplot2::ggplot()),
+    list(draw_natal_chart = function(...) ggplot2::ggplot()),
     render_natal_chart_to_file(
       planet_position = planet_df,
       chart_name      = "Test Chart",
@@ -111,7 +111,7 @@ test_that("render_natal_chart_to_file always closes the graphics device", {
   dev_count_before <- length(grDevices::dev.list())
 
   path <- with_namespace_bindings(
-    list(draw_whole_sign_chart = function(...) ggplot2::ggplot()),
+    list(draw_natal_chart = function(...) ggplot2::ggplot()),
     render_natal_chart_to_file(
       planet_position = planet_df,
       chart_name      = "Device Test",
@@ -146,7 +146,7 @@ test_that("DataManager$update_chart_async returns only the JPEG path (AC 5)", {
       lookup_city_data = function(country, city) list(lat = 35.3273, lng = -96.9253, timezone = "America/Chicago"),
       calculate_planet_position = function(...) list(planetary_position = make_mock_planet_df()),
       calculate_aspect = function(data) make_mock_aspect_df(),
-      draw_whole_sign_chart = function(...) ggplot2::ggplot(),
+      draw_natal_chart = function(...) ggplot2::ggplot(),
       render_natal_chart_to_file = function(...) tmp_jpeg
     ),
     with_sequential_future({
@@ -185,7 +185,7 @@ test_that("DataManager$update_chart_async respects selected_planets filter", {
         captured_data <<- data
         make_mock_aspect_df()
       },
-      draw_whole_sign_chart = function(...) ggplot2::ggplot(),
+      draw_natal_chart = function(...) ggplot2::ggplot(),
       render_natal_chart_to_file = function(...) tmp_jpeg
     ),
     with_sequential_future({
@@ -218,7 +218,7 @@ test_that("DataManager$update_chart_async refreshes location metadata like updat
       },
       calculate_planet_position = function(...) list(planetary_position = make_mock_planet_df()),
       calculate_aspect = function(data) make_mock_aspect_df(),
-      draw_whole_sign_chart = function(...) ggplot2::ggplot(),
+      draw_natal_chart = function(...) ggplot2::ggplot(),
       render_natal_chart_to_file = function(...) tmp_jpeg
     ),
     with_sequential_future({
@@ -257,7 +257,7 @@ test_that("DataManager$update_chart_async uses optional IP-geolocation coordinat
         list(planetary_position = make_mock_planet_df())
       },
       calculate_aspect = function(data) make_mock_aspect_df(),
-      draw_whole_sign_chart = function(...) ggplot2::ggplot(),
+      draw_natal_chart = function(...) ggplot2::ggplot(),
       render_natal_chart_to_file = function(...) tmp_jpeg
     ),
     with_sequential_future({
