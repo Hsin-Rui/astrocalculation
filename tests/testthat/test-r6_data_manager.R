@@ -191,7 +191,7 @@ test_that("load_chart_to_view keeps local wall time after DB UTC round trip", {
     lookup_city_data = function(country, city) list(lat = 25.03, lng = 121.56, timezone = "Asia/Taipei"),
     calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
     calculate_aspect = function(data) data.frame(),
-    draw_whole_sign_chart = function(...) list(),
+    draw_natal_chart = mock_ggplot_chart,
     poolWithTransaction = function(pool, code) code(NULL),
     .env = asNamespace("astrocalculation")
   )
@@ -407,7 +407,7 @@ make_dm_base_bindings <- function(extra = list()) {
   )
 }
 
-test_that("DataManager$register passes terms_accepted and oracle_voice_preference to auth_register_user", {
+test_that("DataManager$register passes terms_accepted to auth_register_user", {
   calls <- list()
 
   with_mocked_bindings(
@@ -416,29 +416,36 @@ test_that("DataManager$register passes terms_accepted and oracle_voice_preferenc
       on.exit(r6$pool <- NULL, add = TRUE)
 
       result <- r6$register(
-        user_id               = "uid-1",
-        email                 = "a@b.com",
-        password              = "Abcd123!",
-        display_name          = "Alice",
-        terms_accepted        = TRUE,
-        oracle_voice_preference = "Ancient Echo"
+        user_id = "uid-1",
+        email = "a@b.com",
+        password = "Abcd123!",
+        display_name = "Alice",
+        terms_accepted = TRUE
       )
 
-      expect_equal(calls$terms_accepted, TRUE)
-      expect_equal(calls$voice, "Ancient Echo")
+      expect_equal(calls$user_id, "uid-1")
+      expect_equal(calls$email, "a@b.com")
+      expect_equal(calls$display_name, "Alice")
+      expect_true(calls$terms_accepted)
       expect_equal(result$user_id, "uid-1")
+      expect_equal(result$verification_token, "tok")
     },
     auth_register_user = function(pool, user_id, email, password, display_name,
-                                  terms_accepted = FALSE, oracle_voice_preference = "Living Spark") {
-      calls$terms_accepted <<- terms_accepted
-      calls$voice          <<- oracle_voice_preference
+                                  terms_accepted = FALSE) {
+      calls <<- list(
+        user_id = user_id,
+        email = email,
+        password = password,
+        display_name = display_name,
+        terms_accepted = terms_accepted
+      )
       list(user_id = user_id, verification_token = "tok")
     },
     connect_postgres_db = function() list(conn = TRUE),
     Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
     calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
-    calculate_aspect   = function(data) data.frame(),
+    calculate_aspect = function(data) data.frame(),
     draw_natal_chart = mock_ggplot_chart,
     db_get_profile = function(pool, uid) NULL,
     db_get_library = function(pool, uid) data.frame(),

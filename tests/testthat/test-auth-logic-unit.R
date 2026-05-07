@@ -65,8 +65,8 @@ test_that("auth_verify_user returns id and updates last_login on success", {
 
     pool <- make_mock_conn(
         query_res = data.frame(
-            user_entity_id = "u-1", 
-            password_hash = sodium::password_store("pw"), 
+            user_entity_id = "u-1",
+            password_hash = sodium::password_store("pw"),
             is_verified = TRUE,
             failed_attempts = 0,
             locked_until = as.POSIXct(NA)
@@ -112,11 +112,20 @@ test_that("auth_handle_oauth_user links existing user", {
 })
 
 test_that("auth_handle_oauth_user creates new user when none exists", {
-    exec_calls <- list(count = 0)
+    exec_calls <- list(count = 0, statements = character(0))
 
     pool <- make_mock_conn(
-        query_res = data.frame(),
-        exec_side = function() exec_calls$count <<- exec_calls$count + 1
+        query_res = data.frame()
+    )
+
+    methods::setMethod(
+        "dbExecute",
+        signature(conn = "MockConn", statement = "character"),
+        function(conn, statement, ...) {
+            exec_calls$count <<- exec_calls$count + 1
+            exec_calls$statements <<- c(exec_calls$statements, statement)
+            1
+        }
     )
 
     res <- {
@@ -149,6 +158,13 @@ test_that("auth_handle_oauth_user creates new user when none exists", {
 
     expect_match(res, "new-uid")
     expect_equal(exec_calls$count, 2) # credentials + profile inserts
+
+    profile_stmt <- exec_calls$statements[
+        grepl("INSERT INTO user_profiles", exec_calls$statements, fixed = TRUE)
+    ]
+    expect_length(profile_stmt, 1L)
+    expect_true(grepl("entry_id", profile_stmt, fixed = TRUE))
+    expect_true(grepl("display_name", profile_stmt, fixed = TRUE))
 })
 
 test_that("auth_trigger_password_reset returns FALSE when email missing", {
@@ -213,17 +229,17 @@ test_that("auth_reset_password updates password and clears token", {
 
 test_that("auth_verify_user increments failed_attempts on wrong password", {
     exec_calls <- list(count = 0, statement = "")
-    
+
     pool <- make_mock_conn(
         query_res = data.frame(
-            user_entity_id = "u-1", 
-            password_hash = sodium::password_store("correct_pw"), 
+            user_entity_id = "u-1",
+            password_hash = sodium::password_store("correct_pw"),
             is_verified = TRUE,
             failed_attempts = 2,
             locked_until = as.POSIXct(NA)
         )
     )
-    
+
     # Override dbExecute to capture the statement
     methods::setMethod(
         "dbExecute",
@@ -234,9 +250,9 @@ test_that("auth_verify_user increments failed_attempts on wrong password", {
             1
         }
     )
-    
+
     res <- auth_verify_user(pool, "u-1", "wrong_pw")
-    
+
     expect_null(res)
     expect_equal(exec_calls$count, 1)
     # Check that statement updates failed_attempts (value will be interpolated)
@@ -246,17 +262,17 @@ test_that("auth_verify_user increments failed_attempts on wrong password", {
 
 test_that("auth_verify_user locks account after 5 failed attempts", {
     exec_calls <- list(count = 0, statements = character(0))
-    
+
     pool <- make_mock_conn(
         query_res = data.frame(
-            user_entity_id = "u-1", 
-            password_hash = sodium::password_store("correct_pw"), 
+            user_entity_id = "u-1",
+            password_hash = sodium::password_store("correct_pw"),
             is_verified = TRUE,
             failed_attempts = 4,
             locked_until = as.POSIXct(NA)
         )
     )
-    
+
     # Override dbExecute to capture all statements (list, not single)
     methods::setMethod(
         "dbExecute",
@@ -267,9 +283,9 @@ test_that("auth_verify_user locks account after 5 failed attempts", {
             1
         }
     )
-    
+
     res <- auth_verify_user(pool, "u-1", "wrong_pw")
-    
+
     expect_null(res)
     # 2 dbExecute calls: UPDATE locked_until + INSERT security log
     expect_equal(exec_calls$count, 2)
@@ -283,17 +299,17 @@ test_that("auth_verify_user locks account after 5 failed attempts", {
 
 test_that("auth_verify_user resets failed_attempts on successful login", {
     exec_calls <- list(count = 0, statement = "")
-    
+
     pool <- make_mock_conn(
         query_res = data.frame(
-            user_entity_id = "u-1", 
-            password_hash = sodium::password_store("correct_pw"), 
+            user_entity_id = "u-1",
+            password_hash = sodium::password_store("correct_pw"),
             is_verified = TRUE,
             failed_attempts = 3,
             locked_until = as.POSIXct(NA)
         )
     )
-    
+
     # Override dbExecute to capture the statement
     methods::setMethod(
         "dbExecute",
@@ -304,9 +320,9 @@ test_that("auth_verify_user resets failed_attempts on successful login", {
             1
         }
     )
-    
+
     res <- auth_verify_user(pool, "u-1", "correct_pw")
-    
+
     expect_equal(res$id, "u-1")
     expect_true(res$verified)
     expect_equal(exec_calls$count, 1)
@@ -315,19 +331,19 @@ test_that("auth_verify_user resets failed_attempts on successful login", {
 
 test_that("auth_verify_user returns locked status for locked account", {
     future_time <- Sys.time() + 600  # 10 minutes from now
-    
+
     pool <- make_mock_conn(
         query_res = data.frame(
-            user_entity_id = "u-1", 
-            password_hash = sodium::password_store("correct_pw"), 
+            user_entity_id = "u-1",
+            password_hash = sodium::password_store("correct_pw"),
             is_verified = TRUE,
             failed_attempts = 5,
             locked_until = future_time
         )
     )
-    
+
     res <- auth_verify_user(pool, "u-1", "correct_pw")
-    
+
     expect_true(!is.null(res$locked))
     expect_true(res$locked)
     expect_equal(res$locked_until, future_time)
@@ -336,20 +352,20 @@ test_that("auth_verify_user returns locked status for locked account", {
 test_that("auth_verify_user allows login after lockout expires", {
     exec_calls <- list(count = 0)
     past_time <- Sys.time() - 600  # 10 minutes ago
-    
+
     pool <- make_mock_conn(
         query_res = data.frame(
-            user_entity_id = "u-1", 
-            password_hash = sodium::password_store("correct_pw"), 
+            user_entity_id = "u-1",
+            password_hash = sodium::password_store("correct_pw"),
             is_verified = TRUE,
             failed_attempts = 5,
             locked_until = past_time
         ),
         exec_side = function() exec_calls$count <<- exec_calls$count + 1
     )
-    
+
     res <- auth_verify_user(pool, "u-1", "correct_pw")
-    
+
     expect_equal(res$id, "u-1")
     expect_true(res$verified)
     expect_equal(exec_calls$count, 1)
@@ -579,10 +595,6 @@ test_that("auth_reset_password still succeeds if security log insert fails", {
     expect_equal(exec_calls$count, 1L) # UPDATE still executed
 })
 
-# ---------------------------------------------------------------------------
-# Story 1.2: auth_register_user consent gate + oracle voice preference tests
-# ---------------------------------------------------------------------------
-
 test_that("auth_register_user hard-fails when terms_accepted is FALSE", {
     pool <- make_mock_conn()
     expect_error(
@@ -600,76 +612,79 @@ test_that("auth_register_user hard-fails when terms_accepted is missing (default
     )
 })
 
-test_that("auth_register_user hard-fails with invalid oracle_voice_preference", {
-    pool <- make_mock_conn(
-        query_res = list(data.frame(), data.frame()) # id + email uniqueness checks
-    )
-    expect_error(
-        with_mocked_bindings(
-            {
-                ns_pool <- asNamespace("pool")
-                old_tx <- get("poolWithTransaction", envir = ns_pool)
-                unlockBinding("poolWithTransaction", ns_pool)
-                assign("poolWithTransaction", function(pool_obj, code) code(pool_obj), envir = ns_pool)
-                on.exit({
-                    assign("poolWithTransaction", old_tx, envir = ns_pool)
-                    lockBinding("poolWithTransaction", ns_pool)
-                }, add = TRUE)
-                auth_register_user(pool, "uid-1", "a@b.com", "Abcd123!", "Alice",
-                                   terms_accepted = TRUE,
-                                   oracle_voice_preference = "Unknown Option")
-            },
-            UUIDgenerate = function(...) "tok-1",
-            .env = asNamespace("uuid")
-        ),
-        "oracle_voice_preference must be one of"
-    )
-})
-
-test_that("auth_register_user inserts terms_accepted_at and oracle_voice_preference when consented", {
-    exec_calls <- list(count = 0)
+test_that("auth_register_user inserts credentials and profile when consented", {
+    exec_calls <- list(count = 0L, statements = character(0))
 
     pool <- make_mock_conn(
-        query_res = list(data.frame(), data.frame()), # uniqueness checks return empty
-        exec_side = function() exec_calls$count <<- exec_calls$count + 1
+        query_res = list(data.frame(), data.frame())
     )
 
-    res <- {
-        # Manually unlock pool::poolWithTransaction (locked namespace requires this pattern)
-        ns_pool <- asNamespace("pool")
-        old_tx <- get("poolWithTransaction", envir = ns_pool)
-        unlockBinding("poolWithTransaction", ns_pool)
-        assign("poolWithTransaction", function(pool_obj, code) code(pool_obj), envir = ns_pool)
-        on.exit({
-            assign("poolWithTransaction", old_tx, envir = ns_pool)
-            lockBinding("poolWithTransaction", ns_pool)
-        }, add = TRUE)
+    methods::setMethod(
+        "dbExecute",
+        signature(conn = "MockConn", statement = "character"),
+        function(conn, statement, ...) {
+            exec_calls$count <<- exec_calls$count + 1L
+            exec_calls$statements <<- c(exec_calls$statements, statement)
+            1
+        }
+    )
 
-        # Manually unlock uuid::UUIDgenerate
-        ns_uuid <- asNamespace("uuid")
-        old_uuid <- get("UUIDgenerate", envir = ns_uuid)
-        unlockBinding("UUIDgenerate", ns_uuid)
-        assign("UUIDgenerate", function(...) "verif-tok", envir = ns_uuid)
-        on.exit({
-            assign("UUIDgenerate", old_uuid, envir = ns_uuid)
-            lockBinding("UUIDgenerate", ns_uuid)
-        }, add = TRUE)
+    ns_pool <- asNamespace("pool")
+    old_tx <- get("poolWithTransaction", envir = ns_pool)
+    unlockBinding("poolWithTransaction", ns_pool)
+    assign("poolWithTransaction", function(pool_obj, code) code(pool_obj), envir = ns_pool)
+    on.exit({
+        assign("poolWithTransaction", old_tx, envir = ns_pool)
+        lockBinding("poolWithTransaction", ns_pool)
+    }, add = TRUE)
 
-        with_mocked_bindings(
-            {
-                auth_register_user(
-                    pool, "uid-ok", "ok@b.com", "Abcd123!", "Bob",
-                    terms_accepted          = TRUE,
-                    oracle_voice_preference = "Ancient Echo"
-                )
-            },
-            password_store = function(pwd) "hashed",
-            .env = asNamespace("astrocalculation")
-        )
-    }
+    ns_uuid <- asNamespace("uuid")
+    old_uuid <- get("UUIDgenerate", envir = ns_uuid)
+    uuid_values <- c("verif-tok", "profile-entry")
+    unlockBinding("UUIDgenerate", ns_uuid)
+    assign("UUIDgenerate", function(...) {
+        value <- uuid_values[1]
+        uuid_values <<- uuid_values[-1]
+        value
+    }, envir = ns_uuid)
+    on.exit({
+        assign("UUIDgenerate", old_uuid, envir = ns_uuid)
+        lockBinding("UUIDgenerate", ns_uuid)
+    }, add = TRUE)
 
-    # Two dbExecute calls: credentials INSERT + profile INSERT
-    expect_equal(exec_calls$count, 2L)
+    res <- with_mocked_bindings(
+        {
+            with_mocked_bindings(
+                {
+                    auth_register_user(
+                        pool, "uid-ok", "ok@b.com", "Abcd123!", "Bob",
+                        terms_accepted = TRUE
+                    )
+                },
+                password_store = function(pwd) "hashed",
+                .env = asNamespace("sodium")
+            )
+        },
+        send_verification_email = function(...) TRUE,
+        .env = asNamespace("astrocalculation")
+    )
+
     expect_equal(res$user_id, "uid-ok")
-    expect_type(res$verification_token, "character")
+    expect_equal(res$verification_token, "verif-tok")
+    expect_equal(exec_calls$count, 2L)
+
+    credential_stmt <- exec_calls$statements[
+        grepl("INSERT INTO auth_credentials", exec_calls$statements, fixed = TRUE)
+    ]
+    profile_stmt <- exec_calls$statements[
+        grepl("INSERT INTO user_profiles", exec_calls$statements, fixed = TRUE)
+    ]
+
+    expect_length(credential_stmt, 1L)
+    expect_true(grepl("terms_accepted_at", credential_stmt, fixed = TRUE))
+    expect_true(grepl("verification_token", credential_stmt, fixed = TRUE))
+
+    expect_length(profile_stmt, 1L)
+    expect_true(grepl("entry_id", profile_stmt, fixed = TRUE))
+    expect_true(grepl("display_name", profile_stmt, fixed = TRUE))
 })

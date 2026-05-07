@@ -96,10 +96,6 @@ tables:
         type: "TEXT"
         title: "Profile Photo"
         description: "Base64 encoded image string."
-      oracle_voice_preference:
-        type: "VARCHAR(50) DEFAULT 'Living Spark'"
-        title: "Oracle Voice Preference"
-        description: "User's preferred interpretation mode: 'Living Spark' (AI) or 'Ancient Echo' (Static)."
       created_at:
         type: "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
         title: "Created At"

@@ -10,8 +10,7 @@ auth_register_user(
   email,
   password,
   display_name,
-  terms_accepted = FALSE,
-  oracle_voice_preference = "Living Spark"
+  terms_accepted = FALSE
 )
 }
 \arguments{
@@ -26,9 +25,6 @@ auth_register_user(
 \item{display_name}{User's public name}
 
 \item{terms_accepted}{Logical. Must be TRUE; registration is hard-blocked otherwise.}
-
-\item{oracle_voice_preference}{Character. "Living Spark" (AI) or "Ancient Echo" (Static).
-Defaults to "Living Spark".}
 }
 \value{
 list(user_id, verification_token) if successful

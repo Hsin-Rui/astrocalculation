@@ -1,7 +1,6 @@
 #' Migration 001: Add Consent Fields and Tarot Draws Table
 #'
 #' Adds `terms_accepted_at` to `auth_credentials`,
-#' `oracle_voice_preference` to `user_profiles`, and creates the
 #' `tarot_draws` table for the Tarot Journal.
 #'
 #' @param con A live DBI/pool database connection.
@@ -15,14 +14,7 @@ run_migration_001 <- function(con) {
      ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMP WITH TIME ZONE"
   )
 
-  # 2. Add oracle_voice_preference to user_profiles
-  DBI::dbExecute(
-    con,
-    "ALTER TABLE user_profiles
-     ADD COLUMN IF NOT EXISTS oracle_voice_preference VARCHAR(50) DEFAULT 'Living Spark'"
-  )
-
-  # 3. Create tarot_draws table (idempotent via IF NOT EXISTS)
+  # 2. Create tarot_draws table (idempotent via IF NOT EXISTS)
   DBI::dbExecute(
     con,
     "CREATE TABLE IF NOT EXISTS tarot_draws (

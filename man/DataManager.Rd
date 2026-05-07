@@ -134,8 +134,7 @@ Register a new user
   email,
   password,
   display_name,
-  terms_accepted = FALSE,
-  oracle_voice_preference = "Living Spark"
+  terms_accepted = FALSE
 )}\if{html}{\out{</div>}}
 }
 
@@ -151,8 +150,6 @@ Register a new user
 \item{\code{display_name}}{User name to be displayed in chart}
 
 \item{\code{terms_accepted}}{Logical. Must be TRUE; hard-fails registration otherwise.}
-
-\item{\code{oracle_voice_preference}}{Character. "Living Spark" or "Ancient Echo". Defaults to "Living Spark".}
 }
 \if{html}{\out{</div>}}
 }
