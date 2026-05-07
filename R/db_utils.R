@@ -49,6 +49,8 @@ db_save_profile <- function(pool, user_id, data) {
     user_id, city_name, final_tz
   ))
 
+  profile_entry_id <- uuid::UUIDgenerate()
+
   pool::poolWithTransaction(pool, function(con) {
     # Close Old
     DBI::dbExecute(con, DBI::sqlInterpolate(con, "
@@ -73,7 +75,7 @@ db_save_profile <- function(pool, user_id, data) {
         NOW()
       )
     ",
-      entry_id = uuid::UUIDgenerate(),
+      entry_id = profile_entry_id,
       id = user_id,
       name = display_name,
       ts = birth_ts,

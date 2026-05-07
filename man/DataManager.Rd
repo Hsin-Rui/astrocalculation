@@ -43,6 +43,9 @@ name of the chart}
 \item{\code{selected_planets}}{(\code{character()})\cr
 name of the chart}
 
+\item{\code{house_system}}{(\code{character()})\cr
+can be "whole_sign", "placidus", "koch" or "regiomontanus". Default at whole sign.}
+
 \item{\code{pool}}{postgres SQL database connection}
 
 \item{\code{user_id}}{ID to identify the user. If NULL, user is Guest}

@@ -36,13 +36,15 @@ calculate_planet_position <- function(date, timezone, longitude, latitude){
   position$mc <- c(mc, 0)
   position$vertex <- c(vertex,0)
 
-  # calculate house cusps  ## whole sign = W, equal = "E", Placidus = "P", Koch = "K"
-  systems <- list("W", "E", "P", "K")
+  # calculate house cusps  ## whole sign = W, equal = "E", Placidus = "P", Koch = "K", "Regiomontanus"="R"
+  systems <- list("W", "E", "P", "K", "R")
 
-  calculate_house_cusps <- function(x){swe_houses_ex(jd, 0, geolat = latitude, geolon = longitude, hsys = x)$cusps[2:13]}
+  calculate_house_cusps <- function(x){
+    swe_houses_ex(jd, 0, geolat = latitude, geolon = longitude, hsys = x)$cusps[2:13]
+    }
 
   house_cusps <- data.frame(sapply(systems, calculate_house_cusps))
-  names(house_cusps) <- c("whole_sign", "equal", "placidus", "koch")
+  names(house_cusps) <- c("whole_sign", "equal", "placidus", "koch", "regiomontanus")
 
   # find sign and put on information for chart visualization
   position <- t(position)

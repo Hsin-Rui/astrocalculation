@@ -247,7 +247,7 @@ test_that("resolve_tarot_llm_config uses OpenRouter when Groq is missing", {
 test_that("DataManager initialises with draw_status = 'idle'", {
   ns <- asNamespace("astrocalculation")
   mock_names <- c("connect_postgres_db", "Logger", "lookup_city_data",
-                  "calculate_planet_position", "calculate_aspect", "draw_whole_sign_chart")
+                  "calculate_planet_position", "calculate_aspect", "draw_natal_chart")
   originals <- setNames(lapply(mock_names, function(nm) get(nm, envir = ns)), mock_names)
   on.exit({
     for (nm in mock_names) {
@@ -272,8 +272,8 @@ test_that("DataManager initialises with draw_status = 'idle'", {
     envir = ns)
   unlockBinding("calculate_aspect", ns)
   assign("calculate_aspect", function(data) data.frame(), envir = ns)
-  unlockBinding("draw_whole_sign_chart", ns)
-  assign("draw_whole_sign_chart", function(...) list(), envir = ns)
+  unlockBinding("draw_natal_chart", ns)
+  assign("draw_natal_chart", function(...) ggplot2::ggplot(), envir = ns)
 
   with_mocked_bindings(
     {
@@ -290,7 +290,7 @@ test_that("DataManager initialises with draw_status = 'idle'", {
 test_that("shuffle_and_prepare draws a card and returns a future", {
   ns <- asNamespace("astrocalculation")
   mock_names <- c("connect_postgres_db", "Logger", "lookup_city_data",
-                  "calculate_planet_position", "calculate_aspect", "draw_whole_sign_chart",
+                  "calculate_planet_position", "calculate_aspect", "draw_natal_chart",
                   "connect_tarot_db", "shuffle_deck", "draw_cards", "get_tarot_interpretation")
   originals <- setNames(lapply(mock_names, function(nm) get(nm, envir = ns)), mock_names)
   on.exit({
@@ -316,8 +316,8 @@ test_that("shuffle_and_prepare draws a card and returns a future", {
     envir = ns)
   unlockBinding("calculate_aspect", ns)
   assign("calculate_aspect", function(data) data.frame(), envir = ns)
-  unlockBinding("draw_whole_sign_chart", ns)
-  assign("draw_whole_sign_chart", function(...) list(), envir = ns)
+  unlockBinding("draw_natal_chart", ns)
+  assign("draw_natal_chart", function(...) ggplot2::ggplot(), envir = ns)
   unlockBinding("connect_tarot_db", ns)
   assign("connect_tarot_db", function() {
     con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
@@ -359,7 +359,7 @@ test_that("shuffle_and_prepare draws a card and returns a future", {
 test_that("shuffle_and_prepare skip_llm=TRUE skips get_tarot_interpretation call", {
   ns <- asNamespace("astrocalculation")
   mock_names <- c("connect_postgres_db", "Logger", "lookup_city_data",
-                  "calculate_planet_position", "calculate_aspect", "draw_whole_sign_chart",
+                  "calculate_planet_position", "calculate_aspect", "draw_natal_chart",
                   "connect_tarot_db", "shuffle_deck", "draw_cards", "get_tarot_interpretation")
   originals <- setNames(lapply(mock_names, function(nm) get(nm, envir = ns)), mock_names)
   on.exit({
@@ -385,8 +385,8 @@ test_that("shuffle_and_prepare skip_llm=TRUE skips get_tarot_interpretation call
     envir = ns)
   unlockBinding("calculate_aspect", ns)
   assign("calculate_aspect", function(data) data.frame(), envir = ns)
-  unlockBinding("draw_whole_sign_chart", ns)
-  assign("draw_whole_sign_chart", function(...) list(), envir = ns)
+  unlockBinding("draw_natal_chart", ns)
+  assign("draw_natal_chart", function(...) ggplot2::ggplot(), envir = ns)
   unlockBinding("connect_tarot_db", ns)
   assign("connect_tarot_db", function() {
     con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")

@@ -56,6 +56,7 @@ auth_register_user <- function(pool, user_id, email, password, display_name,
   hashed_pw <- sodium::password_store(password)
   # Generate a random verification token
   verif_token <- uuid::UUIDgenerate()
+  profile_entry_id <- uuid::UUIDgenerate()
 
   # 5. Transaction: Insert Account -> Then Profile
   pool::poolWithTransaction(pool, function(con) {
@@ -79,7 +80,7 @@ auth_register_user <- function(pool, user_id, email, password, display_name,
       ) VALUES (
         ?entry_id, ?id, ?name, ?voice, NOW()
       )
-    ", entry_id = uuid::UUIDgenerate(), id = user_id, name = display_name, voice = oracle_voice_preference))
+    ", entry_id = profile_entry_id, id = user_id, name = display_name, voice = oracle_voice_preference))
   })
 
   app_url <- Sys.getenv("APP_BASE_URL", "http://127.0.0.1:3000")
@@ -523,6 +524,7 @@ auth_handle_oauth_user <- function(pool, email, google_id, name) {
     # We use the email prefix as a default username (user can change later if we build that feature)
     # or generate a UUID. Let's use a UUID for safety to avoid collisions.
     new_uid <- uuid::UUIDgenerate()
+    profile_entry_id <- uuid::UUIDgenerate()
 
     pool::poolWithTransaction(pool, function(con) {
       # Create Credentials (No password hash needed for OAuth-only)
@@ -540,7 +542,7 @@ auth_handle_oauth_user <- function(pool, email, google_id, name) {
       DBI::dbExecute(con, DBI::sqlInterpolate(con, "
         INSERT INTO user_profiles (entry_id, user_entity_id, display_name, valid_from)
         VALUES (?entry_id, ?uid, ?name, NOW())
-      ", entry_id = uuid::UUIDgenerate(), uid = new_uid, name = name))
+      ", entry_id = profile_entry_id, uid = new_uid, name = name))
     })
 
     return(new_uid)

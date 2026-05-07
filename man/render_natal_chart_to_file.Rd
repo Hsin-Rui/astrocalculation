@@ -15,7 +15,9 @@ render_natal_chart_to_file(
   width = 600,
   height = 600,
   pointsize = 24,
-  res = 96
+  res = 96,
+  house_cusps = NULL,
+  house_system = c("whole_sign", "placidus", "koch", "regiomontanus")
 )
 }
 \arguments{
@@ -41,6 +43,12 @@ as returned by \code{calculate_planet_position()$planetary_position}).}
 \item{pointsize}{Integer. Base font size. Default 24.}
 
 \item{res}{Integer. Resolution in ppi. Default 96.}
+
+\item{house_cusps}{Optional data frame of house cusps. Required for quadrant
+house systems.}
+
+\item{house_system}{Character. One of \code{"whole_sign"}, \code{"placidus"},
+\code{"koch"}, or \code{"regiomontanus"}. Default \code{"whole_sign"}.}
 }
 \value{
 Absolute path (character) to the generated JPEG tempfile.

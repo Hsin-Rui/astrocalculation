@@ -4,10 +4,15 @@
 \alias{draw_chart_template}
 \title{Draw chart template using ggplot}
 \usage{
-draw_chart_template(style = "whole_sign")
+draw_chart_template(
+  style = c("whole_sign", "chris_brennan", "quadrant"),
+  include_limits = TRUE
+)
 }
 \arguments{
-\item{style}{chart style (whole sign, chris brennan, others)}
+\item{style}{chart style (whole sign, chris brennan, quadrant)}
+
+\item{include_limits}{logical. If TRUE, add default x/y limits to the template}
 }
 \value{
 ggplot object (three possible empty chart templates for further plotting)

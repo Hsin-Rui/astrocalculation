@@ -35,12 +35,12 @@ Imports:
     rlang,
     future,
     httr2,
-    jsonvalidate
+    jsonvalidate,
+    tibble
 Date: 2025-07-27
 Suggests: 
     dbplyr,
     testthat,
     utils,
-    tibble,
     mockery
 Config/testthat/edition: 3

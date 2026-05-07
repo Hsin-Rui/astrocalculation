@@ -72,6 +72,7 @@ Logger <- R6::R6Class(
 
       tryCatch({
         # 1. Prepare JSON Context
+        log_id <- uuid::UUIDgenerate()
         context_json <- jsonlite::toJSON(context, auto_unbox = TRUE)
 
         # 2. SQL Insert (Clean & Separated)
@@ -79,7 +80,7 @@ Logger <- R6::R6Class(
                 VALUES (?log_id, ?level, ?evt, ?msg, ?ctx, ?uid)"
 
         query <- DBI::sqlInterpolate(self$pool, sql,
-                                     log_id = uuid::UUIDgenerate(),
+                                     log_id = log_id,
                                      level = level,
                                      evt = event,  # <--- Clean separate column
                                      msg = message,
