@@ -112,11 +112,20 @@ test_that("auth_handle_oauth_user links existing user", {
 })
 
 test_that("auth_handle_oauth_user creates new user when none exists", {
-    exec_calls <- list(count = 0)
+    exec_calls <- list(count = 0, statements = character(0))
 
     pool <- make_mock_conn(
-        query_res = data.frame(),
-        exec_side = function() exec_calls$count <<- exec_calls$count + 1
+        query_res = data.frame()
+    )
+
+    methods::setMethod(
+        "dbExecute",
+        signature(conn = "MockConn", statement = "character"),
+        function(conn, statement, ...) {
+            exec_calls$count <<- exec_calls$count + 1
+            exec_calls$statements <<- c(exec_calls$statements, statement)
+            1
+        }
     )
 
     res <- {
@@ -149,6 +158,13 @@ test_that("auth_handle_oauth_user creates new user when none exists", {
 
     expect_match(res, "new-uid")
     expect_equal(exec_calls$count, 2) # credentials + profile inserts
+
+    profile_stmt <- exec_calls$statements[
+        grepl("INSERT INTO user_profiles", exec_calls$statements, fixed = TRUE)
+    ]
+    expect_length(profile_stmt, 1L)
+    expect_true(grepl("entry_id", profile_stmt, fixed = TRUE))
+    expect_true(grepl("display_name", profile_stmt, fixed = TRUE))
 })
 
 test_that("auth_trigger_password_reset returns FALSE when email missing", {
@@ -594,4 +610,81 @@ test_that("auth_register_user hard-fails when terms_accepted is missing (default
         auth_register_user(pool, "uid-1", "a@b.com", "Abcd123!", "Alice"),
         "Terms of Use"
     )
+})
+
+test_that("auth_register_user inserts credentials and profile when consented", {
+    exec_calls <- list(count = 0L, statements = character(0))
+
+    pool <- make_mock_conn(
+        query_res = list(data.frame(), data.frame())
+    )
+
+    methods::setMethod(
+        "dbExecute",
+        signature(conn = "MockConn", statement = "character"),
+        function(conn, statement, ...) {
+            exec_calls$count <<- exec_calls$count + 1L
+            exec_calls$statements <<- c(exec_calls$statements, statement)
+            1
+        }
+    )
+
+    ns_pool <- asNamespace("pool")
+    old_tx <- get("poolWithTransaction", envir = ns_pool)
+    unlockBinding("poolWithTransaction", ns_pool)
+    assign("poolWithTransaction", function(pool_obj, code) code(pool_obj), envir = ns_pool)
+    on.exit({
+        assign("poolWithTransaction", old_tx, envir = ns_pool)
+        lockBinding("poolWithTransaction", ns_pool)
+    }, add = TRUE)
+
+    ns_uuid <- asNamespace("uuid")
+    old_uuid <- get("UUIDgenerate", envir = ns_uuid)
+    uuid_values <- c("verif-tok", "profile-entry")
+    unlockBinding("UUIDgenerate", ns_uuid)
+    assign("UUIDgenerate", function(...) {
+        value <- uuid_values[1]
+        uuid_values <<- uuid_values[-1]
+        value
+    }, envir = ns_uuid)
+    on.exit({
+        assign("UUIDgenerate", old_uuid, envir = ns_uuid)
+        lockBinding("UUIDgenerate", ns_uuid)
+    }, add = TRUE)
+
+    res <- with_mocked_bindings(
+        {
+            with_mocked_bindings(
+                {
+                    auth_register_user(
+                        pool, "uid-ok", "ok@b.com", "Abcd123!", "Bob",
+                        terms_accepted = TRUE
+                    )
+                },
+                password_store = function(pwd) "hashed",
+                .env = asNamespace("sodium")
+            )
+        },
+        send_verification_email = function(...) TRUE,
+        .env = asNamespace("astrocalculation")
+    )
+
+    expect_equal(res$user_id, "uid-ok")
+    expect_equal(res$verification_token, "verif-tok")
+    expect_equal(exec_calls$count, 2L)
+
+    credential_stmt <- exec_calls$statements[
+        grepl("INSERT INTO auth_credentials", exec_calls$statements, fixed = TRUE)
+    ]
+    profile_stmt <- exec_calls$statements[
+        grepl("INSERT INTO user_profiles", exec_calls$statements, fixed = TRUE)
+    ]
+
+    expect_length(credential_stmt, 1L)
+    expect_true(grepl("terms_accepted_at", credential_stmt, fixed = TRUE))
+    expect_true(grepl("verification_token", credential_stmt, fixed = TRUE))
+
+    expect_length(profile_stmt, 1L)
+    expect_true(grepl("entry_id", profile_stmt, fixed = TRUE))
+    expect_true(grepl("display_name", profile_stmt, fixed = TRUE))
 })
