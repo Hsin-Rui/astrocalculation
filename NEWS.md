@@ -1,3 +1,6 @@
+# astrocalculation 0.1.21 -- 2026-5-6
+* persist LLM call response for tarot draw
+
 # astrocalculation 0.1.20 -- 2026-5-5
 * Enable async chart calculation
 

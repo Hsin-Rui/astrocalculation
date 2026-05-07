@@ -62,10 +62,11 @@ test_that("save_tarot_draw stops when card_id is missing", {
 })
 
 test_that("save_tarot_draw executes a parameterized INSERT and returns 1", {
-  calls <- list(count = 0L)
+  calls <- list(count = 0L, statements = character())
 
   pool <- make_ud_mock_conn(exec_side = function(sql) {
     calls$count <<- calls$count + 1L
+    calls$statements <<- c(calls$statements, sql)
   })
 
   rows <- save_tarot_draw(
@@ -76,7 +77,10 @@ test_that("save_tarot_draw executes a parameterized INSERT and returns 1", {
     is_free_tier        = TRUE
   )
 
-  expect_equal(calls$count, 1L)
+  expect_true(any(grepl("CREATE TABLE IF NOT EXISTS tarot_draws", calls$statements, fixed = TRUE)))
+  expect_true(any(grepl("INSERT INTO tarot_draws", calls$statements, fixed = TRUE)))
+  expect_false(any(grepl("gen_random_uuid", calls$statements, fixed = TRUE)))
+  expect_false(any(grepl("uuid_generate_v4", calls$statements, fixed = TRUE)))
   expect_equal(rows, 1L)
 })
 

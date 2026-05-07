@@ -204,6 +204,43 @@ test_that("get_tarot_interpretation falls back on non-200 status", {
   expect_equal(result$title, "Wheel")
 })
 
+test_that("resolve_tarot_llm_config prefers Groq and strips quoted env values", {
+  old <- Sys.getenv(c("GROQ_API_KEY", "GROQ_MODEL", "OPENROUTER_API_KEY"), unset = NA)
+  on.exit({
+    for (nm in names(old)) {
+      if (is.na(old[[nm]])) Sys.unsetenv(nm) else do.call(Sys.setenv, as.list(stats::setNames(old[[nm]], nm)))
+    }
+  }, add = TRUE)
+
+  Sys.setenv(GROQ_API_KEY = '"groq-key"', GROQ_MODEL = "custom-groq-model")
+  Sys.setenv(OPENROUTER_API_KEY = "openrouter-key")
+
+  config <- resolve_tarot_llm_config()
+
+  expect_equal(config$api_key, "groq-key")
+  expect_equal(config$model, "custom-groq-model")
+  expect_match(config$base_url, "groq.com", fixed = TRUE)
+})
+
+test_that("resolve_tarot_llm_config uses OpenRouter when Groq is missing", {
+  old <- Sys.getenv(c("GROQ_API_KEY", "OPENROUTER_API_KEY", "OPENROUTER_MODEL"), unset = NA)
+  on.exit({
+    for (nm in names(old)) {
+      if (is.na(old[[nm]])) Sys.unsetenv(nm) else do.call(Sys.setenv, as.list(stats::setNames(old[[nm]], nm)))
+    }
+  }, add = TRUE)
+
+  Sys.unsetenv("GROQ_API_KEY")
+  Sys.setenv(OPENROUTER_API_KEY = "openrouter-key")
+  Sys.unsetenv("OPENROUTER_MODEL")
+
+  config <- resolve_tarot_llm_config()
+
+  expect_equal(config$api_key, "openrouter-key")
+  expect_equal(config$base_url, "https://openrouter.ai/api/v1/chat/completions")
+  expect_equal(config$model, "openai/gpt-4.1-mini")
+})
+
 
 # ── DataManager: draw_status & shuffle_and_prepare ───────────────────────────
 

@@ -1,3 +1,17 @@
+test_that("required save fields reject blank values", {
+  expect_error(require_non_empty("", "Chart name"), "Chart name is required")
+  expect_error(require_non_empty("   ", "City"), "City is required")
+  expect_equal(require_non_empty(" Taipei ", "City"), "Taipei")
+})
+
+test_that("normalize_local_datetime preserves selected city wall time", {
+  entered <- as.POSIXct("1986-02-13 20:30:00", tz = "UTC")
+  stored <- normalize_local_datetime(entered, "Asia/Taipei")
+
+  expect_equal(format(stored, "%Y-%m-%d %H:%M:%S", tz = "Asia/Taipei"), "1986-02-13 20:30:00")
+  expect_equal(format(stored, "%Y-%m-%d %H:%M:%S", tz = "UTC"), "1986-02-13 12:30:00")
+})
+
 test_that("Story 3: Personal Library (Save, Load, Delete)", {
 
   # 1. Setup: Create a User
@@ -66,17 +80,8 @@ test_that("Story 3: Personal Library (Save, Load, Delete)", {
     notes = "My first test chart"
   )
 
-  # Save new - check if uuid_generate_v4() is available
-  save_result <- tryCatch({
-    expect_silent(db_save_library_entry(pool, user_oid, chart_data))
-    TRUE
-  }, error = function(e) {
-    # Skip if uuid-ossp extension is not installed
-    if (grepl("uuid_generate_v4", e$message)) {
-      skip("PostgreSQL uuid-ossp extension not installed; skipping library entry tests.")
-    }
-    stop(e)
-  })
+  # Save new - UUIDs are generated in R, so this does not depend on DB extensions.
+  expect_silent(db_save_library_entry(pool, user_oid, chart_data))
 
   # 3. Retrieve Library
   lib <- db_get_library(pool, user_oid)

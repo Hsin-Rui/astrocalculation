@@ -2,7 +2,7 @@
 % Please edit documentation in R/r6_data_manager.R
 \name{DataManager}
 \alias{DataManager}
-\title{R6 Class to store & process data.}
+\title{R6 Class to store and process data}
 \description{
 An R6 Class to communicate between shiny modules
 }
@@ -69,6 +69,8 @@ One of: "idle", "shuffling", "ready", "revealed".}
 
 \item{\code{llm_interpretation}}{Named list with \code{title}, \code{body}, \code{general}, \code{work}, \code{health},
 \code{relationships} from the LLM (or fallback). All fields in Traditional Chinese.}
+
+\item{\code{last_tarot_draw_saved}}{Logical flag to prevent duplicate persistence for the current draw.}
 }
 \if{html}{\out{</div>}}
 }
@@ -78,6 +80,7 @@ One of: "idle", "shuffling", "ready", "revealed".}
 \item \href{#method-DataManager-new}{\code{DataManager$new()}}
 \item \href{#method-DataManager-register}{\code{DataManager$register()}}
 \item \href{#method-DataManager-promote_guest_draw}{\code{DataManager$promote_guest_draw()}}
+\item \href{#method-DataManager-save_current_tarot_draw}{\code{DataManager$save_current_tarot_draw()}}
 \item \href{#method-DataManager-validate_session}{\code{DataManager$validate_session()}}
 \item \href{#method-DataManager-login}{\code{DataManager$login()}}
 \item \href{#method-DataManager-login_with_google}{\code{DataManager$login_with_google()}}
@@ -179,6 +182,37 @@ No-ops (with a warning) when there is no guest draw to promote.
 }
 \subsection{Returns}{
 Invisibly TRUE on success, FALSE when no draw was available.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-save_current_tarot_draw"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-save_current_tarot_draw}{}}}
+\subsection{Method \code{save_current_tarot_draw()}}{
+Persist the current tarot draw and interpretation for audit/debug review.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$save_current_tarot_draw(
+  user_id = self$user_id,
+  interpretation = self$llm_interpretation,
+  is_free_tier = TRUE,
+  pool_override = NULL
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{user_id}}{Optional user ID override; defaults to current authenticated user.}
+
+\item{\code{interpretation}}{Optional interpretation list/string; defaults to current state.}
+
+\item{\code{is_free_tier}}{Logical. Whether the draw consumed the free tier.}
+
+\item{\code{pool_override}}{Optional transaction connection.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisibly TRUE when saved, FALSE when skipped.
 }
 }
 \if{html}{\out{<hr>}}

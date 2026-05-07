@@ -9,10 +9,9 @@
 #' and auth header can be swapped to Gemini / Vertex AI for registered /
 #' paid users in Story 1.3 without changing callers.
 #'
-#' @param card_name   Character. Localised name of the drawn card
-#'   (e.g., \code{"愚者逆位"}).
+#' @param card_name   Character. Localised name of the drawn card.
 #' @param card_meanings Character vector.  Keywords / description from the
-#'   tarot DB — used as prompt context and as the hard fallback, so must not
+#'   tarot DB, used as prompt context and as the hard fallback, so must not
 #'   be \code{NULL}.
 #' @param api_key Character or \code{NULL}.  Groq API key.  When \code{NULL}
 #'   or empty the function returns the structured fallback immediately without
@@ -63,20 +62,25 @@ get_tarot_interpretation <- function(
 
   # --- HTTP request with retry ------------------------------------------
   response_text <- tryCatch({
+    request_body <- list(
+      messages    = list(
+        list(role = "system", content = system_prompt),
+        list(role = "user",   content = user_prompt)
+      ),
+      max_tokens  = 512L,
+      temperature = 0.7,
+      response_format = list(type = "json_object")
+    )
+    if (!is.null(model) && nchar(trimws(model)) > 0) {
+      request_body$model <- model
+    }
+
     req <- httr2::request(base_url) |>
       httr2::req_headers(
         "Authorization" = paste("Bearer", api_key),
         "Content-Type"  = "application/json"
       ) |>
-      httr2::req_body_json(list(
-        model       = model,
-        messages    = list(
-          list(role = "system", content = system_prompt),
-          list(role = "user",   content = user_prompt)
-        ),
-        max_tokens  = 256L,
-        temperature = 0.7
-      )) |>
+      httr2::req_body_json(request_body) |>
       httr2::req_timeout(seconds = 10) |>
       httr2::req_retry(
         max_tries = 3,
@@ -188,7 +192,7 @@ validate_interpretation <- function(json_text) {
 }
 
 
-#' Internal helper — loads inst/extdata/tarot_prompts.yaml into a list.
+#' Internal helper that loads inst/extdata/tarot_prompts.yaml into a list
 #' Used by get_tarot_interpretation() and r6_data_manager.R.
 tarot_prompts <- function() {
   yaml::read_yaml(
@@ -198,7 +202,7 @@ tarot_prompts <- function() {
 }
 
 
-#' Internal helper — build fallback list (plain list, no future wrapping).
+#' Internal helper that builds a fallback list
 #' @param card_name card name parsed into LLM
 #' @param card_meanings keywords related to the card
 #'
@@ -218,5 +222,3 @@ build_tarot_fallback <- function(card_name, card_meanings){
     is_local_fallback = TRUE
   )
 }
-
-

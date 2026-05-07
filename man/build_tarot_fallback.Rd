@@ -2,7 +2,7 @@
 % Please edit documentation in R/llm_tarot_interpretation.R
 \name{build_tarot_fallback}
 \alias{build_tarot_fallback}
-\title{Internal helper — build fallback list (plain list, no future wrapping).}
+\title{Internal helper that builds a fallback list}
 \usage{
 build_tarot_fallback(card_name, card_meanings)
 }
@@ -12,5 +12,5 @@ build_tarot_fallback(card_name, card_meanings)
 \item{card_meanings}{keywords related to the card}
 }
 \description{
-Internal helper — build fallback list (plain list, no future wrapping).
+Internal helper that builds a fallback list
 }

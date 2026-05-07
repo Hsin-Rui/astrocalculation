@@ -2,7 +2,7 @@
 % Please edit documentation in R/db_utils.R
 \name{db_save_library_entry}
 \alias{db_save_library_entry}
-\title{Handles "SCD Type 2" updates (if editing) or creates new entries.}
+\title{Handles "SCD Type 2" updates (if editing) or creates new entries}
 \usage{
 db_save_library_entry(pool, user_id, data, entity_id = NULL)
 }
@@ -16,5 +16,5 @@ db_save_library_entry(pool, user_id, data, entity_id = NULL)
 \item{entity_id}{uuid of the chart}
 }
 \description{
-Handles "SCD Type 2" updates (if editing) or creates new entries.
+Handles "SCD Type 2" updates (if editing) or creates new entries
 }

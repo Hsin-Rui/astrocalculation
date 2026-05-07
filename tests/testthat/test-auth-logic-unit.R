@@ -174,6 +174,17 @@ test_that("auth_trigger_password_reset writes token and expiry", {
     expect_equal(exec_calls$count, 1)
 })
 
+test_that("email token links strip deployment quotes from APP_BASE_URL", {
+    expect_equal(
+        build_app_token_link('"https://uat.astro-roots.com"', "reset", "token-123"),
+        "https://uat.astro-roots.com/?reset=token-123"
+    )
+    expect_equal(
+        build_app_token_link("https://uat.astro-roots.com/", "verify", "token-123"),
+        "https://uat.astro-roots.com/?verify=token-123"
+    )
+})
+
 test_that("auth_reset_password fails on invalid token", {
     pool <- make_mock_conn(query_res = data.frame())
     res <- auth_reset_password(pool, "bad-token", "Abcd123!")

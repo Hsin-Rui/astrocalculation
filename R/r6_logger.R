@@ -8,6 +8,7 @@
 #' @import R6
 #' @import DBI
 #' @import jsonlite
+#' @importFrom uuid UUIDgenerate
 #'
 Logger <- R6::R6Class(
   "Logger",

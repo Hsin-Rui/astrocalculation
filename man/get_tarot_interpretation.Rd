@@ -13,11 +13,10 @@ get_tarot_interpretation(
 )
 }
 \arguments{
-\item{card_name}{Character. Localised name of the drawn card
-(e.g., \code{"愚者逆位"}).}
+\item{card_name}{Character. Localised name of the drawn card.}
 
 \item{card_meanings}{Character vector.  Keywords / description from the
-tarot DB — used as prompt context and as the hard fallback, so must not
+tarot DB, used as prompt context and as the hard fallback, so must not
 be \code{NULL}.}
 
 \item{api_key}{Character or \code{NULL}.  Groq API key.  When \code{NULL}
