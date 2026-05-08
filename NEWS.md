@@ -1,6 +1,7 @@
 # astrocalculation 0.2.0 -- 2026-5-8
 * Support quadrant houses
 * Remove oracle voice preferences (redundant feature)
+* Fix tarot LLM response validation
 
 # astrocalculation 0.1.21 -- 2026-5-6
 * persist LLM call response for tarot draw
