@@ -30,7 +30,6 @@ save_tarot_draw <- function(pool, user_id, card_id, interpretation_text = NULL,
   if (is.null(user_id) || user_id == "") stop("user_id is required to save a tarot draw.")
   if (is.null(card_id) || card_id == "") stop("card_id is required to save a tarot draw.")
 
-  ensure_tarot_draws_table(pool)
   entry_id <- uuid::UUIDgenerate()
 
   rows <- DBI::dbExecute(
@@ -59,52 +58,6 @@ save_tarot_draw <- function(pool, user_id, card_id, interpretation_text = NULL,
   )
 
   invisible(rows)
-}
-
-#' Ensure Tarot Draw Audit Table Exists
-#'
-#' Creates the table and additive audit columns needed to inspect each draw and
-#' interpretation response. This is intentionally idempotent for UAT databases
-#' that may not have run every migration yet.
-#'
-#' @param pool A DBI/pool database connection.
-#' @return Invisibly TRUE.
-ensure_tarot_draws_table <- function(pool) {
-  if (is.null(pool)) return(invisible(FALSE))
-
-  DBI::dbExecute(
-    pool,
-    "CREATE TABLE IF NOT EXISTS tarot_draws (
-      entry_id UUID PRIMARY KEY,
-      user_entity_id VARCHAR(255) NOT NULL REFERENCES auth_credentials(user_entity_id) ON DELETE CASCADE,
-      draw_date DATE DEFAULT CURRENT_DATE,
-      card_id VARCHAR(255) NOT NULL,
-      interpretation_text TEXT,
-      is_free_tier BOOLEAN DEFAULT TRUE,
-      interpretation_payload TEXT,
-      is_local_fallback BOOLEAN,
-      llm_provider VARCHAR(64),
-      llm_model VARCHAR(255),
-      card_file VARCHAR(255),
-      is_reversed BOOLEAN,
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-    )"
-  )
-
-  alter_statements <- c(
-    "ALTER TABLE tarot_draws ADD COLUMN IF NOT EXISTS interpretation_payload TEXT",
-    "ALTER TABLE tarot_draws ADD COLUMN IF NOT EXISTS is_local_fallback BOOLEAN",
-    "ALTER TABLE tarot_draws ADD COLUMN IF NOT EXISTS llm_provider VARCHAR(64)",
-    "ALTER TABLE tarot_draws ADD COLUMN IF NOT EXISTS llm_model VARCHAR(255)",
-    "ALTER TABLE tarot_draws ADD COLUMN IF NOT EXISTS card_file VARCHAR(255)",
-    "ALTER TABLE tarot_draws ADD COLUMN IF NOT EXISTS is_reversed BOOLEAN"
-  )
-
-  for (statement in alter_statements) {
-    DBI::dbExecute(pool, statement)
-  }
-
-  invisible(TRUE)
 }
 
 #' Convert optional values to nullable character scalars

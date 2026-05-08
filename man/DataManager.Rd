@@ -78,6 +78,7 @@ One of: "idle", "shuffling", "ready", "revealed".}
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-DataManager-new}{\code{DataManager$new()}}
+\item \href{#method-DataManager-close_pool}{\code{DataManager$close_pool()}}
 \item \href{#method-DataManager-register}{\code{DataManager$register()}}
 \item \href{#method-DataManager-promote_guest_draw}{\code{DataManager$promote_guest_draw()}}
 \item \href{#method-DataManager-save_current_tarot_draw}{\code{DataManager$save_current_tarot_draw()}}
@@ -122,6 +123,17 @@ If not, default to Guest/Transit mode.
 }
 \if{html}{\out{</div>}}
 }
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-close_pool"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-close_pool}{}}}
+\subsection{Method \code{close_pool()}}{
+Close the PostgreSQL connection pool held by this manager.
+Safe to call more than once.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$close_pool()}\if{html}{\out{</div>}}
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DataManager-register"></a>}}

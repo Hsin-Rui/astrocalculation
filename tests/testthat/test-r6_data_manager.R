@@ -52,6 +52,38 @@ test_that("login_with_google sets user state and returns session token", {
   )
 })
 
+test_that("close_pool closes and detaches the DataManager pool", {
+  close_calls <- 0L
+
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+
+      expect_false(is.null(r6$pool))
+      expect_false(is.null(r6$logger$pool))
+
+      r6$close_pool()
+      r6$close_pool()
+
+      expect_null(r6$pool)
+      expect_null(r6$logger$pool)
+      expect_equal(close_calls, 1L)
+    },
+    connect_postgres_db = function() list(conn = TRUE),
+    close_postgres_db = function(pool) {
+      if (!is.null(pool)) close_calls <<- close_calls + 1L
+      invisible(TRUE)
+    },
+    Logger = list(new = function(pool) list(pool = pool, log_info = function(...) NULL, log_error = function(...) NULL)),
+    lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
+    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_aspect = function(data) data.frame(),
+    draw_natal_chart = mock_ggplot_chart,
+    poolWithTransaction = function(pool, code) code(NULL),
+    .env = asNamespace("astrocalculation")
+  )
+})
+
 test_that("validate_session updates user_id and refreshes data", {
   with_mocked_bindings(
     {

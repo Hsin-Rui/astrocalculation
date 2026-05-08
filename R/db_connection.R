@@ -42,15 +42,17 @@ connect_postgres_db <- function() {
     stop("DB_HOST is missing. Did you load your .Renviron?")
   }
 
-  pool <- pool::dbPool(
-    drv = RPostgres::Postgres(),
+  pool <- postgres_db_pool(
+    drv = postgres_driver(),
     dbname = db_name,
     host = db_host,
     port = db_port,
     user = db_user,
     password = db_pass,
     sslmode = ssl_mode,
-    options = paste0("-c search_path=", Sys.getenv("R_CONFIG_ACTIVE"))
+    options = paste0("-c search_path=", Sys.getenv("R_CONFIG_ACTIVE")),
+    validateQuery = "SELECT 1",
+    validationInterval = 0
   )
 
   return(pool)
@@ -61,9 +63,23 @@ connect_postgres_db <- function() {
 #' @param pool The connection pool to close
 #'
 close_postgres_db <- function(pool) {
-  if (!is.null(pool) && pool::dbIsValid(pool)) {
-    pool::poolClose(pool)
+  if (is.null(pool)) {
+    return(invisible(FALSE))
   }
+
+  tryCatch(
+    {
+      if (isTRUE(pool::dbIsValid(pool))) {
+        pool::poolClose(pool)
+        return(invisible(TRUE))
+      }
+      invisible(FALSE)
+    },
+    error = function(e) {
+      message("DB pool close skipped: ", e$message)
+      invisible(FALSE)
+    }
+  )
 }
 
 #' Initialize Database Schema from YAML
@@ -219,18 +235,35 @@ connect_postgres_ipgeo_db <- function() {
     stop("DB_HOST is missing. Did you load your .Renviron?")
   }
 
-  pool <- pool::dbPool(
-    drv = RPostgres::Postgres(),
+  pool <- postgres_db_pool(
+    drv = postgres_driver(),
     dbname = db_name,
     host = db_host,
     port = db_port,
     user = db_user,
     password = db_pass,
     sslmode = ssl_mode,
-    options = paste0("-c search_path=", "ipgeo")
+    options = paste0("-c search_path=", "ipgeo"),
+    validateQuery = "SELECT 1",
+    validationInterval = 0
   )
 
   return(pool)
 }
 
+#' PostgreSQL driver factory
+#'
+#' @return An RPostgres driver object.
+#' @noRd
+postgres_driver <- function() {
+  RPostgres::Postgres()
+}
 
+#' PostgreSQL pool factory
+#'
+#' @param ... Arguments passed to `pool::dbPool()`.
+#' @return A `pool` object.
+#' @noRd
+postgres_db_pool <- function(...) {
+  pool::dbPool(...)
+}
