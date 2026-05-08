@@ -29,7 +29,7 @@ test_that("validate_interpretation strips markdown code fences", {
 test_that("validate_interpretation returns valid=FALSE for non-JSON input", {
   result <- validate_interpretation("not json at all")
   expect_false(result$valid)
-  expect_match(result$error, "schema", ignore.case = TRUE)
+  expect_match(result$error, "JSON", ignore.case = TRUE)
 })
 
 test_that("validate_interpretation returns valid=FALSE when a field is missing", {
@@ -37,7 +37,7 @@ test_that("validate_interpretation returns valid=FALSE when a field is missing",
   json <- '{"title":"T","body":"B","general":"G","work":"W","health":"H"}'
   result <- validate_interpretation(json)
   expect_false(result$valid)
-  expect_match(result$error, "schema", ignore.case = TRUE)
+  expect_match(result$error, "missing", ignore.case = TRUE)
 })
 
 test_that("validate_interpretation rejects old 3-field contract (wisdom_tag)", {
@@ -51,14 +51,14 @@ test_that("validate_interpretation returns valid=FALSE for empty string", {
   expect_false(result$valid)
 })
 
-test_that("validate_interpretation returns valid=FALSE for extra fields", {
+test_that("validate_interpretation ignores extra provider/model metadata fields", {
   json <- paste0(
     '{"title":"T","body":"B","general":"G","work":"W","health":"H",',
     '"relationships":"R","extra":"nope"}'
   )
   result <- validate_interpretation(json)
-  expect_false(result$valid)
-  expect_match(result$error, "schema", ignore.case = TRUE)
+  expect_true(result$valid)
+  expect_equal(result$data$relationships, "R")
 })
 
 test_that("validate_interpretation returns valid=FALSE for empty required values", {
@@ -71,7 +71,21 @@ test_that("validate_interpretation rejects numeric field values", {
   json <- '{"title":42,"body":"B","general":"G","work":"W","health":"H","relationships":"R"}'
   result <- validate_interpretation(json)
   expect_false(result$valid)
-  expect_match(result$error, "schema", ignore.case = TRUE)
+  expect_match(result$error, "invalid", ignore.case = TRUE)
+})
+
+test_that("validate_interpretation extracts JSON object from surrounding prose", {
+  json <- paste("Here is the reading:", VALID_JSON_6, "Hope this helps.")
+  result <- validate_interpretation(json)
+  expect_true(result$valid)
+  expect_equal(result$data$title, fix$valid_json_6$title)
+})
+
+test_that("validate_interpretation unwraps common LLM response containers", {
+  json <- jsonlite::toJSON(list(interpretation = fix$valid_json_6, model = "test-model"), auto_unbox = TRUE)
+  result <- validate_interpretation(json)
+  expect_true(result$valid)
+  expect_equal(result$data$work, fix$valid_json_6$work)
 })
 
 
@@ -157,6 +171,38 @@ test_that("get_tarot_interpretation parses valid 6-field LLM response", {
   expect_equal(result$work,          fix$mock_llm_response$work)
   expect_equal(result$health,        fix$mock_llm_response$health)
   expect_equal(result$relationships, fix$mock_llm_response$relationships)
+})
+
+test_that("get_tarot_interpretation accepts LLM response with harmless metadata", {
+  llm_content <- jsonlite::toJSON(
+    c(fix$mock_llm_response, list(model = "test-model", card = fix$card_names$star)),
+    auto_unbox = TRUE
+  )
+  api_body <- jsonlite::toJSON(list(
+    choices = list(list(message = list(content = llm_content)))
+  ), auto_unbox = TRUE)
+
+  fake_resp <- structure(
+    list(
+      status_code = 200L,
+      body = charToRaw(api_body),
+      headers = list(`content-type` = "application/json")
+    ),
+    class = "httr2_response"
+  )
+
+  mockery::stub(get_tarot_interpretation, "httr2::req_perform", function(...) fake_resp)
+  mockery::stub(get_tarot_interpretation, "httr2::resp_status",      function(...) 200L)
+  mockery::stub(get_tarot_interpretation, "httr2::resp_body_string", function(...) api_body)
+
+  result <- get_tarot_interpretation(
+    card_name     = fix$card_names$star,
+    card_meanings  = fix$card_meanings$star,
+    api_key       = "test-key-abc"
+  )
+
+  expect_equal(result$title, fix$mock_llm_response$title)
+  expect_null(result$is_local_fallback)
 })
 
 test_that("get_tarot_interpretation falls back when LLM returns invalid JSON", {

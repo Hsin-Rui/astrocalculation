@@ -120,10 +120,11 @@ get_tarot_interpretation <- function(
 
 #' Validate a tarot interpretation JSON string
 #'
-#' Checks that the provided JSON text is parseable and contains the six
-#' required fields: \code{title}, \code{body}, \code{general}, \code{work},
-#' \code{health}, and \code{relationships}.
-#' Uses \code{jsonlite} which is already a dependency of this package.
+#' Checks that the provided JSON text is parseable and contains the six required
+#' fields: \code{title}, \code{body}, \code{general}, \code{work},
+#' \code{health}, and \code{relationships}. Extra provider/model metadata is
+#' ignored, and common wrappers such as \code{interpretation} or \code{data} are
+#' unwrapped.
 #'
 #' @param json_text Character. Raw JSON string returned by the LLM.
 #'
@@ -140,53 +141,63 @@ get_tarot_interpretation <- function(
 #' @importFrom jsonlite fromJSON
 #' @export
 validate_interpretation <- function(json_text) {
-  # 1. Strip markdown code fences that some models emit
-  cleaned <- gsub("^```(?:json)?\\s*|\\s*```$", "", trimws(json_text), perl = TRUE)
+  required_fields <- c("title", "body", "general", "work", "health", "relationships")
 
-  schema <- paste0(
-    '{',
-    '"type":"object",',
-    '"required":["title","body","general","work","health","relationships"],',
-    '"properties":{',
-    '"title":{"type":"string","minLength":1},',
-    '"body":{"type":"string","minLength":1},',
-    '"general":{"type":"string","minLength":1},',
-    '"work":{"type":"string","minLength":1},',
-    '"health":{"type":"string","minLength":1},',
-    '"relationships":{"type":"string","minLength":1}',
-    '},',
-    '"additionalProperties":false',
-    '}'
-  )
-
-  schema_ok <- tryCatch(
-    jsonvalidate::json_validate(cleaned, schema, error = FALSE),
-    error = function(e) FALSE
-  )
-
-  if (!isTRUE(schema_ok)) {
-    return(list(valid = FALSE, error = "Response does not match required JSON schema"))
+  if (is.null(json_text) || length(json_text) == 0) {
+    return(list(valid = FALSE, error = "Response is empty"))
   }
 
-  parsed <- tryCatch(
-    jsonlite::fromJSON(cleaned, simplifyVector = TRUE),
-    error = function(e) NULL
-  )
+  # Strip markdown code fences and tolerate short prose before/after the object.
+  cleaned <- gsub("^```(?:json)?\\s*|\\s*```$", "", trimws(as.character(json_text[[1]])), perl = TRUE)
+  json_start <- regexpr("\\{", cleaned, perl = TRUE)[[1]]
+  json_end_matches <- gregexpr("\\}", cleaned, perl = TRUE)[[1]]
+  if (json_start > 0 && !identical(json_end_matches, -1L)) {
+    cleaned <- substr(cleaned, json_start, max(json_end_matches))
+  }
+
+  parsed <- tryCatch(jsonlite::fromJSON(cleaned, simplifyVector = FALSE), error = function(e) NULL)
 
   if (is.null(parsed)) {
     return(list(valid = FALSE, error = "Response is not valid JSON"))
   }
 
-  # Coerce to character to guard against unexpected types
+  candidate <- parsed
+  wrapper_names <- c("interpretation", "tarot_interpretation", "response", "data", "result")
+  for (wrapper in wrapper_names) {
+    if (is.list(candidate[[wrapper]])) {
+      candidate <- candidate[[wrapper]]
+      break
+    }
+  }
+
+  missing_fields <- setdiff(required_fields, names(candidate))
+  if (length(missing_fields) > 0) {
+    return(list(
+      valid = FALSE,
+      error = paste("Response is missing required fields:", paste(missing_fields, collapse = ", "))
+    ))
+  }
+
+  invalid_fields <- required_fields[vapply(required_fields, function(field) {
+    value <- candidate[[field]]
+    !is.character(value) || length(value) != 1L || !nzchar(trimws(value))
+  }, logical(1))]
+  if (length(invalid_fields) > 0) {
+    return(list(
+      valid = FALSE,
+      error = paste("Response has invalid required fields:", paste(invalid_fields, collapse = ", "))
+    ))
+  }
+
   list(
     valid = TRUE,
     data  = list(
-      title         = as.character(parsed$title),
-      body          = as.character(parsed$body),
-      general       = as.character(parsed$general),
-      work          = as.character(parsed$work),
-      health        = as.character(parsed$health),
-      relationships = as.character(parsed$relationships)
+      title         = trimws(candidate$title),
+      body          = trimws(candidate$body),
+      general       = trimws(candidate$general),
+      work          = trimws(candidate$work),
+      health        = trimws(candidate$health),
+      relationships = trimws(candidate$relationships)
     )
   )
 }

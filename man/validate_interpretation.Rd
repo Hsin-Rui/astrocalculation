@@ -21,8 +21,9 @@ A named list:
 }
 }
 \description{
-Checks that the provided JSON text is parseable and contains the six
-required fields: \code{title}, \code{body}, \code{general}, \code{work},
-\code{health}, and \code{relationships}.
-Uses \code{jsonlite} which is already a dependency of this package.
+Checks that the provided JSON text is parseable and contains the six required
+fields: \code{title}, \code{body}, \code{general}, \code{work},
+\code{health}, and \code{relationships}. Extra provider/model metadata is
+ignored, and common wrappers such as \code{interpretation} or \code{data} are
+unwrapped.
 }

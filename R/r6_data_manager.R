@@ -153,6 +153,17 @@ DataManager <- R6::R6Class(
       self$update_chart()
     },
 
+    #' @description Close the PostgreSQL connection pool held by this manager.
+    #' Safe to call more than once.
+    close_pool = function() {
+      pool_to_close <- self$pool
+      self$pool <- NULL
+      if (!is.null(self$logger)) {
+        self$logger$pool <- NULL
+      }
+      close_postgres_db(pool_to_close)
+    },
+
     # 2. Methods: Auth Integration ---------------------
 
     #' @description Register a new user
@@ -762,7 +773,7 @@ DataManager <- R6::R6Class(
 
       llm_config <- resolve_tarot_llm_config()
 
-      # Fire LLM call in background \u2014 caller chains the result
+      # Fire LLM call in background caller chains the result
       future::future({
         get_tarot_interpretation(
           card_name,
@@ -814,7 +825,7 @@ DataManager <- R6::R6Class(
   # 7. Private Methods -----------------------------------------
   private = list(
     finalize = function() {
-      if (!is.null(self$pool)) close_postgres_db(self$pool)
+      self$close_pool()
     }
   )
 )

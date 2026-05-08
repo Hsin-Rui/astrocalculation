@@ -62,6 +62,7 @@ test_that("save_tarot_draw stops when card_id is missing", {
 })
 
 test_that("save_tarot_draw executes a parameterized INSERT and returns 1", {
+  skip_if_not_installed("uuid")
   calls <- list(count = 0L, statements = character())
 
   pool <- make_ud_mock_conn(exec_side = function(sql) {
@@ -77,14 +78,36 @@ test_that("save_tarot_draw executes a parameterized INSERT and returns 1", {
     is_free_tier        = TRUE
   )
 
-  expect_true(any(grepl("CREATE TABLE IF NOT EXISTS tarot_draws", calls$statements, fixed = TRUE)))
   expect_true(any(grepl("INSERT INTO tarot_draws", calls$statements, fixed = TRUE)))
+  expect_false(any(grepl("CREATE TABLE IF NOT EXISTS tarot_draws", calls$statements, fixed = TRUE)))
+  expect_false(any(grepl("ALTER TABLE tarot_draws", calls$statements, fixed = TRUE)))
   expect_false(any(grepl("gen_random_uuid", calls$statements, fixed = TRUE)))
   expect_false(any(grepl("uuid_generate_v4", calls$statements, fixed = TRUE)))
   expect_equal(rows, 1L)
 })
 
+test_that("save_tarot_draw only inserts rows and does not run tarot_draws DDL", {
+  skip_if_not_installed("uuid")
+  calls <- list(statements = character())
+
+  pool <- make_ud_mock_conn(exec_side = function(sql) {
+    calls$statements <<- c(calls$statements, sql)
+  })
+
+  save_tarot_draw(pool, "uid-1", "The Fool", interpretation_text = "First")
+  save_tarot_draw(pool, "uid-1", "The Moon", interpretation_text = "Second")
+
+  create_calls <- grepl("CREATE TABLE IF NOT EXISTS tarot_draws", calls$statements, fixed = TRUE)
+  alter_calls <- grepl("ALTER TABLE tarot_draws", calls$statements, fixed = TRUE)
+  insert_calls <- grepl("INSERT INTO tarot_draws", calls$statements, fixed = TRUE)
+
+  expect_equal(sum(create_calls), 0L)
+  expect_equal(sum(alter_calls), 0L)
+  expect_equal(sum(insert_calls), 2L)
+})
+
 test_that("save_tarot_draw handles NULL interpretation_text without error", {
+  skip_if_not_installed("uuid")
   pool <- make_ud_mock_conn()
   expect_no_error(
     save_tarot_draw(pool, "uid-1", "The Moon", interpretation_text = NULL)
