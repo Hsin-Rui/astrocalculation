@@ -307,7 +307,7 @@ add_planet_layers <- function(p, planet_position, starting_deg, x_limits, y_limi
         y = planet_data$planet_y_glyphs,
         label = planet_position$planet_glyphs
       ),
-      family = planet_position$font_gpyphs,
+      family = planet_position$font_glyphs,
       size = planet_position$font_size
     ) +
     ggplot2::geom_segment(

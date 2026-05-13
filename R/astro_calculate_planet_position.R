@@ -58,7 +58,7 @@ calculate_planet_position <- function(date, timezone, longitude, latitude){
   position$planet_glyphs <- convert_planet_symbol(row.names(position))
   position$planet_color <- zodiac_sign_color[position$sign]
 
-  position$font_gpyphs <-  dplyr::case_when(position$planet_glyphs == "Vx" ~ "sans", TRUE ~ "AstroDotBasic")
+  position$font_glyphs <-  dplyr::case_when(position$planet_glyphs == "Vx" ~ "sans", TRUE ~ "AstroDotBasic")
   position$font_size <- dplyr::case_when(position$planet_glyphs == "Vx" ~ 4.5, TRUE ~ 6.5)
 
   return(list(planetary_position=position ,house_cusps=house_cusps))

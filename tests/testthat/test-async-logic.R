@@ -26,7 +26,7 @@ make_mock_planet_df <- function() {
     speed        = c(1.0, 13.0),
     planet_color = c("black", "black"),
     planet_glyphs = c("Q", "R"),
-    font_gpyphs  = c("HamburgSymbols", "HamburgSymbols"),
+    font_glyphs  = c("HamburgSymbols", "HamburgSymbols"),
     font_size    = c(6, 6),
     row.names    = c("sun", "moon")
   )
