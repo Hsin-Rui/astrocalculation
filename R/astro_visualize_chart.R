@@ -261,7 +261,7 @@ prepare_planet_layers_data <- function(planet_position, starting_deg) {
 prepare_aspect_layers_data <- function(aspect_table, starting_deg) {
   aspect_table <-
     aspect_table |>
-    dplyr::filter(aspect != "conjunction")
+      dplyr::filter(draw_line)
 
   aspect_table$theta_p1 <- convert_degree_to_theta(aspect_table$deg_p1, starting_deg)
   aspect_table$theta_p2 <- convert_degree_to_theta(aspect_table$deg_p2, starting_deg)
