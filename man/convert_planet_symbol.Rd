@@ -2,7 +2,7 @@
 % Please edit documentation in R/astro_utils.R
 \name{convert_planet_symbol}
 \alias{convert_planet_symbol}
-\title{Convert planet names to glyphs using AstroGadget.ttf}
+\title{Convert planet names to glyphs using AstroDotBasic.ttf}
 \usage{
 convert_planet_symbol(x)
 }
@@ -13,5 +13,5 @@ convert_planet_symbol(x)
 a character vector of alphabets for glyphs
 }
 \description{
-Convert planet names to glyphs using AstroGadget.ttf
+Convert planet names to glyphs using AstroDotBasic.ttf
 }

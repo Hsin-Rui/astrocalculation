@@ -50,6 +50,7 @@ DataManager <- R6::R6Class(
 
     #' @field planet_conditions data.frame of planet conditions
     planet_conditions = NULL,
+    #' @field greek_lots data.frame of greek lots position
     greek_lots = NULL,
 
     ## 1-3. Calculation config ####
@@ -574,34 +575,6 @@ DataManager <- R6::R6Class(
           self$horoscope_longitude <- loc_data$lng
           self$horoscope_timezone <- loc_data$timezone
 
-          self$planet_position <- calculate_planet_position(
-            self$horoscope_datetime,
-            self$horoscope_timezone,
-            self$horoscope_longitude,
-            self$horoscope_latitude
-          )
-
-          self$planet_conditions <- get_planetary_conditions(
-            self$planet_position,
-            self$house_system
-          )
-
-          self$greek_lots <-
-            calculate_greek_lots(
-              self$planet_position$planetary_position,
-              self$planet_conditions
-            )
-
-          self$planet_position$planetary_position <-
-            dplyr::bind_rows(self$planet_position$planetary_position, self$greek_lots)
-
-          # 3. Process Aspect Table
-          data <- self$planet_position$planetary_position
-          data <- data[(row.names(data) %in% self$selected_planets), ]
-          self$aspect_table <- calculate_aspect(data)
-
-          # 4. Generate Visualization
-          self$planet_position$planetary_position <- data
           house_system <- self$house_system
           if (is.null(house_system) || length(house_system) == 0) {
             house_system <- "whole_sign"
@@ -611,16 +584,37 @@ DataManager <- R6::R6Class(
             c("whole_sign", "placidus", "koch", "regiomontanus")
           )
 
+          # Resolve the canonical payload (single call covers planets,
+          # conditions, greek lots, aspects, and display tables)
+          payload <- calculate_natal_payload(
+            date            = self$horoscope_datetime,
+            timezone        = self$horoscope_timezone,
+            longitude       = self$horoscope_longitude,
+            latitude        = self$horoscope_latitude,
+            selected_bodies = self$selected_planets,
+            house_system    = house_system
+          )
+
+          # Distribute payload fields onto DataManager state
+          self$planet_position <- list(
+            planetary_position = payload$planetary_positions,
+            house_cusps        = payload$house_cusps
+          )
+          self$planet_conditions <- payload$planetary_conditions
+          self$greek_lots        <- payload$greek_lots
+          self$aspect_table      <- payload$aspects
+
+          # Generate Visualization
           chart <- draw_natal_chart(
-            planet_position = data,
-            chart_name = self$chart_name,
-            date = self$horoscope_datetime,
-            city = self$horoscope_city,
-            country = self$horoscope_country,
-            timezone = self$horoscope_timezone,
-            aspect_table = self$aspect_table,
-            house_cusps = self$planet_position$house_cusps,
-            house_system = house_system
+            planet_position = payload$planetary_positions,
+            chart_name      = self$chart_name,
+            date            = self$horoscope_datetime,
+            city            = self$horoscope_city,
+            country         = self$horoscope_country,
+            timezone        = self$horoscope_timezone,
+            aspect_table    = payload$aspects,
+            house_cusps     = payload$house_cusps,
+            house_system    = house_system
           )
           if (!inherits(chart, "ggplot") && !inherits(chart, "ggplot2::ggplot")) {
             stop("draw_natal_chart did not return a ggplot object")
@@ -696,14 +690,21 @@ DataManager <- R6::R6Class(
       safe_lng <- self$horoscope_longitude
 
       future::future({
-        planet_pos <- calculate_planet_position(dt, worker_tz, safe_lng, safe_lat)
-        data_df    <- planet_pos$planetary_position
-        data_df    <- data_df[(row.names(data_df) %in% planets), ]
-        aspect     <- calculate_aspect(data_df)
-        planet_pos$planetary_position <- data_df
+        # Resolve the same canonical payload as the sync path; only the
+        # rendered image path crosses back across the future boundary.
+        payload <- calculate_natal_payload(
+          date            = dt,
+          timezone        = worker_tz,
+          longitude       = safe_lng,
+          latitude        = safe_lat,
+          selected_bodies = planets,
+          house_system    = house_system
+        )
         render_natal_chart_to_file(
-          data_df, name, dt, city, country, worker_tz, aspect,
-          house_cusps = planet_pos$house_cusps,
+          payload$planetary_positions,
+          name, dt, city, country, worker_tz,
+          payload$aspects,
+          house_cusps  = payload$house_cusps,
           house_system = house_system
         )
       }, packages = "astrocalculation", seed = NULL)

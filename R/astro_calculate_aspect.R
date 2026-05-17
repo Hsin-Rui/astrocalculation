@@ -54,7 +54,7 @@ get_aspect_edge_list <- function(x, asp_name){
       p1 = pmin(planet, planet2),
       p2 = pmax(planet, planet2)
     ) |>
-    dplyr::distinct(p1, p2, aspect) %>%
+    dplyr::distinct(p1, p2, aspect) |>
     dplyr::select(planet = p1, planet2 = p2, aspect)
 
 }
