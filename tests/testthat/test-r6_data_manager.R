@@ -2,6 +2,33 @@ library(testthat)
 
 mock_ggplot_chart <- function(...) ggplot2::ggplot()
 
+make_mock_planet_position <- function(house_cusps = NULL) {
+  if (is.null(house_cusps)) {
+    house_cusps <- data.frame(
+      whole_sign = seq(0, 330, by = 30),
+      placidus = seq(1, 331, by = 30),
+      koch = seq(2, 332, by = 30),
+      regiomontanus = seq(3, 333, by = 30)
+  )
+  }
+
+  planetary_position <- data.frame(
+    deg = c(15, 45, 75, 105, 135, 165, 195, 225),
+    speed = c(1.0, 13.0, 1.2, 1.1, 0.6, 0.3, 0.1, 0),
+    sign = c(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L),
+    deg_in_sign = c(15, 15, 15, 15, 15, 15, 15, 15),
+    min_in_sign = c(0, 0, 0, 0, 0, 0, 0, 0),
+    sec_in_sign = c(0, 0, 0, 0, 0, 0, 0, 0),
+    planet_glyphs = c("Q", "R", "S", "T", "U", "V", "W", "x"),
+    planet_color = rep("black", 8),
+    font_glyphs = rep("HamburgSymbols", 8),
+    font_size = rep(6, 8),
+    row.names = c("sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "asc")
+  )
+
+  list(planetary_position = planetary_position, house_cusps = house_cusps)
+}
+
 test_that("login_with_google sets user state and returns session token", {
   calls <- list()
 
@@ -33,7 +60,7 @@ test_that("login_with_google sets user state and returns session token", {
     connect_postgres_db = function() list(conn = TRUE),
     Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
-    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_planet_position = function(...) make_mock_planet_position(),
     calculate_aspect = function(data) data.frame(),
     draw_natal_chart = mock_ggplot_chart,
     auth_handle_oauth_user = function(pool, email, google_id, name) {
@@ -76,7 +103,7 @@ test_that("close_pool closes and detaches the DataManager pool", {
     },
     Logger = list(new = function(pool) list(pool = pool, log_info = function(...) NULL, log_error = function(...) NULL)),
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
-    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_planet_position = function(...) make_mock_planet_position(),
     calculate_aspect = function(data) data.frame(),
     draw_natal_chart = mock_ggplot_chart,
     poolWithTransaction = function(pool, code) code(NULL),
@@ -109,7 +136,7 @@ test_that("validate_session updates user_id and refreshes data", {
     connect_postgres_db = function() list(conn = TRUE),
     Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
-    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_planet_position = function(...) make_mock_planet_position(),
     calculate_aspect = function(data) data.frame(),
     draw_natal_chart = mock_ggplot_chart,
     auth_validate_session = function(pool, token) "uid-validated",
@@ -140,7 +167,7 @@ test_that("trigger_password_reset delegates to auth logic", {
     connect_postgres_db = function() list(conn = TRUE),
     Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
-    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_planet_position = function(...) make_mock_planet_position(),
     calculate_aspect = function(data) data.frame(),
     draw_natal_chart = mock_ggplot_chart,
     auth_trigger_password_reset = function(pool, email, ttl_minutes = 30) {
@@ -175,7 +202,7 @@ test_that("reset_password delegates to auth logic", {
     connect_postgres_db = function() list(conn = TRUE),
     Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
-    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_planet_position = function(...) make_mock_planet_position(),
     calculate_aspect = function(data) data.frame(),
     draw_natal_chart = mock_ggplot_chart,
     auth_reset_password = function(pool, token, new_password) {
@@ -221,7 +248,7 @@ test_that("load_chart_to_view keeps local wall time after DB UTC round trip", {
     connect_postgres_db = function() list(conn = TRUE),
     Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
     lookup_city_data = function(country, city) list(lat = 25.03, lng = 121.56, timezone = "Asia/Taipei"),
-    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_planet_position = function(...) make_mock_planet_position(),
     calculate_aspect = function(data) data.frame(),
     draw_natal_chart = mock_ggplot_chart,
     poolWithTransaction = function(pool, code) code(NULL),
@@ -259,7 +286,7 @@ test_that("adjust_time delegates to add/minus helpers and refreshes chart", {
     connect_postgres_db = function() list(conn = TRUE),
     Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
-    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_planet_position = function(...) make_mock_planet_position(),
     calculate_aspect = function(data) data.frame(),
     draw_natal_chart = mock_ggplot_chart,
     add_datetime = function(time, unit, value) {
@@ -307,7 +334,7 @@ test_that("update_chart passes house_system and house cusps to draw_natal_chart"
     Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
     calculate_planet_position = function(...) {
-      list(planetary_position = data.frame(dummy = 1), house_cusps = house_cusps)
+      make_mock_planet_position(house_cusps = house_cusps)
     },
     calculate_aspect = function(data) data.frame(),
     draw_natal_chart = function(...) {
@@ -363,7 +390,7 @@ test_that("login logs auth_method=password and login_id in context", {
     connect_postgres_db = function() list(conn = TRUE),
     Logger = capture$mock,
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
-    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_planet_position = function(...) make_mock_planet_position(),
     calculate_aspect = function(data) data.frame(),
     draw_natal_chart = mock_ggplot_chart,
     auth_verify_user = function(pool, login_id, password) list(id = "uid-pw", verified = TRUE),
@@ -405,7 +432,7 @@ test_that("login_with_google logs auth_method=google and email in context", {
     connect_postgres_db = function() list(conn = TRUE),
     Logger = capture$mock,
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
-    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_planet_position = function(...) make_mock_planet_position(),
     calculate_aspect = function(data) data.frame(),
     draw_natal_chart = mock_ggplot_chart,
     auth_handle_oauth_user = function(pool, email, google_id, name) "uid-goog",
@@ -429,7 +456,7 @@ make_dm_base_bindings <- function(extra = list()) {
       connect_postgres_db = function() list(conn = TRUE),
       Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
       lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
-      calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+      calculate_planet_position = function(...) make_mock_planet_position(),
       calculate_aspect = function(data) data.frame(),
       draw_natal_chart = mock_ggplot_chart,
       db_get_profile = function(pool, uid) NULL,
@@ -476,7 +503,7 @@ test_that("DataManager$register passes terms_accepted to auth_register_user", {
     connect_postgres_db = function() list(conn = TRUE),
     Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
-    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_planet_position = function(...) make_mock_planet_position(),
     calculate_aspect = function(data) data.frame(),
     draw_natal_chart = mock_ggplot_chart,
     db_get_profile = function(pool, uid) NULL,
@@ -526,7 +553,7 @@ test_that("DataManager$promote_guest_draw persists current_cards + llm_interpret
     connect_postgres_db = function() list(conn = TRUE),
     Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
-    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_planet_position = function(...) make_mock_planet_position(),
     calculate_aspect   = function(data) data.frame(),
     draw_natal_chart = mock_ggplot_chart,
     db_get_profile = function(pool, uid) NULL,
@@ -551,7 +578,7 @@ test_that("DataManager$promote_guest_draw is a no-op (returns FALSE) when no gue
     connect_postgres_db = function() list(conn = TRUE),
     Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
     lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
-    calculate_planet_position = function(...) list(planetary_position = data.frame(dummy = 1)),
+    calculate_planet_position = function(...) make_mock_planet_position(),
     calculate_aspect   = function(data) data.frame(),
     draw_natal_chart = mock_ggplot_chart,
     db_get_profile = function(pool, uid) NULL,

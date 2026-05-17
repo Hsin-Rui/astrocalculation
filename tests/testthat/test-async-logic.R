@@ -26,7 +26,7 @@ make_mock_planet_df <- function() {
     speed        = c(1.0, 13.0),
     planet_color = c("black", "black"),
     planet_glyphs = c("Q", "R"),
-    font_gpyphs  = c("HamburgSymbols", "HamburgSymbols"),
+    font_glyphs  = c("HamburgSymbols", "HamburgSymbols"),
     font_size    = c(6, 6),
     row.names    = c("sun", "moon")
   )
@@ -34,12 +34,37 @@ make_mock_planet_df <- function() {
 
 make_mock_aspect_df <- function() {
   data.frame(
-    planet1 = character(0),
-    planet2 = character(0),
-    aspect  = character(0),
-    deg_p1  = numeric(0),
-    deg_p2  = numeric(0),
+    planet     = character(0),
+    planet2    = character(0),
+    aspect     = character(0),
+    deg_p1     = numeric(0),
+    deg_p2     = numeric(0),
+    orb1       = numeric(0),
+    orb2       = numeric(0),
+    separation = character(0),
+    draw_line  = logical(0),
     stringsAsFactors = FALSE
+  )
+}
+
+make_mock_payload <- function(planets = c("sun", "moon")) {
+  pos_df <- make_mock_planet_df()
+  pos_df <- pos_df[row.names(pos_df) %in% planets, , drop = FALSE]
+  list(
+    planetary_positions  = pos_df,
+    house_cusps          = data.frame(
+      whole_sign = rep(0, 12), equal = rep(0, 12),
+      placidus   = rep(0, 12), koch  = rep(0, 12),
+      regiomontanus = rep(0, 12)
+    ),
+    aspects              = make_mock_aspect_df(),
+    planetary_conditions = data.frame(),
+    greek_lots           = data.frame(),
+    selected_bodies      = planets,
+    tables               = list(
+      aspects    = make_mock_aspect_df(),
+      conditions = data.frame()
+    )
   )
 }
 
@@ -144,8 +169,7 @@ test_that("DataManager$update_chart_async returns only the JPEG path (AC 5)", {
       connect_postgres_db = function() list(conn = TRUE),
       Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
       lookup_city_data = function(country, city) list(lat = 35.3273, lng = -96.9253, timezone = "America/Chicago"),
-      calculate_planet_position = function(...) list(planetary_position = make_mock_planet_df()),
-      calculate_aspect = function(data) make_mock_aspect_df(),
+      calculate_natal_payload = function(...) make_mock_payload(c("sun", "moon")),
       draw_natal_chart = function(...) ggplot2::ggplot(),
       render_natal_chart_to_file = function(...) tmp_jpeg
     ),
@@ -173,17 +197,17 @@ test_that("DataManager$update_chart_async respects selected_planets filter", {
   tmp_jpeg      <- tempfile(fileext = ".jpg")
   writeLines("stub", tmp_jpeg)
   on.exit(unlink(tmp_jpeg, force = TRUE), add = TRUE)
-  captured_data <- NULL
+  captured_bodies <- NULL
 
   with_namespace_bindings(
     list(
       connect_postgres_db = function() list(conn = TRUE),
       Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
       lookup_city_data = function(country, city) list(lat = 35.3273, lng = -96.9253, timezone = "America/Chicago"),
-      calculate_planet_position = function(...) list(planetary_position = make_mock_planet_df()),
-      calculate_aspect = function(data) {
-        captured_data <<- data
-        make_mock_aspect_df()
+      calculate_natal_payload = function(date, timezone, longitude, latitude,
+                                         selected_bodies, house_system) {
+        captured_bodies <<- selected_bodies
+        make_mock_payload(selected_bodies)
       },
       draw_natal_chart = function(...) ggplot2::ggplot(),
       render_natal_chart_to_file = function(...) tmp_jpeg
@@ -196,8 +220,8 @@ test_that("DataManager$update_chart_async respects selected_planets filter", {
     })
   )
 
-  expect_true("sun"     %in% row.names(captured_data))
-  expect_false("moon"   %in% row.names(captured_data))
+  expect_true("sun"   %in% captured_bodies)
+  expect_false("moon" %in% captured_bodies)
 })
 
 test_that("DataManager$update_chart_async refreshes location metadata like update_chart", {
@@ -216,8 +240,7 @@ test_that("DataManager$update_chart_async refreshes location metadata like updat
 
         list(lat = 25.03, lng = 121.56, timezone = "Asia/Taipei")
       },
-      calculate_planet_position = function(...) list(planetary_position = make_mock_planet_df()),
-      calculate_aspect = function(data) make_mock_aspect_df(),
+      calculate_natal_payload = function(...) make_mock_payload(c("sun", "moon")),
       draw_natal_chart = function(...) ggplot2::ggplot(),
       render_natal_chart_to_file = function(...) tmp_jpeg
     ),
@@ -248,15 +271,15 @@ test_that("DataManager$update_chart_async uses optional IP-geolocation coordinat
       connect_postgres_db = function() list(conn = TRUE),
       Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
       lookup_city_data = function(country, city) list(lat = 35.3273, lng = -96.9253, timezone = "America/Chicago"),
-      calculate_planet_position = function(datetime, timezone, longitude, latitude) {
+      calculate_natal_payload = function(date, timezone, longitude, latitude,
+                                          selected_bodies, house_system) {
         captured_args <<- list(
-          timezone = timezone,
+          timezone  = timezone,
           longitude = longitude,
-          latitude = latitude
+          latitude  = latitude
         )
-        list(planetary_position = make_mock_planet_df())
+        make_mock_payload(selected_bodies)
       },
-      calculate_aspect = function(data) make_mock_aspect_df(),
       draw_natal_chart = function(...) ggplot2::ggplot(),
       render_natal_chart_to_file = function(...) tmp_jpeg
     ),

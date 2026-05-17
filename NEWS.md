@@ -1,3 +1,7 @@
+# astrocalculation 0.2.1 -- 2026-5-17
+* Report 7 Hermit Lots (Greek lots for the seven traditional starts)
+* Report Aspects in Hellenistic tradition (report sign based aspects, draw lines according to degree based aspects, degree for moon = 13 degree, for all other planets = 3 degree)
+
 # astrocalculation 0.2.0 -- 2026-5-8
 * Support quadrant houses
 * Remove oracle voice preferences (redundant feature)

@@ -10,20 +10,6 @@
 
 .onLoad <- function(libname, pkgname) {
 
-  font_path <- system.file("fonts", "AstroGadget.ttf", package = pkgname)
-
-  if (font_path != "") {
-
-    sysfonts::font_add(family = "AstroGadget", regular = font_path)
-
-    if (requireNamespace("showtext", quietly = TRUE)) {
-      showtext::showtext_auto()
-    }
-
-  } else {
-    warning("'AstroGadget.ttf' not found")
-  }
-
   font_path <- system.file("fonts", "HamburgSymbols.ttf", package = pkgname)
 
   if (font_path != "") {
@@ -51,6 +37,21 @@
   } else {
     warning("'AstroDotBasic.ttf' not found")
   }
+
+  font_path <- system.file("fonts", "AstroParts.ttf", package = pkgname)
+
+  if (font_path != "") {
+
+    sysfonts::font_add(family = "AstroParts", regular = font_path)
+
+    if (requireNamespace("showtext", quietly = TRUE)) {
+      showtext::showtext_auto()
+    }
+
+  } else {
+    warning("'AstroParts.ttf' not found")
+  }
+
 
   se_path <- system.file("se_data", package = pkgname)
 

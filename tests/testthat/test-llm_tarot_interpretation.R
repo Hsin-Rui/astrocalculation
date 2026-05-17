@@ -5,6 +5,30 @@ library(testthat)
 # contains only ASCII and fixture references.
 fix <- yaml::read_yaml(testthat::test_path("fixtures", "tarot_test_fixtures.yaml"))
 
+make_mock_planet_position <- function() {
+  list(
+    planetary_position = data.frame(
+      deg = c(15, 45, 75, 105, 135, 165, 195, 225),
+      speed = c(1.0, 13.0, 1.2, 1.1, 0.6, 0.3, 0.1, 0),
+      sign = c(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L),
+      deg_in_sign = c(15, 15, 15, 15, 15, 15, 15, 15),
+      min_in_sign = c(0, 0, 0, 0, 0, 0, 0, 0),
+      sec_in_sign = c(0, 0, 0, 0, 0, 0, 0, 0),
+      planet_glyphs = c("Q", "R", "S", "T", "U", "V", "W", "x"),
+      planet_color = rep("black", 8),
+      font_glyphs = rep("HamburgSymbols", 8),
+      font_size = rep(6, 8),
+      row.names = c("sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "asc")
+    ),
+    house_cusps = data.frame(
+      whole_sign = seq(0, 330, by = 30),
+      placidus = seq(1, 331, by = 30),
+      koch = seq(2, 332, by = 30),
+      regiomontanus = seq(3, 333, by = 30)
+    )
+  )
+}
+
 # ── validate_interpretation ───────────────────────────────────────────────────
 
 VALID_JSON_6 <- jsonlite::toJSON(fix$valid_json_6, auto_unbox = TRUE)
@@ -314,7 +338,7 @@ test_that("DataManager initialises with draw_status = 'idle'", {
     envir = ns)
   unlockBinding("calculate_planet_position", ns)
   assign("calculate_planet_position",
-    function(...) list(planetary_position = data.frame(dummy = 1)),
+    function(...) make_mock_planet_position(),
     envir = ns)
   unlockBinding("calculate_aspect", ns)
   assign("calculate_aspect", function(data) data.frame(), envir = ns)
@@ -358,7 +382,7 @@ test_that("shuffle_and_prepare draws a card and returns a future", {
     envir = ns)
   unlockBinding("calculate_planet_position", ns)
   assign("calculate_planet_position",
-    function(...) list(planetary_position = data.frame(dummy = 1)),
+    function(...) make_mock_planet_position(),
     envir = ns)
   unlockBinding("calculate_aspect", ns)
   assign("calculate_aspect", function(data) data.frame(), envir = ns)
@@ -427,7 +451,7 @@ test_that("shuffle_and_prepare skip_llm=TRUE skips get_tarot_interpretation call
     envir = ns)
   unlockBinding("calculate_planet_position", ns)
   assign("calculate_planet_position",
-    function(...) list(planetary_position = data.frame(dummy = 1)),
+    function(...) make_mock_planet_position(),
     envir = ns)
   unlockBinding("calculate_aspect", ns)
   assign("calculate_aspect", function(data) data.frame(), envir = ns)

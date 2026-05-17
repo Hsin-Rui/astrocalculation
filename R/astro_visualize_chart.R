@@ -134,8 +134,7 @@ draw_chart_template <- function(style=c("whole_sign", "chris_brennan", "quadrant
 
 convert_degree_to_theta <- function(deg, starting_deg){
 
-  new_deg <- deg - starting_deg # re-scaling
-  new_deg [new_deg < 0] <- new_deg [new_deg < 0] + 360 # position (on the circle) of planets
+  new_deg <- (deg - starting_deg) %% 360
 
   theta <- as.integer(new_deg /360 *36000) + 1
 
@@ -262,7 +261,7 @@ prepare_planet_layers_data <- function(planet_position, starting_deg) {
 prepare_aspect_layers_data <- function(aspect_table, starting_deg) {
   aspect_table <-
     aspect_table |>
-    dplyr::filter(aspect != "conjunction")
+      dplyr::filter(draw_line)
 
   aspect_table$theta_p1 <- convert_degree_to_theta(aspect_table$deg_p1, starting_deg)
   aspect_table$theta_p2 <- convert_degree_to_theta(aspect_table$deg_p2, starting_deg)
@@ -308,7 +307,7 @@ add_planet_layers <- function(p, planet_position, starting_deg, x_limits, y_limi
         y = planet_data$planet_y_glyphs,
         label = planet_position$planet_glyphs
       ),
-      family = planet_position$font_gpyphs,
+      family = planet_position$font_glyphs,
       size = planet_position$font_size
     ) +
     ggplot2::geom_segment(
@@ -413,8 +412,7 @@ prepare_quadrant_house_layers_data <- function(house_cusps, house_system) {
 
   sign_border_position <- seq(from = first_line, by = 90, length.out = 12)
 
-  ac_ic_difference <- ic - quadrant_start
-  if (ac_ic_difference < 0) ac_ic_difference <- ac_ic_difference + 360
+  ac_ic_difference <- (ic - quadrant_start) %% 360
 
   ic_point <- 541 + (ac_ic_difference) * 3
   mc_point <- (ac_ic_difference) * 3
@@ -431,12 +429,7 @@ prepare_quadrant_house_layers_data <- function(house_cusps, house_system) {
   sign_y <- sign_y[define_sign_order(7)]
 
   quadrant_house_cusps <- house_cusps[house_system] |> unlist()
-  quadrant_house_cusps <- quadrant_house_cusps - quadrant_start
-  quadrant_house_cusps <- dplyr::if_else(
-    quadrant_house_cusps < 0,
-    quadrant_house_cusps + 360,
-    quadrant_house_cusps
-  )
+  quadrant_house_cusps <- (quadrant_house_cusps - quadrant_start) %% 360
 
   quadrant_house_cusps_position <- as.integer((quadrant_house_cusps[c(2, 3, 5, 6, 8, 9, 11, 12)]) * 3)
 
@@ -633,8 +626,7 @@ draw_natal_chart <- function(planet_position,
   p <- quadrant_layers$plot
   house_data <- quadrant_layers$house_data
 
-  starting_deg <- house_data$quadrant_start - 180
-  starting_deg <- dplyr::if_else(starting_deg < 0, starting_deg + 360, starting_deg)
+  starting_deg <- (house_data$quadrant_start - 180) %% 360
 
   axis_position <- planet_position[row.names(planet_position) %in% c("asc", "mc"), ]
   planet_position <- planet_position[!row.names(planet_position) %in% c("asc", "mc"), ]

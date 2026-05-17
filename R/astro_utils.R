@@ -89,7 +89,7 @@ find_opposite_sign <- function(sign){
 
 }
 
-#' Convert planet names to glyphs using AstroGadget.ttf
+#' Convert planet names to glyphs using AstroDotBasic.ttf
 #'
 #' @param x a character vector of planet names
 #' @importFrom dplyr recode
@@ -114,7 +114,14 @@ convert_planet_symbol <- function(x){
                 "asc"="P",
                 "mc"="Q",
                 "vertex"="Vx",
-                "chiron"="U"
+                "chiron"="U",
+                "spirit"="a",
+                "fortune"="b",
+                "necessity"="c",
+                "eros"="d",
+                "courage"="e",
+                "victory"="f",
+                "nemesis"="g"
                 )
 
 }
