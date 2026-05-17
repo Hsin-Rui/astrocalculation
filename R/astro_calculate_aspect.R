@@ -1,22 +1,3 @@
-#' Check if two planets have aspects (within 3 degrees / 13 degrees for moon)
-#'
-#' @param distance a matrix of distance between planets
-#'
-
-has_degree_based_aspect <- function(distance){
-
-  # orb for moon = 13 degree; orb for asc/mc/vertex still 3 degree, also with moon
-  res <- distance < 13
-  res <- distance < 3
-
-  for(i in 1:ncol(distance)) res [i,i:ncol(distance)] <- FALSE # create an asymmetric matrix
-
-  res <- data.frame(res)
-  res$planet <- names(res)
-
-  return(res)
-}
-
 #' Calculate distance between planets
 #'
 #' @param data planetary_position
@@ -117,7 +98,7 @@ calculate_aspect <- function(data){
         aspect == "sextile" ~ distance_abs - 60,
         aspect == "square" ~ distance_abs - 90,
         aspect == "trine" ~ distance_abs - 120,
-        aspect == "opp1osition" ~ distance_abs - 180,
+        aspect == "opposition" ~ distance_abs - 180,
         TRUE ~ orb1
       )) |>
       dplyr::mutate(in_three_degree = abs(orb1) < 3,

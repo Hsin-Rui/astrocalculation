@@ -37,6 +37,21 @@ is_diurnal_chart <- function(normalized_planet_degree){
   return(is_diurnal)
 }
 
+#' Determine chart sect
+#'
+#' @param sun_degree degree of sun
+#' @param mercury_degree degree of mercury
+#' @return a boolean. If diurnal then TRUE, otherwise FALSE
+#'
+
+get_mercury_sect <- function(sun_degree, mercury_degree) {
+
+  diff <- (mercury_degree - sun_degree) %% 360
+  is_diurnal <- diff > 180
+
+  return(is_diurnal)
+}
+
 #' Determine if the planets are in the comfortable sect
 #'
 #' @param is_diurnal boolean. If TRUE, it's a diurnal chart.
@@ -48,9 +63,10 @@ is_diurnal_chart <- function(normalized_planet_degree){
 is_in_sect <- function(planetary_position, is_diurnal){
 
   degree <- planetary_position$deg
-  degree <- degree - degree[match("sun", row.names(planetary_position))] %% 360
+  sun_degree <- degree[match("sun", row.names(planetary_position))]
+  mercury_degree <-  degree[match("mercury", row.names(planetary_position))]
 
-  is_diurnal_mercury <- degree[match("mercury", row.names(planetary_position))] < 0
+  is_diurnal_mercury <- get_mercury_sect(sun_degree, mercury_degree)
 
   planets <- c("sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn")
   is_in_sect <- rep(FALSE, 7)
