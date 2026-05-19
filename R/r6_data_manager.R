@@ -58,8 +58,7 @@ DataManager <- R6::R6Class(
     #' name of the chart
     selected_planets = c(
       "sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto",
-      "chiron", "mean_node", "asc", "mc", "vertex",
-      "spirit","fortune","necessity","eros","courage","victory","nemesis"
+      "chiron", "mean_node", "asc", "mc", "vertex", "spirit","fortune"
     ),
     #' @field house_system (`character()`)\cr
     #' can be "whole_sign", "placidus", "koch" or "regiomontanus". Default at whole sign.
