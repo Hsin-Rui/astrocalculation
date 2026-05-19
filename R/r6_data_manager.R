@@ -53,12 +53,20 @@ DataManager <- R6::R6Class(
     #' @field greek_lots data.frame of greek lots position
     greek_lots = NULL,
 
+    #' @field natal_tables
+    #' Named list of display-ready data frames (\code{aspects} and \code{conditions})
+    #' as returned by \code{calculate_natal_payload()$tables}. Updated by both
+    #' synchronous and asynchronous chart paths.
+    natal_tables = NULL,
+
     ## 1-3. Calculation config ####
     #' @field selected_planets (`character()`)\cr
-    #' name of the chart
+    #' Bodies included in chart calculations and aspect rendering.
+    #' Defaults to the Modern preset (matches \code{chart_modern_bodies()} in
+    #' \code{astro.shiny}) so a fresh session initialises to Modern in the UI.
     selected_planets = c(
-      "sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto",
-      "chiron", "mean_node", "asc", "mc", "vertex", "spirit","fortune"
+      "sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn",
+      "uranus", "neptune", "pluto", "chiron", "vertex", "asc", "mc"
     ),
     #' @field house_system (`character()`)\cr
     #' can be "whole_sign", "placidus", "koch" or "regiomontanus". Default at whole sign.
@@ -94,10 +102,10 @@ DataManager <- R6::R6Class(
     card_meanings = NULL,
     #' @field card_files
     #' Path to the jpg of card(s),
-    card_files=NULL,
+    card_files = NULL,
     #' @field card_reverse
     #' Boolean. If the card should be reversed
-    card_reverse=NULL,
+    card_reverse = NULL,
     #' @field draw_status
     #' State machine status for the tarot draw flow.
     #' One of: "idle", "shuffling", "ready", "revealed".
@@ -186,7 +194,7 @@ DataManager <- R6::R6Class(
       # Delegates to the logic function
       new_id <- auth_register_user(
         self$pool, user_id, email, password, display_name,
-        terms_accepted        = terms_accepted
+        terms_accepted = terms_accepted
       )
       if (!is.null(self$logger)) {
         self$logger$log_info(
@@ -377,7 +385,8 @@ DataManager <- R6::R6Class(
       session_token <- auth_create_session(self$pool, self$user_id)
 
       self$logger$log_info("LOGIN", "User logged in", self$user_id,
-        context = list(auth_method = "password", login_id = login_id))
+        context = list(auth_method = "password", login_id = login_id)
+      )
 
       return(session_token)
     },
@@ -400,7 +409,8 @@ DataManager <- R6::R6Class(
 
       self$refresh_user_data()
       self$logger$log_info("LOGIN_GOOGLE", "User logged in", self$user_id,
-        context = list(auth_method = "google", email = email))
+        context = list(auth_method = "google", email = email)
+      )
       session_token <- auth_create_session(self$pool, self$user_id)
 
       # 3. Create Session
@@ -600,8 +610,9 @@ DataManager <- R6::R6Class(
             house_cusps        = payload$house_cusps
           )
           self$planet_conditions <- payload$planetary_conditions
-          self$greek_lots        <- payload$greek_lots
-          self$aspect_table      <- payload$aspects
+          self$greek_lots <- payload$greek_lots
+          self$aspect_table <- payload$aspects
+          self$natal_tables <- payload$tables
 
           # Generate Visualization
           chart <- draw_natal_chart(
@@ -652,9 +663,9 @@ DataManager <- R6::R6Class(
     #' @importFrom future future
     update_chart_async = function(timezone = NULL, latitude = NULL, longitude = NULL) {
       # Capture all needed state as plain values before entering the future worker
-      dt      <- self$horoscope_datetime
-      name    <- self$chart_name
-      city    <- self$horoscope_city
+      dt <- self$horoscope_datetime
+      name <- self$chart_name
+      city <- self$horoscope_city
       country <- self$horoscope_country
       planets <- self$selected_planets
       house_system <- self$house_system
@@ -688,25 +699,34 @@ DataManager <- R6::R6Class(
       safe_lat <- self$horoscope_latitude
       safe_lng <- self$horoscope_longitude
 
-      future::future({
-        # Resolve the same canonical payload as the sync path; only the
-        # rendered image path crosses back across the future boundary.
-        payload <- calculate_natal_payload(
-          date            = dt,
-          timezone        = worker_tz,
-          longitude       = safe_lng,
-          latitude        = safe_lat,
-          selected_bodies = planets,
-          house_system    = house_system
-        )
-        render_natal_chart_to_file(
-          payload$planetary_positions,
-          name, dt, city, country, worker_tz,
-          payload$aspects,
-          house_cusps  = payload$house_cusps,
-          house_system = house_system
-        )
-      }, packages = "astrocalculation", seed = NULL)
+      future::future(
+        {
+          # Resolve the same canonical payload as the sync path; only the
+          # rendered image path crosses back across the future boundary.
+          payload <- calculate_natal_payload(
+            date            = dt,
+            timezone        = worker_tz,
+            longitude       = safe_lng,
+            latitude        = safe_lat,
+            selected_bodies = planets,
+            house_system    = house_system
+          )
+          jpeg_path <- render_natal_chart_to_file(
+            payload$planetary_positions,
+            name, dt, city, country, worker_tz,
+            payload$aspects,
+            house_cusps = payload$house_cusps,
+            house_system = house_system
+          )
+          list(
+            path = jpeg_path,
+            tables = payload$tables,
+            greek_lots = payload$greek_lots
+          )
+        },
+        packages = "astrocalculation",
+        seed = NULL
+      )
     },
 
     #' @description
@@ -776,33 +796,42 @@ DataManager <- R6::R6Class(
       self$last_tarot_draw_saved <- FALSE
 
       # Capture card state as plain values before entering async worker
-      card_name    <- self$current_cards
+      card_name <- self$current_cards
       card_meanings <- self$card_meanings
 
       # Guard: skip LLM for second+ same-day draws (AC 26)
       if (isTRUE(skip_llm)) {
         fallback <- build_tarot_fallback(card_name, card_meanings)
-        return(future::future({ fallback }, packages = "astrocalculation", seed = NULL))
+        return(future::future(
+          {
+            fallback
+          },
+          packages = "astrocalculation",
+          seed = NULL
+        ))
       }
 
       llm_config <- resolve_tarot_llm_config()
 
       # Fire LLM call in background caller chains the result
-      future::future({
-        get_tarot_interpretation(
-          card_name,
-          card_meanings,
-          api_key = llm_config$api_key,
-          base_url = llm_config$base_url,
-          model = llm_config$model
-        )
-      }, packages = "astrocalculation", seed = NULL)
+      future::future(
+        {
+          get_tarot_interpretation(
+            card_name,
+            card_meanings,
+            api_key = llm_config$api_key,
+            base_url = llm_config$base_url,
+            model = llm_config$model
+          )
+        },
+        packages = "astrocalculation",
+        seed = NULL
+      )
     },
 
     #' @description
     #' Draw one tarot card for daily inspiration
-    draw_one_tarot_card = function(){
-
+    draw_one_tarot_card = function() {
       current_deck <- shuffle_deck()
       card_drawn <- draw_cards(n = 1, deck = current_deck)
 
@@ -828,11 +857,11 @@ DataManager <- R6::R6Class(
       ) |> unlist()
 
       self$card_files <- system.file("tarot_cards", paste0(card$file, ".jpg"),
-                                    package = "astrocalculation", mustWork = TRUE)
+        package = "astrocalculation", mustWork = TRUE
+      )
       self$card_reverse <- is_reversed
       self$current_cards <- card_name
       self$card_meanings <- card_meanings
-
     }
   ),
 

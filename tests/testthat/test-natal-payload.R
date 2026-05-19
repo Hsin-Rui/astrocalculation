@@ -16,34 +16,36 @@ library(testthat)
 # Shared fixtures
 # ---------------------------------------------------------------------------
 
-FIXTURE_DATE     <- as.POSIXct("1988-06-15 12:30:00", tz = "Asia/Taipei")
-FIXTURE_TZ       <- "Asia/Taipei"
-FIXTURE_LON      <- 121.52639   # Taipei
-FIXTURE_LAT      <- 25.05306
+FIXTURE_DATE <- as.POSIXct("1988-06-15 12:30:00", tz = "Asia/Taipei")
+FIXTURE_TZ <- "Asia/Taipei"
+FIXTURE_LON <- 121.52639 # Taipei
+FIXTURE_LAT <- 25.05306
 
 # Minimal 3-body planet position data.frame (sun, moon, asc) that lets all
 # downstream helpers run without error.
 make_fixture_planet_pos <- function() {
-  bodies <- c("sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn",
-              "uranus", "neptune", "pluto", "chiron", "mean_node", "true_node",
-              "asc", "mc", "vertex")
+  bodies <- c(
+    "sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn",
+    "uranus", "neptune", "pluto", "chiron", "mean_node", "true_node",
+    "asc", "mc", "vertex"
+  )
 
   n <- length(bodies)
   # Spread evenly around the zodiac so no pathological edge cases
   degs <- seq(0, 359, length.out = n) %% 360
 
   df <- data.frame(
-    deg          = degs,
-    speed        = rep(1.0, n),
-    sign         = as.integer(floor(degs / 30)) + 1L,
-    deg_in_sign  = as.integer(degs %% 30),
-    min_in_sign  = rep(0L, n),
-    sec_in_sign  = rep(0L, n),
+    deg = degs,
+    speed = rep(1.0, n),
+    sign = as.integer(floor(degs / 30)) + 1L,
+    deg_in_sign = as.integer(degs %% 30),
+    min_in_sign = rep(0L, n),
+    sec_in_sign = rep(0L, n),
     planet_glyphs = LETTERS[seq_len(n)],
     planet_color = rep("black", n),
-    font_glyphs  = rep("AstroDotBasic", n),
-    font_size    = rep(6.5, n),
-    row.names    = bodies,
+    font_glyphs = rep("AstroDotBasic", n),
+    font_size = rep(6.5, n),
+    row.names = bodies,
     stringsAsFactors = FALSE
   )
   df
@@ -74,7 +76,7 @@ make_fixture_conditions <- function() {
   df <- data.frame(
     house              = 1:7,
     is_in_sect         = c(TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE),
-    element            = c("Fire","Water","Air","Earth","Fire","Air","Earth"),
+    element            = c("Fire", "Water", "Air", "Earth", "Fire", "Air", "Earth"),
     is_domicile_lord   = rep(FALSE, 7),
     is_exaltation_lord = rep(FALSE, 7),
     is_triplicity_lord = rep(FALSE, 7),
@@ -82,7 +84,7 @@ make_fixture_conditions <- function() {
     is_face_lord       = rep(FALSE, 7),
     is_in_detriment    = rep(FALSE, 7),
     is_in_fall         = rep(FALSE, 7),
-    is_peregrine       = rep(TRUE,  7),
+    is_peregrine       = rep(TRUE, 7),
     row.names          = trad,
     stringsAsFactors   = FALSE
   )
@@ -91,20 +93,20 @@ make_fixture_conditions <- function() {
 
 # Minimal Greek Lots data.frame (7 lots)
 make_fixture_lots <- function() {
-  lot_names <- c("spirit","fortune","necessity","eros","courage","victory","nemesis")
+  lot_names <- c("spirit", "fortune", "necessity", "eros", "courage", "victory", "nemesis")
   degs <- seq(15, 195, by = 30)
   data.frame(
-    deg           = degs,
-    speed         = rep(0, 7),
-    sign          = as.integer(floor(degs / 30)) + 1L,
-    deg_in_sign   = as.integer(degs %% 30),
-    min_in_sign   = rep(0L, 7),
-    sec_in_sign   = rep(0L, 7),
+    deg = degs,
+    speed = rep(0, 7),
+    sign = as.integer(floor(degs / 30)) + 1L,
+    deg_in_sign = as.integer(degs %% 30),
+    min_in_sign = rep(0L, 7),
+    sec_in_sign = rep(0L, 7),
     planet_glyphs = letters[1:7],
-    planet_color  = rep("black", 7),
-    font_glyphs   = rep("AstroParts", 7),
-    font_size     = rep(4.8, 7),
-    row.names     = lot_names,
+    planet_color = rep("black", 7),
+    font_glyphs = rep("AstroParts", 7),
+    font_size = rep(4.8, 7),
+    row.names = lot_names,
     stringsAsFactors = FALSE
   )
 }
@@ -112,15 +114,15 @@ make_fixture_lots <- function() {
 # Empty aspect data.frame with the expected columns
 make_fixture_aspects <- function() {
   data.frame(
-    planet     = character(0),
-    planet2    = character(0),
-    aspect     = character(0),
-    deg_p1     = numeric(0),
-    deg_p2     = numeric(0),
-    orb1       = numeric(0),
-    orb2       = numeric(0),
+    planet = character(0),
+    planet2 = character(0),
+    aspect = character(0),
+    deg_p1 = numeric(0),
+    deg_p2 = numeric(0),
+    orb1 = numeric(0),
+    orb2 = numeric(0),
     separation = character(0),
-    draw_line  = logical(0),
+    draw_line = logical(0),
     stringsAsFactors = FALSE
   )
 }
@@ -130,15 +132,15 @@ make_fixture_aspects <- function() {
 # ---------------------------------------------------------------------------
 
 with_natal_payload_mocks <- function(code, extra_bindings = list()) {
-  pos_list   <- make_fixture_planet_position_list()
+  pos_list <- make_fixture_planet_position_list()
   conditions <- make_fixture_conditions()
-  lots       <- make_fixture_lots()
+  lots <- make_fixture_lots()
 
   default_bindings <- list(
     calculate_planet_position = function(...) pos_list,
-    get_planetary_conditions  = function(...) conditions,
-    calculate_greek_lots      = function(...) lots,
-    normalize_degree          = function(planet_position) {
+    get_planetary_conditions = function(...) conditions,
+    calculate_greek_lots = function(...) lots,
+    normalize_degree = function(planet_position) {
       asc <- planet_position$planetary_position$deg[
         match("asc", row.names(planet_position$planetary_position))
       ]
@@ -147,10 +149,10 @@ with_natal_payload_mocks <- function(code, extra_bindings = list()) {
         normalized_house_cusps   = planet_position$house_cusps
       )
     },
-    find_house_placement      = function(norm_deg, norm_cusps, house_system) {
+    find_house_placement = function(norm_deg, norm_cusps, house_system) {
       rep(1L, length(norm_deg))
     },
-    calculate_aspect          = function(...) make_fixture_aspects()
+    calculate_aspect = function(...) make_fixture_aspects()
   )
 
   bindings <- c(default_bindings, extra_bindings)
@@ -165,13 +167,16 @@ with_natal_payload_mocks <- function(code, extra_bindings = list()) {
     if (was_locked[[name]]) lockBinding(name, ns)
   }
 
-  on.exit({
-    for (name in rev(binding_names)) {
-      if (bindingIsLocked(name, ns)) unlockBinding(name, ns)
-      assign(name, old_values[[name]], envir = ns)
-      if (was_locked[[name]]) lockBinding(name, ns)
-    }
-  }, add = TRUE)
+  on.exit(
+    {
+      for (name in rev(binding_names)) {
+        if (bindingIsLocked(name, ns)) unlockBinding(name, ns)
+        assign(name, old_values[[name]], envir = ns)
+        if (was_locked[[name]]) lockBinding(name, ns)
+      }
+    },
+    add = TRUE
+  )
 
   force(code)
 }
@@ -192,7 +197,8 @@ test_that("calculate_natal_payload returns list with all required top-level name
       "planetary_conditions", "greek_lots", "selected_bodies", "tables"
     )
     expect_true(all(required_names %in% names(payload)),
-                info = paste("Missing:", paste(setdiff(required_names, names(payload)), collapse = ", ")))
+      info = paste("Missing:", paste(setdiff(required_names, names(payload)), collapse = ", "))
+    )
   })
 })
 
@@ -221,7 +227,7 @@ test_that("payload$planetary_positions is filtered to selected_bodies", {
       selected_bodies = c("sun", "moon")
     )
 
-    expect_true("sun"  %in% row.names(payload$planetary_positions))
+    expect_true("sun" %in% row.names(payload$planetary_positions))
     expect_true("moon" %in% row.names(payload$planetary_positions))
     expect_false("mars" %in% row.names(payload$planetary_positions))
   })
@@ -254,8 +260,10 @@ test_that("payload$aspects is a data.frame with required columns", {
 
     asp <- payload$aspects
     expect_s3_class(asp, "data.frame")
-    for (col in c("planet", "planet2", "aspect", "deg_p1", "deg_p2",
-                  "orb1", "orb2", "separation", "draw_line")) {
+    for (col in c(
+      "planet", "planet2", "aspect", "deg_p1", "deg_p2",
+      "orb1", "orb2", "separation", "draw_line"
+    )) {
       expect_true(col %in% names(asp), info = paste("Missing aspect column:", col))
     }
   })
@@ -273,9 +281,11 @@ test_that("payload$planetary_conditions is a data.frame with required columns", 
 
     cond <- payload$planetary_conditions
     expect_s3_class(cond, "data.frame")
-    for (col in c("house", "is_in_sect", "element",
-                  "is_domicile_lord", "is_exaltation_lord",
-                  "is_in_detriment", "is_in_fall", "is_peregrine")) {
+    for (col in c(
+      "house", "is_in_sect", "element",
+      "is_domicile_lord", "is_exaltation_lord",
+      "is_in_detriment", "is_in_fall", "is_peregrine"
+    )) {
       expect_true(col %in% names(cond), info = paste("Missing conditions column:", col))
     }
   })
@@ -295,10 +305,12 @@ test_that("payload$greek_lots is a data.frame with 7 rows and a 'house' column",
     expect_s3_class(lots, "data.frame")
     expect_equal(nrow(lots), 7L)
     expect_true("house" %in% names(lots),
-                info = "Greek Lots must carry house placement in payload")
-    expected_lots <- c("spirit","fortune","necessity","eros","courage","victory","nemesis")
+      info = "Greek Lots must carry house placement in payload"
+    )
+    expected_lots <- c("spirit", "fortune", "necessity", "eros", "courage", "victory", "nemesis")
     expect_true(all(expected_lots %in% row.names(lots)),
-                info = paste("Missing lots:", paste(setdiff(expected_lots, row.names(lots)), collapse=", ")))
+      info = paste("Missing lots:", paste(setdiff(expected_lots, row.names(lots)), collapse = ", "))
+    )
   })
 })
 
@@ -308,7 +320,7 @@ test_that("payload$greek_lots is a data.frame with 7 rows and a 'house' column",
 
 test_that("payload$selected_bodies echoes the selected_bodies argument", {
   with_natal_payload_mocks({
-    bodies  <- c("sun", "moon", "mars")
+    bodies <- c("sun", "moon", "mars")
     payload <- calculate_natal_payload(
       FIXTURE_DATE, FIXTURE_TZ, FIXTURE_LON, FIXTURE_LAT,
       selected_bodies = bodies
@@ -329,7 +341,7 @@ test_that("payload$tables is a list with 'aspects' and 'conditions' entries", {
     )
 
     expect_type(payload$tables, "list")
-    expect_true("aspects"    %in% names(payload$tables))
+    expect_true("aspects" %in% names(payload$tables))
     expect_true("conditions" %in% names(payload$tables))
   })
 })
@@ -344,10 +356,11 @@ test_that("tables$aspects contains only the display columns", {
     expect_s3_class(tbl, "data.frame")
     display_cols <- c("planet", "planet2", "aspect", "orb1", "separation", "draw_line")
     expect_true(all(display_cols %in% names(tbl)),
-                info = paste("Missing display columns:", paste(setdiff(display_cols, names(tbl)), collapse=", ")))
+      info = paste("Missing display columns:", paste(setdiff(display_cols, names(tbl)), collapse = ", "))
+    )
     # Raw intermediate columns should NOT be present
     expect_false("deg_p1" %in% names(tbl))
-    expect_false("orb2"   %in% names(tbl))
+    expect_false("orb2" %in% names(tbl))
   })
 })
 
@@ -360,7 +373,8 @@ test_that("tables$conditions carries a 'sign' column enriched from planetary pos
     tbl <- payload$tables$conditions
     expect_s3_class(tbl, "data.frame")
     expect_true("sign" %in% names(tbl),
-                info = "conditions display table must carry 'sign' column")
+      info = "conditions display table must carry 'sign' column"
+    )
   })
 })
 
@@ -401,8 +415,7 @@ test_that("sync and async DataManager paths resolve the same payload shape", {
     pos_list <- make_fixture_planet_position_list()
     list(
       planetary_positions = pos_list$planetary_position[
-        row.names(pos_list$planetary_position) %in% selected_bodies,
-        ,
+        row.names(pos_list$planetary_position) %in% selected_bodies, ,
         drop = FALSE
       ],
       house_cusps = pos_list$house_cusps,
@@ -420,12 +433,15 @@ test_that("sync and async DataManager paths resolve the same payload shape", {
   ns <- asNamespace("astrocalculation")
   bindings <- list(
     connect_postgres_db = function() list(conn = TRUE),
-    Logger = list(new = function(pool) list(
-      log_info = function(...) NULL,
-      log_error = function(...) NULL
-    )),
-    lookup_city_data = function(country, city)
-      list(lat = FIXTURE_LAT, lng = FIXTURE_LON, timezone = FIXTURE_TZ),
+    Logger = list(new = function(pool) {
+      list(
+        log_info = function(...) NULL,
+        log_error = function(...) NULL
+      )
+    }),
+    lookup_city_data = function(country, city) {
+      list(lat = FIXTURE_LAT, lng = FIXTURE_LON, timezone = FIXTURE_TZ)
+    },
     calculate_natal_payload = function(date, timezone, longitude, latitude,
                                        selected_bodies, house_system) {
       payload <- payload_for(selected_bodies)
@@ -455,13 +471,16 @@ test_that("sync and async DataManager paths resolve the same payload shape", {
     assign(name, bindings[[name]], envir = ns)
     if (was_locked[[name]]) lockBinding(name, ns)
   }
-  on.exit({
-    for (name in rev(binding_names)) {
-      if (bindingIsLocked(name, ns)) unlockBinding(name, ns)
-      assign(name, old_values[[name]], envir = ns)
-      if (was_locked[[name]]) lockBinding(name, ns)
-    }
-  }, add = TRUE)
+  on.exit(
+    {
+      for (name in rev(binding_names)) {
+        if (bindingIsLocked(name, ns)) unlockBinding(name, ns)
+        assign(name, old_values[[name]], envir = ns)
+        if (was_locked[[name]]) lockBinding(name, ns)
+      }
+    },
+    add = TRUE
+  )
 
   previous_plan <- future::plan()
   future::plan(future::sequential)
@@ -489,7 +508,7 @@ test_that("sync and async DataManager paths resolve the same payload shape", {
   sync_r6$update_chart()
   async_result <- future::value(async_r6$update_chart_async())
 
-  expect_identical(async_result, tmp_jpeg)
+  expect_identical(async_result$path, tmp_jpeg)
   expect_length(captured, 2L)
   expect_identical(captured[[1]]$args, captured[[2]]$args)
   expect_identical(captured[[1]]$shape, captured[[2]]$shape)
@@ -506,46 +525,54 @@ test_that("update_chart_async returns a character path, not an R6 or ggplot obje
 
   ns <- asNamespace("astrocalculation")
   bindings <- list(
-    connect_postgres_db     = function() list(conn = TRUE),
-    Logger                  = list(new = function(pool) list(
-      log_info  = function(...) NULL,
-      log_error = function(...) NULL
-    )),
-    lookup_city_data        = function(country, city)
-      list(lat = FIXTURE_LAT, lng = FIXTURE_LON, timezone = FIXTURE_TZ),
-    calculate_natal_payload = function(...) {
-      pos_list   <- make_fixture_planet_position_list()
+    connect_postgres_db = function() list(conn = TRUE),
+    Logger = list(new = function(pool) {
       list(
-        planetary_positions  = pos_list$planetary_position[c("sun","moon"), ],
-        house_cusps          = pos_list$house_cusps,
-        aspects              = make_fixture_aspects(),
+        log_info  = function(...) NULL,
+        log_error = function(...) NULL
+      )
+    }),
+    lookup_city_data = function(country, city) {
+      list(lat = FIXTURE_LAT, lng = FIXTURE_LON, timezone = FIXTURE_TZ)
+    },
+    calculate_natal_payload = function(...) {
+      pos_list <- make_fixture_planet_position_list()
+      list(
+        planetary_positions = pos_list$planetary_position[c("sun", "moon"), ],
+        house_cusps = pos_list$house_cusps,
+        aspects = make_fixture_aspects(),
         planetary_conditions = make_fixture_conditions(),
-        greek_lots           = make_fixture_lots(),
-        selected_bodies      = c("sun","moon"),
-        tables               = list(aspects = make_fixture_aspects(),
-                                    conditions = data.frame())
+        greek_lots = make_fixture_lots(),
+        selected_bodies = c("sun", "moon"),
+        tables = list(
+          aspects = make_fixture_aspects(),
+          conditions = data.frame()
+        )
       )
     },
-    draw_natal_chart        = function(...) ggplot2::ggplot(),
+    draw_natal_chart = function(...) ggplot2::ggplot(),
     render_natal_chart_to_file = function(...) tmp_jpeg
   )
 
   binding_names <- names(bindings)
-  old_values    <- mget(binding_names, envir = ns, inherits = FALSE)
-  was_locked    <- vapply(binding_names, bindingIsLocked, logical(1), env = ns)
+  old_values <- mget(binding_names, envir = ns, inherits = FALSE)
+  was_locked <- vapply(binding_names, bindingIsLocked, logical(1), env = ns)
 
   for (name in binding_names) {
     if (was_locked[[name]]) unlockBinding(name, ns)
     assign(name, bindings[[name]], envir = ns)
     if (was_locked[[name]]) lockBinding(name, ns)
   }
-  on.exit({
-    for (name in rev(binding_names)) {
-      if (bindingIsLocked(name, ns)) unlockBinding(name, ns)
-      assign(name, old_values[[name]], envir = ns)
-      if (was_locked[[name]]) lockBinding(name, ns)
-    }
-  }, add = TRUE)
+  on.exit(
+    {
+      for (name in rev(binding_names)) {
+        if (bindingIsLocked(name, ns)) unlockBinding(name, ns)
+        assign(name, old_values[[name]], envir = ns)
+        if (was_locked[[name]]) lockBinding(name, ns)
+      }
+    },
+    add = TRUE
+  )
 
   previous_plan <- future::plan()
   future::plan(future::sequential)
@@ -553,19 +580,20 @@ test_that("update_chart_async returns a character path, not an R6 or ggplot obje
 
   r6 <- suppressMessages(DataManager$new())
   on.exit(r6$pool <- NULL, add = TRUE)
-  r6$horoscope_datetime  <- FIXTURE_DATE
-  r6$horoscope_timezone  <- FIXTURE_TZ
-  r6$horoscope_latitude  <- FIXTURE_LAT
+  r6$horoscope_datetime <- FIXTURE_DATE
+  r6$horoscope_timezone <- FIXTURE_TZ
+  r6$horoscope_latitude <- FIXTURE_LAT
   r6$horoscope_longitude <- FIXTURE_LON
-  r6$selected_planets    <- c("sun", "moon")
+  r6$selected_planets <- c("sun", "moon")
 
   result <- future::value(r6$update_chart_async())
 
-  # Result must be a plain character path — not R6, ggplot, or any reference type
-  expect_type(result, "character")
+  # Result must be a serializable list with a path and tables — not R6 or ggplot
+  expect_type(result, "list")
+  expect_named(result, c("path", "tables", "greek_lots"), ignore.order = TRUE)
   expect_false(inherits(result, "R6"))
   expect_false(inherits(result, "ggplot"))
-  expect_true(file.exists(result))
+  expect_true(file.exists(result$path))
 })
 
 # ---------------------------------------------------------------------------
@@ -579,25 +607,29 @@ test_that("update_chart_async returns a character path, not an R6 or ggplot obje
 test_that("calculate_natal_payload produces stable structure for deterministic fixture", {
   with_natal_payload_mocks({
     payload <- calculate_natal_payload(
-      date            = as.POSIXct("1988-06-15 12:30:00", tz = "Asia/Taipei"),
-      timezone        = "Asia/Taipei",
-      longitude       = 121.52639,
-      latitude        = 25.05306,
-      selected_bodies = c("sun","moon","mercury","venus","mars",
-                          "jupiter","saturn","asc","mc",
-                          "spirit","fortune"),
-      house_system    = "whole_sign"
+      date = as.POSIXct("1988-06-15 12:30:00", tz = "Asia/Taipei"),
+      timezone = "Asia/Taipei",
+      longitude = 121.52639,
+      latitude = 25.05306,
+      selected_bodies = c(
+        "sun", "moon", "mercury", "venus", "mars",
+        "jupiter", "saturn", "asc", "mc",
+        "spirit", "fortune"
+      ),
+      house_system = "whole_sign"
     )
 
     # Top-level keys
     expect_setequal(
       names(payload),
-      c("planetary_positions","house_cusps","aspects",
-        "planetary_conditions","greek_lots","selected_bodies","tables")
+      c(
+        "planetary_positions", "house_cusps", "aspects",
+        "planetary_conditions", "greek_lots", "selected_bodies", "tables"
+      )
     )
 
     # Positions include only the requested bodies
-    expect_true(all(c("sun","moon","spirit","fortune") %in% row.names(payload$planetary_positions)))
+    expect_true(all(c("sun", "moon", "spirit", "fortune") %in% row.names(payload$planetary_positions)))
     expect_false("neptune" %in% row.names(payload$planetary_positions))
 
     # Greek Lots always 7 rows regardless of selected_bodies filter
@@ -609,7 +641,7 @@ test_that("calculate_natal_payload produces stable structure for deterministic f
     # tables$aspects has exactly the display columns
     expect_setequal(
       names(payload$tables$aspects),
-      c("planet","planet2","aspect","orb1","separation","draw_line")
+      c("planet", "planet2", "aspect", "orb1", "separation", "draw_line")
     )
 
     # tables$conditions has a sign column

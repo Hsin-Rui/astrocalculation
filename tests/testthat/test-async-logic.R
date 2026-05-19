@@ -19,30 +19,30 @@ library(testthat)
 
 make_mock_planet_df <- function() {
   data.frame(
-    deg          = c(265.85, 292.81),
-    deg_in_sign  = c(25, 22),
-    min_in_sign  = c(51, 49),
-    sign         = c(9L, 10L),
-    speed        = c(1.0, 13.0),
+    deg = c(265.85, 292.81),
+    deg_in_sign = c(25, 22),
+    min_in_sign = c(51, 49),
+    sign = c(9L, 10L),
+    speed = c(1.0, 13.0),
     planet_color = c("black", "black"),
     planet_glyphs = c("Q", "R"),
-    font_glyphs  = c("HamburgSymbols", "HamburgSymbols"),
-    font_size    = c(6, 6),
-    row.names    = c("sun", "moon")
+    font_glyphs = c("HamburgSymbols", "HamburgSymbols"),
+    font_size = c(6, 6),
+    row.names = c("sun", "moon")
   )
 }
 
 make_mock_aspect_df <- function() {
   data.frame(
-    planet     = character(0),
-    planet2    = character(0),
-    aspect     = character(0),
-    deg_p1     = numeric(0),
-    deg_p2     = numeric(0),
-    orb1       = numeric(0),
-    orb2       = numeric(0),
+    planet = character(0),
+    planet2 = character(0),
+    aspect = character(0),
+    deg_p1 = numeric(0),
+    deg_p2 = numeric(0),
+    orb1 = numeric(0),
+    orb2 = numeric(0),
     separation = character(0),
-    draw_line  = logical(0),
+    draw_line = logical(0),
     stringsAsFactors = FALSE
   )
 }
@@ -51,17 +51,17 @@ make_mock_payload <- function(planets = c("sun", "moon")) {
   pos_df <- make_mock_planet_df()
   pos_df <- pos_df[row.names(pos_df) %in% planets, , drop = FALSE]
   list(
-    planetary_positions  = pos_df,
-    house_cusps          = data.frame(
+    planetary_positions = pos_df,
+    house_cusps = data.frame(
       whole_sign = rep(0, 12), equal = rep(0, 12),
-      placidus   = rep(0, 12), koch  = rep(0, 12),
+      placidus = rep(0, 12), koch = rep(0, 12),
       regiomontanus = rep(0, 12)
     ),
-    aspects              = make_mock_aspect_df(),
+    aspects = make_mock_aspect_df(),
     planetary_conditions = data.frame(),
-    greek_lots           = data.frame(),
-    selected_bodies      = planets,
-    tables               = list(
+    greek_lots = data.frame(),
+    selected_bodies = planets,
+    tables = list(
       aspects    = make_mock_aspect_df(),
       conditions = data.frame()
     )
@@ -80,13 +80,16 @@ with_namespace_bindings <- function(bindings, code, ns = asNamespace("astrocalcu
     if (was_locked[[name]]) lockBinding(name, ns)
   }
 
-  on.exit({
-    for (name in rev(binding_names)) {
-      if (bindingIsLocked(name, ns)) unlockBinding(name, ns)
-      assign(name, old_values[[name]], envir = ns)
-      if (was_locked[[name]]) lockBinding(name, ns)
-    }
-  }, add = TRUE)
+  on.exit(
+    {
+      for (name in rev(binding_names)) {
+        if (bindingIsLocked(name, ns)) unlockBinding(name, ns)
+        assign(name, old_values[[name]], envir = ns)
+        if (was_locked[[name]]) lockBinding(name, ns)
+      }
+    },
+    add = TRUE
+  )
 
   eval.parent(code)
 }
@@ -159,7 +162,7 @@ test_that("render_natal_chart_to_file always closes the graphics device", {
 # contract test for the R6 async chart boundary.
 # ---------------------------------------------------------------------------
 
-test_that("DataManager$update_chart_async returns only the JPEG path (AC 5)", {
+test_that("DataManager$update_chart_async returns path and display tables (AC 5, Story 2.5.3)", {
   tmp_jpeg <- tempfile(fileext = ".jpg")
   writeLines("stub-jpeg", tmp_jpeg)
   on.exit(unlink(tmp_jpeg, force = TRUE), add = TRUE)
@@ -174,27 +177,30 @@ test_that("DataManager$update_chart_async returns only the JPEG path (AC 5)", {
       render_natal_chart_to_file = function(...) tmp_jpeg
     ),
     with_sequential_future({
-          r6 <- suppressMessages(DataManager$new())
-          on.exit(r6$pool <- NULL, add = TRUE)
-          r6$horoscope_datetime <- as.POSIXct("1963-12-18 06:33:00", tz = "America/Chicago")
-          r6$horoscope_timezone <- "America/Chicago"
-          r6$horoscope_latitude <- 35.3273
-          r6$horoscope_longitude <- -96.9253
-          r6$horoscope_city <- "Shawnee"
-          r6$horoscope_country <- "United States"
-          r6$chart_name <- "Natal Chart"
-          r6$selected_planets <- c("sun", "moon")
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(r6$pool <- NULL, add = TRUE)
+      r6$horoscope_datetime <- as.POSIXct("1963-12-18 06:33:00", tz = "America/Chicago")
+      r6$horoscope_timezone <- "America/Chicago"
+      r6$horoscope_latitude <- 35.3273
+      r6$horoscope_longitude <- -96.9253
+      r6$horoscope_city <- "Shawnee"
+      r6$horoscope_country <- "United States"
+      r6$chart_name <- "Natal Chart"
+      r6$selected_planets <- c("sun", "moon")
 
-          result <- future::value(r6$update_chart_async())
+      result <- future::value(r6$update_chart_async())
 
-          expect_identical(result, tmp_jpeg)
-          expect_true(file.exists(result))
+      expect_type(result, "list")
+      expect_named(result, c("path", "tables", "greek_lots"), ignore.order = TRUE)
+      expect_identical(result$path, tmp_jpeg)
+      expect_true(file.exists(result$path))
+      expect_named(result$tables, c("aspects", "conditions"), ignore.order = TRUE)
     })
   )
 })
 
 test_that("DataManager$update_chart_async respects selected_planets filter", {
-  tmp_jpeg      <- tempfile(fileext = ".jpg")
+  tmp_jpeg <- tempfile(fileext = ".jpg")
   writeLines("stub", tmp_jpeg)
   on.exit(unlink(tmp_jpeg, force = TRUE), add = TRUE)
   captured_bodies <- NULL
@@ -213,14 +219,14 @@ test_that("DataManager$update_chart_async respects selected_planets filter", {
       render_natal_chart_to_file = function(...) tmp_jpeg
     ),
     with_sequential_future({
-          r6 <- suppressMessages(DataManager$new())
-          on.exit(r6$pool <- NULL, add = TRUE)
-          r6$selected_planets <- c("sun")
-          future::value(r6$update_chart_async())
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(r6$pool <- NULL, add = TRUE)
+      r6$selected_planets <- c("sun")
+      future::value(r6$update_chart_async())
     })
   )
 
-  expect_true("sun"   %in% captured_bodies)
+  expect_true("sun" %in% captured_bodies)
   expect_false("moon" %in% captured_bodies)
 })
 
@@ -245,17 +251,17 @@ test_that("DataManager$update_chart_async refreshes location metadata like updat
       render_natal_chart_to_file = function(...) tmp_jpeg
     ),
     with_sequential_future({
-          r6 <- suppressMessages(DataManager$new())
-          on.exit(r6$pool <- NULL, add = TRUE)
-          r6$horoscope_country <- "Japan"
-          r6$horoscope_city <- "Tokyo"
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(r6$pool <- NULL, add = TRUE)
+      r6$horoscope_country <- "Japan"
+      r6$horoscope_city <- "Tokyo"
 
-          result <- future::value(r6$update_chart_async())
+      result <- future::value(r6$update_chart_async())
 
-          expect_equal(result, tmp_jpeg)
-          expect_equal(r6$horoscope_timezone, "Asia/Tokyo")
-          expect_equal(r6$horoscope_latitude, 35.6895)
-          expect_equal(r6$horoscope_longitude, 139.6917)
+      expect_equal(result$path, tmp_jpeg)
+      expect_equal(r6$horoscope_timezone, "Asia/Tokyo")
+      expect_equal(r6$horoscope_latitude, 35.6895)
+      expect_equal(r6$horoscope_longitude, 139.6917)
     })
   )
 })
@@ -272,7 +278,7 @@ test_that("DataManager$update_chart_async uses optional IP-geolocation coordinat
       Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
       lookup_city_data = function(country, city) list(lat = 35.3273, lng = -96.9253, timezone = "America/Chicago"),
       calculate_natal_payload = function(date, timezone, longitude, latitude,
-                                          selected_bodies, house_system) {
+                                         selected_bodies, house_system) {
         captured_args <<- list(
           timezone  = timezone,
           longitude = longitude,
@@ -284,10 +290,10 @@ test_that("DataManager$update_chart_async uses optional IP-geolocation coordinat
       render_natal_chart_to_file = function(...) tmp_jpeg
     ),
     with_sequential_future({
-          r6 <- suppressMessages(DataManager$new())
-          on.exit(r6$pool <- NULL, add = TRUE)
-          result <- future::value(r6$update_chart_async(timezone = "UTC", latitude = 0, longitude = 0))
-          expect_equal(result, tmp_jpeg)
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(r6$pool <- NULL, add = TRUE)
+      result <- future::value(r6$update_chart_async(timezone = "UTC", latitude = 0, longitude = 0))
+      expect_equal(result$path, tmp_jpeg)
     })
   )
 
