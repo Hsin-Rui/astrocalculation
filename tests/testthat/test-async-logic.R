@@ -162,7 +162,7 @@ test_that("render_natal_chart_to_file always closes the graphics device", {
 # contract test for the R6 async chart boundary.
 # ---------------------------------------------------------------------------
 
-test_that("DataManager$update_chart_async returns path and display tables (AC 5, Story 2.5.3)", {
+test_that("DataManager$update_chart_async returns path, aspects, and planet_conditions (AC 5, Story 2.5.3)", {
   tmp_jpeg <- tempfile(fileext = ".jpg")
   writeLines("stub-jpeg", tmp_jpeg)
   on.exit(unlink(tmp_jpeg, force = TRUE), add = TRUE)
@@ -191,10 +191,11 @@ test_that("DataManager$update_chart_async returns path and display tables (AC 5,
       result <- future::value(r6$update_chart_async())
 
       expect_type(result, "list")
-      expect_named(result, c("path", "tables", "greek_lots"), ignore.order = TRUE)
+      expect_named(result, c("path", "aspects", "planet_conditions", "greek_lots"), ignore.order = TRUE)
       expect_identical(result$path, tmp_jpeg)
       expect_true(file.exists(result$path))
-      expect_named(result$tables, c("aspects", "conditions"), ignore.order = TRUE)
+      expect_true(is.data.frame(result$aspects))
+      expect_true(is.data.frame(result$planet_conditions))
     })
   )
 })

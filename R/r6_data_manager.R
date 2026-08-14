@@ -53,12 +53,6 @@ DataManager <- R6::R6Class(
     #' @field greek_lots data.frame of greek lots position
     greek_lots = NULL,
 
-    #' @field natal_tables
-    #' Named list of display-ready data frames (\code{aspects} and \code{conditions})
-    #' as returned by \code{calculate_natal_payload()$tables}. Updated by both
-    #' synchronous and asynchronous chart paths.
-    natal_tables = NULL,
-
     ## 1-3. Calculation config ####
     #' @field selected_planets (`character()`)\cr
     #' Bodies included in chart calculations and aspect rendering.
@@ -612,7 +606,6 @@ DataManager <- R6::R6Class(
           self$planet_conditions <- payload$planetary_conditions
           self$greek_lots <- payload$greek_lots
           self$aspect_table <- payload$aspects
-          self$natal_tables <- payload$tables
 
           # Generate Visualization
           chart <- draw_natal_chart(
@@ -719,9 +712,10 @@ DataManager <- R6::R6Class(
             house_system = house_system
           )
           list(
-            path = jpeg_path,
-            tables = payload$tables,
-            greek_lots = payload$greek_lots
+            path            = jpeg_path,
+            aspects         = payload$aspects,
+            planet_conditions = payload$planetary_conditions,
+            greek_lots      = payload$greek_lots
           )
         },
         packages = "astrocalculation",

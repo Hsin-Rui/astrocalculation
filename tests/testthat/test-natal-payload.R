@@ -588,12 +588,14 @@ test_that("update_chart_async returns a character path, not an R6 or ggplot obje
 
   result <- future::value(r6$update_chart_async())
 
-  # Result must be a serializable list with a path and tables — not R6 or ggplot
+  # Result must be a serializable list with path, aspects, planet_conditions — not R6 or ggplot
   expect_type(result, "list")
-  expect_named(result, c("path", "tables", "greek_lots"), ignore.order = TRUE)
+  expect_named(result, c("path", "aspects", "planet_conditions", "greek_lots"), ignore.order = TRUE)
   expect_false(inherits(result, "R6"))
   expect_false(inherits(result, "ggplot"))
   expect_true(file.exists(result$path))
+  expect_true(is.data.frame(result$aspects))
+  expect_true(is.data.frame(result$planet_conditions))
 })
 
 # ---------------------------------------------------------------------------
