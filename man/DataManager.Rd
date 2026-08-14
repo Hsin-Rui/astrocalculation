@@ -54,6 +54,12 @@ can be "whole_sign", "placidus", "koch" or "regiomontanus". Default at whole sig
 
 \item{\code{user_id}}{ID to identify the user. If NULL, user is Guest}
 
+\item{\code{auth_status}}{Canonical authentication readiness state for Journal gating.
+One of: "restoring", "guest", "authenticated", "link_required", "error".}
+
+\item{\code{db_status}}{Canonical persistence readiness state for Journal gating.
+One of: "unknown", "available", "unavailable", "degraded".}
+
 \item{\code{user_profile}}{The 1-row data frame of self}
 
 \item{\code{user_library}}{The data frame of the user's saved charts}
@@ -83,6 +89,10 @@ One of: "idle", "shuffling", "ready", "revealed".}
 \itemize{
 \item \href{#method-DataManager-new}{\code{DataManager$new()}}
 \item \href{#method-DataManager-close_pool}{\code{DataManager$close_pool()}}
+\item \href{#method-DataManager-set_auth_status}{\code{DataManager$set_auth_status()}}
+\item \href{#method-DataManager-set_db_status}{\code{DataManager$set_db_status()}}
+\item \href{#method-DataManager-journal_ready}{\code{DataManager$journal_ready()}}
+\item \href{#method-DataManager-clear_auth_state}{\code{DataManager$clear_auth_state()}}
 \item \href{#method-DataManager-register}{\code{DataManager$register()}}
 \item \href{#method-DataManager-promote_guest_draw}{\code{DataManager$promote_guest_draw()}}
 \item \href{#method-DataManager-save_current_tarot_draw}{\code{DataManager$save_current_tarot_draw()}}
@@ -138,6 +148,66 @@ Safe to call more than once.
 \if{html}{\out{<div class="r">}}\preformatted{DataManager$close_pool()}\if{html}{\out{</div>}}
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-set_auth_status"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-set_auth_status}{}}}
+\subsection{Method \code{set_auth_status()}}{
+Set canonical auth readiness status.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$set_auth_status(status)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{status}}{One of restoring, guest, authenticated, link_required, error.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-set_db_status"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-set_db_status}{}}}
+\subsection{Method \code{set_db_status()}}{
+Set canonical DB readiness status.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$set_db_status(status)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{status}}{One of unknown, available, unavailable, degraded.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-journal_ready"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-journal_ready}{}}}
+\subsection{Method \code{journal_ready()}}{
+TRUE only when Journal persistence is allowed for this session.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$journal_ready()}\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataManager-clear_auth_state"></a>}}
+\if{latex}{\out{\hypertarget{method-DataManager-clear_auth_state}{}}}
+\subsection{Method \code{clear_auth_state()}}{
+Clear authenticated user data and set a fail-closed auth status.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DataManager$clear_auth_state(status = "guest")}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{status}}{Auth status to apply after clearing user state.}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DataManager-register"></a>}}

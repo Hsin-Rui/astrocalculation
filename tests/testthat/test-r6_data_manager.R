@@ -586,3 +586,219 @@ test_that("DataManager$promote_guest_draw is a no-op (returns FALSE) when no gue
     .env = asNamespace("astrocalculation")
   )
 })
+
+# ---------------------------------------------------------------------------
+# Story 1.2 - Canonical auth/DB readiness and Journal gate contract
+# ---------------------------------------------------------------------------
+
+make_dm_readiness_bindings <- function(extra = list()) {
+  c(
+    list(
+      connect_postgres_db = function() list(conn = TRUE),
+      Logger = list(new = function(pool) list(log_info = function(...) NULL, log_error = function(...) NULL)),
+      lookup_city_data = function(country, city) data.frame(lat = 0, lng = 0, timezone = "UTC"),
+      calculate_natal_payload = function(...) list(
+        planetary_positions = make_mock_planet_position()$planetary_position,
+        house_cusps = make_mock_planet_position()$house_cusps,
+        planetary_conditions = data.frame(),
+        greek_lots = data.frame(),
+        aspects = data.frame()
+      ),
+      draw_natal_chart = mock_ggplot_chart,
+      db_get_profile = function(pool, uid) data.frame(display_name = "Display"),
+      db_get_library = function(pool, uid) data.frame(entity_id = "lib1", name = "Lib")
+    ),
+    extra
+  )
+}
+
+test_that("DataManager starts in restoring auth state until cookie restore resolves", {
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(r6$pool <- NULL, add = TRUE)
+
+      expect_equal(r6$auth_status, "restoring")
+      expect_equal(r6$db_status, "available")
+      expect_false(r6$journal_ready())
+
+      r6$clear_auth_state("guest")
+      expect_equal(r6$auth_status, "guest")
+      expect_false(r6$journal_ready())
+    },
+    !!!make_dm_readiness_bindings(),
+    .env = asNamespace("astrocalculation")
+  )
+})
+
+test_that("journal_ready is true only for authenticated + available", {
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(r6$pool <- NULL, add = TRUE)
+
+      for (auth_status in c("restoring", "guest", "link_required", "error")) {
+        r6$set_auth_status(auth_status)
+        r6$set_db_status("available")
+        expect_false(r6$journal_ready(), info = auth_status)
+      }
+
+      r6$set_auth_status("authenticated")
+      r6$set_db_status("available")
+      expect_true(r6$journal_ready())
+
+      for (db_status in c("unknown", "unavailable", "degraded")) {
+        r6$set_db_status(db_status)
+        expect_false(r6$journal_ready(), info = db_status)
+      }
+    },
+    !!!make_dm_readiness_bindings(),
+    .env = asNamespace("astrocalculation")
+  )
+})
+
+test_that("restore_session success authenticates only when DB is available", {
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(r6$pool <- NULL, add = TRUE)
+
+      expect_true(r6$restore_session("valid-token"))
+      expect_equal(r6$auth_status, "authenticated")
+      expect_equal(r6$db_status, "available")
+      expect_equal(r6$user_id, "uid-restored")
+      expect_true(r6$journal_ready())
+    },
+    !!!make_dm_readiness_bindings(list(
+      auth_validate_session = function(pool, token) "uid-restored"
+    )),
+    .env = asNamespace("astrocalculation")
+  )
+})
+
+test_that("restore_session invalid token clears auth state and fails closed", {
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(r6$pool <- NULL, add = TRUE)
+
+      r6$user_id <- "stale-user"
+      expect_false(r6$restore_session("invalid-token"))
+      expect_null(r6$user_id)
+      expect_equal(r6$auth_status, "guest")
+      expect_equal(r6$db_status, "available")
+      expect_false(r6$journal_ready())
+    },
+    !!!make_dm_readiness_bindings(list(
+      auth_validate_session = function(pool, token) NULL
+    )),
+    .env = asNamespace("astrocalculation")
+  )
+})
+
+test_that("restore_session with missing pool fails closed without throwing", {
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      r6$pool <- NULL
+
+      expect_no_error(result <- r6$restore_session("token"))
+      expect_false(result)
+      expect_null(r6$user_id)
+      expect_equal(r6$auth_status, "error")
+      expect_equal(r6$db_status, "unavailable")
+      expect_false(r6$journal_ready())
+    },
+    !!!make_dm_readiness_bindings(),
+    .env = asNamespace("astrocalculation")
+  )
+})
+
+test_that("validate_session treats NA and blank tokens as guest fail-closed", {
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(r6$pool <- NULL, add = TRUE)
+
+      for (token in list(NA_character_, "")) {
+        r6$user_id <- "stale-user"
+        r6$set_auth_status("authenticated")
+
+        expect_null(r6$validate_session(token))
+        expect_null(r6$user_id)
+        expect_equal(r6$auth_status, "guest")
+        expect_false(r6$journal_ready())
+      }
+    },
+    !!!make_dm_readiness_bindings(),
+    .env = asNamespace("astrocalculation")
+  )
+})
+
+test_that("password login sets Journal readiness when DB is available", {
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(r6$pool <- NULL, add = TRUE)
+
+      token <- r6$login("user@example.test", "valid")
+
+      expect_equal(token, "session-token")
+      expect_equal(r6$user_id, "uid-login")
+      expect_equal(r6$auth_status, "authenticated")
+      expect_equal(r6$db_status, "available")
+      expect_true(r6$journal_ready())
+    },
+    !!!make_dm_readiness_bindings(list(
+      auth_verify_user = function(pool, login_id, password) {
+        list(id = "uid-login", verified = TRUE, locked = FALSE)
+      },
+      auth_create_session = function(pool, user_id) "session-token"
+    )),
+    .env = asNamespace("astrocalculation")
+  )
+})
+
+test_that("Google login sets Journal readiness when DB is available", {
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(r6$pool <- NULL, add = TRUE)
+
+      token <- r6$login_with_google("user@example.test", "google-sub", "User")
+
+      expect_equal(token, "google-session-token")
+      expect_equal(r6$user_id, "uid-google")
+      expect_equal(r6$auth_status, "authenticated")
+      expect_equal(r6$db_status, "available")
+      expect_true(r6$journal_ready())
+    },
+    !!!make_dm_readiness_bindings(list(
+      auth_handle_oauth_user = function(pool, email, google_id, name) "uid-google",
+      auth_create_session = function(pool, user_id) "google-session-token"
+    )),
+    .env = asNamespace("astrocalculation")
+  )
+})
+
+test_that("login hydration failure clears stale auth and marks DB degraded", {
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(r6$pool <- NULL, add = TRUE)
+
+      expect_error(r6$login("user@example.test", "valid"), "profile offline")
+      expect_null(r6$user_id)
+      expect_equal(r6$auth_status, "error")
+      expect_equal(r6$db_status, "degraded")
+      expect_false(r6$journal_ready())
+    },
+    !!!make_dm_readiness_bindings(list(
+      auth_verify_user = function(pool, login_id, password) {
+        list(id = "uid-login", verified = TRUE, locked = FALSE)
+      },
+      db_get_profile = function(pool, uid) stop("profile offline")
+    )),
+    .env = asNamespace("astrocalculation")
+  )
+})

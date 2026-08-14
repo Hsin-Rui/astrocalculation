@@ -74,6 +74,14 @@ DataManager <- R6::R6Class(
     #' @field user_id
     #' ID to identify the user. If NULL, user is Guest
     user_id = NULL,
+    #' @field auth_status
+    #' Canonical authentication readiness state for Journal gating.
+    #' One of: "restoring", "guest", "authenticated", "link_required", "error".
+    auth_status = "restoring",
+    #' @field db_status
+    #' Canonical persistence readiness state for Journal gating.
+    #' One of: "unknown", "available", "unavailable", "degraded".
+    db_status = "unknown",
 
     ## 1-5. User data fields ####
     #' @field user_profile
@@ -143,16 +151,26 @@ DataManager <- R6::R6Class(
         )
         attempt <- attempt + 1
       }
+      if (is.null(self$pool)) {
+        self$set_db_status("unavailable")
+      } else {
+        self$set_db_status("available")
+      }
 
       self$logger <- Logger$new(self$pool)
 
       # Check Auth
       if (!is.null(user_id)) {
-        self$user_id <- user_id
+        if (is.null(self$pool)) {
+          self$set_auth_status("error")
+        } else {
+          self$user_id <- user_id
 
-        # Load Data using Service Function
-        self$refresh_user_data()
-        self$logger$log_info("LOGIN", "User restored from session", user_id)
+          # Load Data using Service Function
+          self$refresh_user_data()
+          self$set_auth_status("authenticated")
+          self$logger$log_info("LOGIN", "User restored from session", user_id)
+        }
       } else {
         self$logger$log_info("INIT", "Guest session started")
       }
@@ -168,7 +186,46 @@ DataManager <- R6::R6Class(
       if (!is.null(self$logger)) {
         self$logger$pool <- NULL
       }
+      self$set_db_status("unavailable")
       close_postgres_db(pool_to_close)
+    },
+
+    #' @description Set canonical auth readiness status.
+    #' @param status One of restoring, guest, authenticated, link_required, error.
+    set_auth_status = function(status) {
+      status <- match.arg(
+        status,
+        c("restoring", "guest", "authenticated", "link_required", "error")
+      )
+      self$auth_status <- status
+      invisible(status)
+    },
+
+    #' @description Set canonical DB readiness status.
+    #' @param status One of unknown, available, unavailable, degraded.
+    set_db_status = function(status) {
+      status <- match.arg(
+        status,
+        c("unknown", "available", "unavailable", "degraded")
+      )
+      self$db_status <- status
+      invisible(status)
+    },
+
+    #' @description TRUE only when Journal persistence is allowed for this session.
+    journal_ready = function() {
+      isTRUE(identical(self$auth_status, "authenticated") &&
+               identical(self$db_status, "available"))
+    },
+
+    #' @description Clear authenticated user data and set a fail-closed auth status.
+    #' @param status Auth status to apply after clearing user state.
+    clear_auth_state = function(status = "guest") {
+      self$user_id <- NULL
+      self$user_profile <- NULL
+      self$user_library <- NULL
+      self$set_auth_status(status)
+      invisible(FALSE)
     },
 
     # 2. Methods: Auth Integration ---------------------
@@ -183,6 +240,7 @@ DataManager <- R6::R6Class(
     register = function(user_id, email, password, display_name,
                         terms_accepted = FALSE) {
       if (is.null(self$pool)) {
+        self$set_db_status("unavailable")
         return(message("Database is offline. Registration is currently unavailable."))
       }
       # Delegates to the logic function
@@ -190,6 +248,7 @@ DataManager <- R6::R6Class(
         self$pool, user_id, email, password, display_name,
         terms_accepted = terms_accepted
       )
+      self$clear_auth_state("guest")
       if (!is.null(self$logger)) {
         self$logger$log_info(
           event = "REGISTER",
@@ -331,16 +390,46 @@ DataManager <- R6::R6Class(
     #' @param token The session cookie string
     #' @return user_id if valid, NULL otherwise
     validate_session = function(token) {
-      if (is.null(token) || token == "") {
+      token_value <- if (is.null(token) || length(token) == 0) NA_character_ else as.character(token[[1]])
+      if (is.na(token_value) || !nzchar(token_value)) {
+        self$clear_auth_state("guest")
+        return(NULL)
+      }
+      if (is.null(self$pool)) {
+        self$set_db_status("unavailable")
+        self$clear_auth_state("error")
         return(NULL)
       }
 
-      # Use the internal pool
-      valid_user_id <- auth_validate_session(self$pool, token)
+      valid_user_id <- tryCatch(
+        auth_validate_session(self$pool, token),
+        error = function(e) {
+          self$set_db_status("degraded")
+          self$clear_auth_state("error")
+          NULL
+        }
+      )
 
       if (!is.null(valid_user_id)) {
         self$user_id <- valid_user_id
-        self$refresh_user_data()
+        refresh_ok <- tryCatch(
+          {
+            self$refresh_user_data()
+            self$set_db_status("available")
+            self$set_auth_status("authenticated")
+            TRUE
+          },
+          error = function(e) {
+            self$set_db_status("degraded")
+            self$clear_auth_state("error")
+            FALSE
+          }
+        )
+        if (!isTRUE(refresh_ok)) {
+          valid_user_id <- NULL
+        }
+      } else {
+        self$clear_auth_state("guest")
       }
 
       return(valid_user_id)
@@ -351,28 +440,44 @@ DataManager <- R6::R6Class(
     #' @param password User password
     #' @return Session Token (String) if success, NULL if failed
     login = function(login_id, password) {
-      if (is.null(self$pool)) stop("Database offline.")
+      if (is.null(self$pool)) {
+        self$set_db_status("unavailable")
+        self$clear_auth_state("error")
+        stop("Database offline.")
+      }
 
       user_info <- auth_verify_user(self$pool, login_id, password)
 
       # 1. Check for account lockout
       if (!is.null(user_info) && !is.null(user_info$locked) && user_info$locked) {
         lockout_mins <- round(as.numeric(difftime(user_info$locked_until, Sys.time(), units = "mins")))
+        self$clear_auth_state("error")
         stop(paste0("Account locked due to too many failed login attempts. Please try again in ", lockout_mins, " minutes or use 'Forgot Password'."))
       }
 
       if (is.null(user_info)) {
+        self$clear_auth_state("error")
         stop("Invalid username/email or password.")
       }
 
       # 2. Enforce Email Verification
       if (isFALSE(user_info$verified)) {
+        self$clear_auth_state("error")
         stop("Account not activated. Please check your email.")
       }
 
       # 3. Update R6 State
       self$user_id <- user_info$id
-      self$refresh_user_data()
+      tryCatch(
+        self$refresh_user_data(),
+        error = function(e) {
+          self$set_db_status("degraded")
+          self$clear_auth_state("error")
+          stop(e)
+        }
+      )
+      self$set_db_status("available")
+      self$set_auth_status("authenticated")
 
       # 4. Generate Session Cookie Token
       # Calls your existing auth_create_session logic
@@ -391,7 +496,11 @@ DataManager <- R6::R6Class(
     #' @param name name of user (returned by google)
     #' @return Session Token
     login_with_google = function(email, google_id, name) {
-      if (is.null(self$pool)) stop("Database offline.")
+      if (is.null(self$pool)) {
+        self$set_db_status("unavailable")
+        self$clear_auth_state("error")
+        stop("Database offline.")
+      }
 
       self$logger$log_info("LOGIN_GOOGLE", "Login attempt", self$user_id)
 
@@ -401,7 +510,16 @@ DataManager <- R6::R6Class(
       # 2. Update Internal State
       self$user_id <- uid
 
-      self$refresh_user_data()
+      tryCatch(
+        self$refresh_user_data(),
+        error = function(e) {
+          self$set_db_status("degraded")
+          self$clear_auth_state("error")
+          stop(e)
+        }
+      )
+      self$set_db_status("available")
+      self$set_auth_status("authenticated")
       self$logger$log_info("LOGIN_GOOGLE", "User logged in", self$user_id,
         context = list(auth_method = "google", email = email)
       )
@@ -414,7 +532,10 @@ DataManager <- R6::R6Class(
     #' @description Trigger password reset email
     #' @param email user email
     trigger_password_reset = function(email) {
-      if (is.null(self$pool)) stop("Database offline.")
+      if (is.null(self$pool)) {
+        self$set_db_status("unavailable")
+        stop("Database offline.")
+      }
       res <- auth_trigger_password_reset(self$pool, email)
       if (!is.null(self$logger)) {
         self$logger$log_info("RESET_REQUEST", paste("Password reset requested for", email))
@@ -426,7 +547,10 @@ DataManager <- R6::R6Class(
     #' @param token reset token
     #' @param new_password new password string
     reset_password = function(token, new_password) {
-      if (is.null(self$pool)) stop("Database offline.")
+      if (is.null(self$pool)) {
+        self$set_db_status("unavailable")
+        stop("Database offline.")
+      }
       res <- auth_reset_password(self$pool, token, new_password)
       if (!is.null(self$logger)) {
         event <- if (isTRUE(res)) "RESET_SUCCESS" else "RESET_FAILED"
@@ -439,6 +563,7 @@ DataManager <- R6::R6Class(
     #' @param token verification token
     verify_email = function(token) {
       if (is.null(self$pool)) {
+        self$set_db_status("unavailable")
         return(FALSE)
       }
       return(auth_verify_email(self$pool, token))
@@ -446,9 +571,7 @@ DataManager <- R6::R6Class(
 
     #' @description Logout
     logout = function() {
-      self$user_id <- NULL
-      self$user_profile <- NULL
-      self$user_library <- NULL
+      self$clear_auth_state("guest")
       # Reset chart to default transit? Optional.
     },
 
@@ -456,17 +579,8 @@ DataManager <- R6::R6Class(
     #' @param token The session UUID string
     #' @return Logical TRUE if successful, FALSE otherwise
     restore_session = function(token) {
-      # 1. Use the existing logic function to check DB
-      user_id <- auth_validate_session(self$pool, token)
-
-      # 2. If a user ID was found
-      if (!is.null(user_id)) {
-        self$user_id <- user_id
-        self$refresh_user_data() # Assuming you have this to load name/avatar
-        return(TRUE)
-      }
-
-      return(FALSE)
+      user_id <- self$validate_session(token)
+      isTRUE(!is.null(user_id))
     },
 
     # 3. Methods: State Management ---------------------
