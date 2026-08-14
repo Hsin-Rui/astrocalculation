@@ -1,0 +1,29 @@
+# UAT 環境變數範本
+# 複製此檔案為 .Renviron，填入實際值後使用
+# 警告: 請勿將含有實際密碼的 .Renviron 納入 git
+# -------------------------------------------------------
+
+# PostgreSQL (遠端虛擬主機)
+PGHOST='<遠端主機 IP 或 hostname>'
+PGDATABASE="<資料庫名稱>"
+DB_PORT="5432"
+PGUSER="<資料庫使用者>"
+PGPASSWORD="<資料庫密碼>"
+PGSSLMODE='require'
+PGCHANNELBINDING='require'
+R_CONFIG_ACTIVE=uat
+
+# SMTP (寄信功能)
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="587"
+SMTP_USERNAME="<寄件信箱>"
+SMTP_PASSWORD="<App Password>"
+
+# Google OAuth
+GOOGLE_CLIENT_ID=<Google Cloud Console 取得>
+GOOGLE_CLIENT_SECRET=<Google Cloud Console 取得>
+
+# LLM API Keys
+OPENROUTER_API_KEY=<OpenRouter API Key>
+GROQ_API_KEY=<Groq API Key>
+GOOGLE_AI_API_KEY=<Google AI Studio API Key>

@@ -402,7 +402,7 @@ DataManager <- R6::R6Class(
       }
 
       valid_user_id <- tryCatch(
-        auth_validate_session(self$pool, token),
+        auth_validate_session(self$pool, token_value),
         error = function(e) {
           self$set_db_status("degraded")
           self$clear_auth_state("error")
@@ -481,7 +481,13 @@ DataManager <- R6::R6Class(
 
       # 4. Generate Session Cookie Token
       # Calls your existing auth_create_session logic
-      session_token <- auth_create_session(self$pool, self$user_id)
+      session_token <- tryCatch(
+        auth_create_session(self$pool, self$user_id),
+        error = function(e) {
+          self$clear_auth_state("error")
+          stop(e)
+        }
+      )
 
       self$logger$log_info("LOGIN", "User logged in", self$user_id,
         context = list(auth_method = "password", login_id = login_id)
@@ -506,6 +512,10 @@ DataManager <- R6::R6Class(
 
       # 1. Get/Create User via Logic
       uid <- auth_handle_oauth_user(self$pool, email, google_id, name)
+      if (is.null(uid)) {
+        self$clear_auth_state("error")
+        stop("OAuth user lookup failed.")
+      }
 
       # 2. Update Internal State
       self$user_id <- uid
@@ -523,7 +533,13 @@ DataManager <- R6::R6Class(
       self$logger$log_info("LOGIN_GOOGLE", "User logged in", self$user_id,
         context = list(auth_method = "google", email = email)
       )
-      session_token <- auth_create_session(self$pool, self$user_id)
+      session_token <- tryCatch(
+        auth_create_session(self$pool, self$user_id),
+        error = function(e) {
+          self$clear_auth_state("error")
+          stop(e)
+        }
+      )
 
       # 3. Create Session
       return(session_token)

@@ -1,0 +1,19 @@
+#!/bin/sh
+# .githooks/pre-push
+# 阻止直接推送到 main branch
+# 啟用方式: git config core.hooksPath .githooks
+
+while read local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    echo ""
+    echo "⛔  不允許直接推送到 main branch。"
+    echo "    請建立新 branch 並提交 PR："
+    echo ""
+    echo "    git checkout -b feature/your-feature-name"
+    echo "    git push origin feature/your-feature-name"
+    echo ""
+    exit 1
+  fi
+done
+
+exit 0

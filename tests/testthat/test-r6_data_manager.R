@@ -488,6 +488,18 @@ test_that("DataManager$register passes terms_accepted to auth_register_user", {
       expect_true(calls$terms_accepted)
       expect_equal(result$user_id, "uid-1")
       expect_equal(result$verification_token, "tok")
+
+      # Story 1.2: register() must leave auth_status="guest" and user_id=NULL
+      expect_equal(r6$auth_status, "guest")
+      expect_null(r6$user_id)
+      expect_null(r6$user_profile)
+
+      # draw state must survive clear_auth_state so promote_guest_draw can run
+      r6$current_cards <- "愚者"
+      r6$llm_interpretation <- list(title = "旅程")
+      r6$register("uid-2", "b@c.com", "Abcd123!", "Bob", terms_accepted = TRUE)
+      expect_equal(r6$current_cards, "愚者")
+      expect_equal(r6$llm_interpretation$title, "旅程")
     },
     auth_register_user = function(pool, user_id, email, password, display_name,
                                   terms_accepted = FALSE) {
@@ -798,6 +810,64 @@ test_that("login hydration failure clears stale auth and marks DB degraded", {
         list(id = "uid-login", verified = TRUE, locked = FALSE)
       },
       db_get_profile = function(pool, uid) stop("profile offline")
+    )),
+    .env = asNamespace("astrocalculation")
+  )
+})
+test_that("login session creation failure clears auth state and does not leave authenticated", {
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(r6$pool <- NULL, add = TRUE)
+
+      expect_error(r6$login("user@example.test", "valid"), "session failed")
+      expect_null(r6$user_id)
+      expect_equal(r6$auth_status, "error")
+      expect_false(r6$journal_ready())
+    },
+    !!!make_dm_readiness_bindings(list(
+      auth_verify_user = function(pool, login_id, password) {
+        list(id = "uid-login", verified = TRUE, locked = FALSE)
+      },
+      auth_create_session = function(pool, user_id) stop("session failed")
+    )),
+    .env = asNamespace("astrocalculation")
+  )
+})
+
+test_that("Google login session creation failure clears auth state and does not leave authenticated", {
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(r6$pool <- NULL, add = TRUE)
+
+      expect_error(r6$login_with_google("user@example.test", "google-sub", "User"), "session failed")
+      expect_null(r6$user_id)
+      expect_equal(r6$auth_status, "error")
+      expect_false(r6$journal_ready())
+    },
+    !!!make_dm_readiness_bindings(list(
+      auth_handle_oauth_user = function(pool, email, google_id, name) "uid-google",
+      auth_create_session = function(pool, user_id) stop("session failed")
+    )),
+    .env = asNamespace("astrocalculation")
+  )
+})
+
+test_that("Google login fails closed when auth_handle_oauth_user returns NULL", {
+  with_mocked_bindings(
+    {
+      r6 <- suppressMessages(DataManager$new())
+      on.exit(r6$pool <- NULL, add = TRUE)
+
+      expect_error(r6$login_with_google("user@example.test", "google-sub", "User"),
+                   "OAuth user lookup failed")
+      expect_null(r6$user_id)
+      expect_equal(r6$auth_status, "error")
+      expect_false(r6$journal_ready())
+    },
+    !!!make_dm_readiness_bindings(list(
+      auth_handle_oauth_user = function(pool, email, google_id, name) NULL
     )),
     .env = asNamespace("astrocalculation")
   )
